@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Verification Query Tester</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #fff;
+            margin-top: 0;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 4px;
+            border: 1px solid #444;
+            background: #333;
+            color: #fff;
+        }
+        input {
+            width: 400px;
+        }
+        button {
+            background: #4a9eff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #5aaeff;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .success {
+            border-left: 4px solid #4caf50;
+        }
+        .error {
+            border-left: 4px solid #f44336;
+        }
+        .info {
+            border-left: 4px solid #2196f3;
+        }
+        .test-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .test-btn {
+            background: #666;
+            font-size: 12px;
+            padding: 8px 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Manual Verification Query Tester</h1>
+    
+    <div class="container">
+        <h2>Configuration</h2>
+        <p>Enter your Supabase credentials (or load from .env if running locally):</p>
+        <input type="text" id="supabaseUrl" placeholder="Supabase URL" value="">
+        <input type="text" id="supabaseKey" placeholder="Supabase Anon Key" value="">
+        <button onclick="loadFromEnv()">Load from .env (if available)</button>
+    </div>
+
+    <div class="container">
+        <h2>Test Query</h2>
+        <input type="text" id="searchInput" placeholder="Enter ticket_id, qr_token, or UUID">
+        <button onclick="testQuery()">Test Query</button>
+        
+        <div class="test-buttons">
+            <button class="test-btn" onclick="setTestValue('373a7615-4e54-40bd-9fc5-c4a9188d4e5b')">QR Token</button>
+            <button class="test-btn" onclick="setTestValue('MGY-1B-20251112-E8AEE922-2JIC')">Ticket ID</button>
+            <button class="test-btn" onclick="setTestValue('0158e62d-dcf6-4012-80a0-f1c7d295462d')">UUID</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Query Variations</h2>
+        <button onclick="testWithQuotes()">Test WITH Quotes</button>
+        <button onclick="testWithoutQuotes()">Test WITHOUT Quotes</button>
+        <button onclick="testBoth()">Test BOTH</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        let supabase = null;
+
+        function loadFromEnv() {
+            // Try to load from environment if running via vite
+            const url = import.meta?.env?.VITE_SUPABASE_URL || '';
+            const key = import.meta?.env?.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+            
+            if (url && key) {
+                document.getElementById('supabaseUrl').value = url;
+                document.getElementById('supabaseKey').value = key;
+                initSupabase();
+            } else {
+                alert('Environment variables not available. Please enter manually.');
+            }
+        }
+
+        function initSupabase() {
+            const url = document.getElementById('supabaseUrl').value;
+            const key = document.getElementById('supabaseKey').value;
+            
+            if (!url || !key) {
+                alert('Please enter Supabase URL and Key');
+                return false;
+            }
+            
+            supabase = window.supabase.createClient(url, key);
+            addResult('info', 'Supabase client initialized');
+            return true;
+        }
+
+        function setTestValue(value) {
+            document.getElementById('searchInput').value = value;
+        }
+
+        function addResult(type, title, content) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>${title}</strong>\n${content || ''}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testQuery() {
+            if (!initSupabase()) return;
+            
+            const input = document.getElementById('searchInput').value.trim();
+            if (!input) {
+                alert('Please enter a search value');
+                return;
+            }
+            
+            clearResults();
+            addResult('info', 'Testing query with input:', input);
+            await testBoth();
+        }
+
+        async function testWithQuotes() {
+            if (!supabase && !initSupabase()) return;
+            
+            const input = document.getElementById('searchInput').value.trim();
+            if (!input) {
+                alert('Please enter a search value');
+                return;
+            }
+            
+            const queryString = `ticket_id.eq."${input}",qr_token.eq."${input}",id.eq."${input}"`;
+            addResult('info', 'Testing WITH quotes:', queryString);
+            
+            try {
+                const startTime = Date.now();
+                const { data, error } = await supabase
+                    .from('tickets')
+                    .select('*, events(*), ticket_types(*)')
+                    .or(queryString)
+                    .limit(1);
+                const duration = Date.now() - startTime;
+                
+                if (error) {
+                    addResult('error', 'Error (WITH quotes):', JSON.stringify(error, null, 2));
+                } else if (data && data.length > 0) {
+                    addResult('success', `✅ Found ticket (WITH quotes) in ${duration}ms:`, JSON.stringify(data[0], null, 2));
+                } else {
+                    addResult('error', 'No ticket found (WITH quotes)', '');
+                }
+            } catch (err) {
+                addResult('error', 'Exception (WITH quotes):', err.toString());
+            }
+        }
+
+        async function testWithoutQuotes() {
+            if (!supabase && !initSupabase()) return;
+            
+            const input = document.getElementById('searchInput').value.trim();
+            if (!input) {
+                alert('Please enter a search value');
+                return;
+            }
+            
+            const queryString = `ticket_id.eq.${input},qr_token.eq.${input},id.eq.${input}`;
+            addResult('info', 'Testing WITHOUT quotes:', queryString);
+            
+            try {
+                const startTime = Date.now();
+                const { data, error } = await supabase
+                    .from('tickets')
+                    .select('*, events(*), ticket_types(*)')
+                    .or(queryString)
+                    .limit(1);
+                const duration = Date.now() - startTime;
+                
+                if (error) {
+                    addResult('error', 'Error (WITHOUT quotes):', JSON.stringify(error, null, 2));
+                } else if (data && data.length > 0) {
+                    addResult('success', `✅ Found ticket (WITHOUT quotes) in ${duration}ms:`, JSON.stringify(data[0], null, 2));
+                } else {
+                    addResult('error', 'No ticket found (WITHOUT quotes)', '');
+                }
+            } catch (err) {
+                addResult('error', 'Exception (WITHOUT quotes):', err.toString());
+            }
+        }
+
+        async function testBoth() {
+            await testWithQuotes();
+            await testWithoutQuotes();
+        }
+
+        // Auto-load from URL params if available
+        window.addEventListener('load', () => {
+            const params = new URLSearchParams(window.location.search);
+            const url = params.get('url');
+            const key = params.get('key');
+            if (url && key) {
+                document.getElementById('supabaseUrl').value = url;
+                document.getElementById('supabaseKey').value = key;
+                initSupabase();
+            }
+        });
+    </script>
+</body>
+</html>
+

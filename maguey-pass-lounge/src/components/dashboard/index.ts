@@ -1,0 +1,2 @@
+export { VIPReservationsSection } from './VIPReservationsSection';
+
