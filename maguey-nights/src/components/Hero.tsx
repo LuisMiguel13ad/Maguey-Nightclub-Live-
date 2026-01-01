@@ -140,7 +140,7 @@ const Hero = () => {
           disablePictureInPicture
           disableRemotePlayback
         >
-          <source src="/Maguey-nights-hero.mp4" type="video/mp4" />
+          <source src="/Maguey-nights-hero-compressed.mp4" type="video/mp4" />
           <source src="/1209.mov" type="video/quicktime" />
         </video>
         {/* Fallback image for browsers that cannot play the video */}
