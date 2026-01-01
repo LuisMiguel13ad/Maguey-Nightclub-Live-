@@ -9,6 +9,31 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Safe localStorage wrapper for mobile compatibility
+const safeStorage = {
+  getItem: (key: string) => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Storage not available
+    }
+  },
+  removeItem: (key: string) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Storage not available
+    }
+  },
+};
+
 // Create client with fallback empty strings to prevent crashes
 // The app will handle missing credentials gracefully
 export const supabase = createClient<Database>(
@@ -16,7 +41,7 @@ export const supabase = createClient<Database>(
   SUPABASE_ANON_KEY || 'placeholder-key',
   {
     auth: {
-      storage: localStorage,
+      storage: safeStorage,
       persistSession: true,
       autoRefreshToken: true,
     }

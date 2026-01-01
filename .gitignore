@@ -36,3 +36,7 @@ supabase/.temp
 
 # Claude
 .claude/plans
+
+# Large video files
+maguey-nights/public/1209.mp4
+maguey-nights/public/Maguey-nights-hero.mp4

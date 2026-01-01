@@ -36,7 +36,7 @@ import VipTablesManagement from "./pages/VipTablesManagement";
 import { GuestListCheckIn } from "./pages/GuestListCheckIn";
 import VipScannerPage from "./pages/VipScannerPage";
 import Orders from "./pages/Orders";
-import Settings from "./pages/Settings";
+import TestQrGenerator from "./pages/TestQrGenerator";
 
 const queryClient = new QueryClient();
 
@@ -72,7 +72,7 @@ const AppContent = () => {
         <Route path="/crew/settings" element={<CrewSettings />} />
         <Route path="/vip-tables" element={<VipTablesManagement />} />
         <Route path="/orders" element={<Orders />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route path="/test-qr" element={<TestQrGenerator />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

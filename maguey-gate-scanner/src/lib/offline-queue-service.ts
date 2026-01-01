@@ -1,5 +1,5 @@
 import Dexie, { Table } from 'dexie';
-import { scanTicket, lookupTicketByQR } from './scanner-service';
+import { scanTicket, findTicket } from './simple-scanner';
 import { supabase } from './supabase';
 
 export interface QueuedScan {
@@ -136,57 +136,26 @@ const syncSingleScan = async (scan: QueuedScan): Promise<boolean> => {
     // Update status to syncing
     await db.queuedScans.update(scan.id!, { syncStatus: 'syncing' });
 
-    // First, resolve the ticket ID if we queued with a lookup key
-    let actualTicketId = scan.ticketId;
-    let ticket;
-    
-    if (scan.qrToken) {
-      // Lookup by QR token
-      ticket = await lookupTicketByQR(scan.qrToken);
-      if (ticket) {
-        actualTicketId = ticket.id;
-      }
-    } else if (scan.ticketIdString) {
-      // Lookup by ticket_id string
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('ticket_id', scan.ticketIdString)
-        .maybeSingle();
-      
-      if (error) throw error;
-      ticket = data;
-      if (ticket) {
-        actualTicketId = ticket.id;
-      }
-    } else {
-      // Try direct ID lookup
-      const { data, error } = await supabase
-        .from('tickets')
-        .select('*')
-        .eq('id', scan.ticketId)
-        .maybeSingle();
-      
-      if (error) throw error;
-      ticket = data;
-    }
+    // Use findTicket from simple-scanner to find the ticket
+    const lookupInput = scan.qrToken || scan.ticketIdString || scan.ticketId;
+    const ticket = await findTicket(lookupInput);
 
     if (!ticket) {
       throw new Error('Ticket not found');
     }
 
     // Update the queued scan with the actual ticket ID if it changed
-    if (actualTicketId !== scan.ticketId) {
-      await db.queuedScans.update(scan.id!, { ticketId: actualTicketId });
+    if (ticket.id !== scan.ticketId) {
+      await db.queuedScans.update(scan.id!, { ticketId: ticket.id });
     }
 
     // Check if already scanned (conflict resolution)
-    if (ticket.status === 'scanned') {
+    if (ticket.is_used) {
       // Ticket was already scanned - this is a conflict
       // We'll mark as synced since the ticket is already scanned
       // (the "already scanned" state is the desired end state)
       console.log('[offline-queue] Conflict: ticket already scanned', { ticketId: scan.ticketId });
-      
+
       await db.queuedScans.update(scan.id!, {
         syncStatus: 'synced',
         errorMessage: 'Ticket was already scanned (conflict resolved)',
@@ -195,18 +164,18 @@ const syncSingleScan = async (scan: QueuedScan): Promise<boolean> => {
     }
 
     // Perform the scan using the resolved ticket ID
-    const scanResult = await scanTicket(actualTicketId, scan.scannedBy);
+    const scanResult = await scanTicket(ticket.id, scan.scannedBy);
 
     if (!scanResult.success) {
       // If it's an "already scanned" error, treat as success (conflict resolved)
-      if (scanResult.error?.includes('Already scanned')) {
+      if (scanResult.alreadyScanned) {
         await db.queuedScans.update(scan.id!, {
           syncStatus: 'synced',
           errorMessage: 'Ticket was already scanned (conflict resolved)',
         });
         return true;
       }
-      throw new Error(scanResult.error || 'Scan failed');
+      throw new Error(scanResult.message || 'Scan failed');
     }
 
     // Success - mark as synced

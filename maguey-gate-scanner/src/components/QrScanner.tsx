@@ -100,14 +100,17 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError }: QrScannerProps
     }
 
     return () => {
-      if (scannerRef.current && isInitialized.current) {
+      if (scannerRef.current) {
         scannerRef.current
           .stop()
           .then(() => {
             scannerRef.current?.clear();
             isInitialized.current = false;
           })
-          .catch(console.error);
+          .catch(() => {
+            // Silently ignore "Cannot stop" errors - scanner may not be running
+            isInitialized.current = false;
+          });
       }
     };
   }, [isScanning]);
