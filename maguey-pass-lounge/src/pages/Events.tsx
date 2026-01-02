@@ -21,6 +21,7 @@ import { getCheckoutUrlForEvent } from "@/lib/events-service";
 import { HeroCarousel } from "@/components/HeroCarousel";
 import { CustomCursor } from "@/components/CustomCursor";
 import { AuthButton } from "@/components/AuthButton";
+import { useNewsletter } from "@/hooks/useNewsletter";
 import { cn } from "@/lib/utils";
 
 const genreIcons: Record<string, React.ReactNode> = {
@@ -60,6 +61,27 @@ const Events = () => {
   const [error, setError] = useState<string | null>(null);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const revealRefs = useRef<(HTMLElement | null)[]>([]);
+
+  // Newsletter state
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [newsletterMessage, setNewsletterMessage] = useState<string | null>(null);
+  const { subscribe: subscribeNewsletter, isLoading: newsletterLoading, success: newsletterSuccess, reset: resetNewsletter } = useNewsletter();
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim()) return;
+
+    const result = await subscribeNewsletter(newsletterEmail, 'events-page');
+    setNewsletterMessage(result.message);
+
+    if (result.success) {
+      setNewsletterEmail("");
+      setTimeout(() => {
+        setNewsletterMessage(null);
+        resetNewsletter();
+      }, 5000);
+    }
+  };
 
   const handleEventClick = async (eventId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -291,21 +313,62 @@ const Events = () => {
 
             {/* Empty State */}
             {events.length === 0 && !error && (
-              <div className="max-w-2xl mx-auto">
-                <div className="glass-panel rounded-sm p-12 text-center">
-                  <div className="w-16 h-16 rounded-full bg-copper-400/10 flex items-center justify-center mx-auto mb-6">
-                    <Calendar className="w-8 h-8 text-copper-400" />
+              <div className="max-w-xl mx-auto">
+                <div className="glass-panel rounded-2xl p-10 sm:p-14 text-center border border-copper-400/20">
+                  {/* Icon with glow effect */}
+                  <div className="relative w-20 h-20 mx-auto mb-8">
+                    <div className="absolute inset-0 rounded-full bg-copper-400/20 blur-xl"></div>
+                    <div className="relative w-full h-full rounded-full bg-gradient-to-br from-copper-400/20 to-copper-400/5 border border-copper-400/30 flex items-center justify-center">
+                      <Calendar className="w-9 h-9 text-copper-400" />
+                    </div>
                   </div>
-                  <h3 className="font-serif text-2xl text-stone-100 mb-4">
-                    Frequencies Incoming
+
+                  {/* Heading */}
+                  <h3 className="font-serif text-3xl sm:text-4xl text-stone-100 mb-3">
+                    The Night Awaits
                   </h3>
-                  <p className="font-mono text-xs text-stone-500 mb-8 max-w-md mx-auto">
-                    New rituals are being calibrated. Join our network to receive
-                    first-access notifications.
+                  <p className="text-copper-400 font-mono text-xs uppercase tracking-[0.3em] mb-6">
+                    New Events Coming Soon
                   </p>
-                  <button className="font-mono text-[10px] uppercase tracking-[0.2em] text-forest-950 bg-copper-400 hover:bg-copper-500 px-6 py-3 rounded-sm transition-colors">
-                    Join Network
-                  </button>
+
+                  {/* Description */}
+                  <p className="text-stone-400 text-sm mb-10 max-w-sm mx-auto leading-relaxed">
+                    Something big is brewing. Sign up to hear it first.
+                  </p>
+
+                  {/* Email Signup */}
+                  <form
+                    className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
+                    onSubmit={handleNewsletterSubmit}
+                  >
+                    <input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={newsletterEmail}
+                      onChange={(e) => setNewsletterEmail(e.target.value)}
+                      disabled={newsletterLoading}
+                      required
+                      className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-stone-100 placeholder:text-stone-500 focus:outline-none focus:border-copper-400/50 focus:ring-1 focus:ring-copper-400/50 transition-all disabled:opacity-50"
+                    />
+                    <button
+                      type="submit"
+                      disabled={newsletterLoading || !newsletterEmail.trim()}
+                      className="font-mono text-[11px] uppercase tracking-[0.15em] text-forest-950 bg-copper-400 hover:bg-copper-300 px-6 py-3 rounded-lg transition-all hover:shadow-lg hover:shadow-copper-400/20 font-semibold whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {newsletterLoading ? "..." : "Notify Me"}
+                    </button>
+                  </form>
+
+                  {/* Feedback Message */}
+                  {newsletterMessage && (
+                    <p className={`text-sm mt-4 ${newsletterSuccess ? 'text-copper-400' : 'text-red-400'}`}>
+                      {newsletterMessage}
+                    </p>
+                  )}
+
+                  <p className="text-stone-600 text-xs mt-4">
+                    No spam, just vibes. Unsubscribe anytime.
+                  </p>
                 </div>
               </div>
             )}

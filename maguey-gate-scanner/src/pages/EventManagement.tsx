@@ -22,6 +22,11 @@ import {
   Globe,
   Archive,
   FileText,
+  Mail,
+  Send,
+  Users,
+  CheckCircle,
+  Loader2,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -85,6 +90,8 @@ interface Event {
   ticket_types: TicketType[];
   created_at: string;
   updated_at: string;
+  newsletter_sent_at: string | null;
+  newsletter_sent_count: number;
 }
 
 const EventManagement = () => {
@@ -136,6 +143,13 @@ const EventManagement = () => {
   const [openaiKey, setOpenaiKey] = useState("");
   const [tempOpenaiKey, setTempOpenaiKey] = useState("");
 
+  // Newsletter notification state
+  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
+  const [eventToNotify, setEventToNotify] = useState<Event | null>(null);
+  const [customMessage, setCustomMessage] = useState("");
+  const [sendingNotification, setSendingNotification] = useState(false);
+  const [subscriberCount, setSubscriberCount] = useState<number | null>(null);
+
   useEffect(() => {
     // Load API key from local storage on mount
     const storedKey = localStorage.getItem("maguey_openai_key");
@@ -163,6 +177,59 @@ const EventManagement = () => {
       });
     }
     setSettingsDialogOpen(false);
+  };
+
+  const handleOpenNotifyDialog = async (event: Event) => {
+    setEventToNotify(event);
+    setCustomMessage("");
+    setNotifyDialogOpen(true);
+
+    // Fetch subscriber count
+    try {
+      const { count, error } = await supabase
+        .from("newsletter_subscribers")
+        .select("*", { count: "exact", head: true })
+        .eq("is_active", true);
+
+      if (!error) {
+        setSubscriberCount(count);
+      }
+    } catch (err) {
+      console.error("Error fetching subscriber count:", err);
+    }
+  };
+
+  const handleSendNotification = async () => {
+    if (!eventToNotify) return;
+
+    setSendingNotification(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-event-announcement", {
+        body: {
+          eventId: eventToNotify.id,
+          customMessage: customMessage.trim() || undefined,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Notification Sent!",
+        description: data.message || `Announcement sent to ${data.sentCount} subscribers`,
+      });
+
+      setNotifyDialogOpen(false);
+      loadEvents(); // Refresh to show updated newsletter status
+    } catch (error: any) {
+      console.error("Error sending notification:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to send notification",
+      });
+    } finally {
+      setSendingNotification(false);
+    }
   };
 
   // Redirect employees (allow owners and promoters)
@@ -215,7 +282,7 @@ const EventManagement = () => {
       // Query events with new fields
       const { data: eventsData, error: eventsError } = await supabase
         .from("events")
-        .select("id, name, description, event_date, event_time, venue_name, venue_address, city, image_url, status, published_at, categories, tags, created_at, updated_at")
+        .select("id, name, description, event_date, event_time, venue_name, venue_address, city, image_url, status, published_at, categories, tags, created_at, updated_at, newsletter_sent_at, newsletter_sent_count")
         .order("event_date", { ascending: false });
 
       if (eventsError) throw eventsError;
@@ -234,6 +301,8 @@ const EventManagement = () => {
         published_at: (event as any).published_at || null,
         categories: Array.isArray((event as any).categories) ? (event as any).categories : [],
         tags: Array.isArray((event as any).tags) ? (event as any).tags : [],
+        newsletter_sent_at: (event as any).newsletter_sent_at || null,
+        newsletter_sent_count: (event as any).newsletter_sent_count || 0,
         ticket_types: (ticketTypesData || [])
           .filter(tt => tt.event_id === event.id)
           .map(tt => ({
@@ -864,6 +933,7 @@ const EventManagement = () => {
                           setEventToDelete(e);
                           setDeleteDialogOpen(true);
                         }}
+                        onNotify={handleOpenNotifyDialog}
                         getStats={(eventId) => getEventStats(eventId)}
                       />
                     ))}
@@ -1244,7 +1314,7 @@ const EventManagement = () => {
                 Configure external integrations and preferences.
               </DialogDescription>
             </DialogHeader>
-            
+
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="openai-key">OpenAI API Key (for Flyer Scanning)</Label>
@@ -1273,6 +1343,110 @@ const EventManagement = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Newsletter Notification Dialog */}
+        <Dialog open={notifyDialogOpen} onOpenChange={setNotifyDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5 text-blue-500" />
+                Notify Subscribers
+              </DialogTitle>
+              <DialogDescription>
+                Send an email announcement about this event to all newsletter subscribers.
+              </DialogDescription>
+            </DialogHeader>
+
+            {eventToNotify && (
+              <div className="space-y-4 py-4">
+                {/* Event Preview */}
+                <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg">
+                  {eventToNotify.image_url && (
+                    <img
+                      src={eventToNotify.image_url}
+                      alt={eventToNotify.name}
+                      className="w-20 h-20 rounded object-cover"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <h4 className="font-semibold">{eventToNotify.name}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(eventToNotify.event_date), "EEEE, MMMM d, yyyy")}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {eventToNotify.venue_name || "Maguey Delaware"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Subscriber Count */}
+                <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <Users className="h-5 w-5 text-blue-500" />
+                  <span className="text-sm">
+                    {subscriberCount !== null ? (
+                      <>This will be sent to <strong>{subscriberCount}</strong> active subscriber{subscriberCount !== 1 ? 's' : ''}</>
+                    ) : (
+                      "Loading subscriber count..."
+                    )}
+                  </span>
+                </div>
+
+                {/* Previous Notification Warning */}
+                {eventToNotify.newsletter_sent_at && (
+                  <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-amber-500" />
+                    <span className="text-sm text-amber-700">
+                      Already sent to {eventToNotify.newsletter_sent_count} subscribers on{" "}
+                      {format(new Date(eventToNotify.newsletter_sent_at), "MMM d, yyyy 'at' h:mm a")}
+                    </span>
+                  </div>
+                )}
+
+                {/* Custom Message */}
+                <div className="space-y-2">
+                  <Label htmlFor="custom-message">Custom Message (Optional)</Label>
+                  <Textarea
+                    id="custom-message"
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    placeholder="Add a personal message to include in the announcement..."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This message will appear highlighted in the email above the event details.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setNotifyDialogOpen(false)}
+                disabled={sendingNotification}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendNotification}
+                disabled={sendingNotification || subscriberCount === 0}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {sendingNotification ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Announcement
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </OwnerPortalLayout>
   );
@@ -1282,10 +1456,11 @@ interface EventRowProps {
   event: Event;
   onEdit: (event: Event) => void;
   onDelete: (event: Event) => void;
+  onNotify: (event: Event) => void;
   getStats: (eventId: string) => Promise<{ totalTickets: number; scannedTickets: number; revenue: number }>;
 }
 
-const EventRow = ({ event, onEdit, onDelete, getStats }: EventRowProps) => {
+const EventRow = ({ event, onEdit, onDelete, onNotify, getStats }: EventRowProps) => {
   const [stats, setStats] = useState<{ totalTickets: number; scannedTickets: number; revenue: number } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
@@ -1303,6 +1478,7 @@ const EventRow = ({ event, onEdit, onDelete, getStats }: EventRowProps) => {
   const eventDate = new Date(event.event_date);
   const totalTicketCapacity = event.ticket_types.reduce((sum, tt) => sum + tt.capacity, 0);
   const timeDisplay = event.event_time || "20:00";
+  const hasBeenNotified = !!event.newsletter_sent_at;
 
   return (
     <TableRow>
@@ -1315,7 +1491,15 @@ const EventRow = ({ event, onEdit, onDelete, getStats }: EventRowProps) => {
               className="w-10 h-10 rounded object-cover"
             />
           )}
-          <span>{event.name}</span>
+          <div>
+            <span>{event.name}</span>
+            {hasBeenNotified && (
+              <div className="flex items-center gap-1 text-xs text-emerald-500 mt-0.5">
+                <CheckCircle className="h-3 w-3" />
+                <span>Notified {event.newsletter_sent_count} subscribers</span>
+              </div>
+            )}
+          </div>
         </div>
       </TableCell>
       <TableCell>
@@ -1353,6 +1537,15 @@ const EventRow = ({ event, onEdit, onDelete, getStats }: EventRowProps) => {
       </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onNotify(event)}
+            title={hasBeenNotified ? "Resend notification" : "Notify subscribers"}
+            className={hasBeenNotified ? "text-emerald-500" : "text-blue-500"}
+          >
+            <Mail className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"
