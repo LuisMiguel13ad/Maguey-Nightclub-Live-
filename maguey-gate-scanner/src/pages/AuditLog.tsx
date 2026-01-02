@@ -20,6 +20,7 @@ import {
   Info,
   AlertTriangle,
   XCircle,
+  RefreshCw,
 } from "lucide-react";
 import {
   Select,
@@ -173,10 +174,23 @@ const AuditLog = () => {
   }
 
   const headerActions = (
-          <Button onClick={handleExport} variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={loadLogs}
+        variant="outline"
+        className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20"
+      >
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Refresh
+      </Button>
+      <Button
+        onClick={handleExport}
+        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0"
+      >
+        <Download className="mr-2 h-4 w-4" />
+        Export CSV
+      </Button>
+    </div>
   );
 
   return (
@@ -186,103 +200,104 @@ const AuditLog = () => {
       actions={headerActions}
     >
 
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div className="space-y-2">
-                <Label>Search</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search logs..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Action</Label>
-                <Select value={filterAction} onValueChange={setFilterAction}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Actions</SelectItem>
-                    {uniqueActions.map(action => (
-                      <SelectItem key={action} value={action}>
-                        {action.replace(/_/g, ' ')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Severity</Label>
-                <Select value={filterSeverity} onValueChange={setFilterSeverity}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Severities</SelectItem>
-                    <SelectItem value="info">Info</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Resource Type</Label>
-                <Select value={filterResourceType} onValueChange={setFilterResourceType}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {uniqueResourceTypes.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Date Range</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {startDate && endDate
-                        ? `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d')}`
-                        : 'All time'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
-                      mode="range"
-                      selected={{ from: startDate, to: endDate }}
-                      onSelect={(range) => {
-                        setStartDate(range?.from);
-                        setEndDate(range?.to);
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+        {/* Filters - Blue Theme */}
+        <div className="mb-6 p-4 bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-indigo-500/10 rounded-xl border border-indigo-500/20 backdrop-blur-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-300">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search logs..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-300">Action</Label>
+              <Select value={filterAction} onValueChange={setFilterAction}>
+                <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                  <SelectItem value="all" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">All Actions</SelectItem>
+                  {uniqueActions.map(action => (
+                    <SelectItem key={action} value={action} className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
+                      {action.replace(/_/g, ' ')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-300">Severity</Label>
+              <Select value={filterSeverity} onValueChange={setFilterSeverity}>
+                <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                  <SelectItem value="all" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">All Severities</SelectItem>
+                  <SelectItem value="info" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Info</SelectItem>
+                  <SelectItem value="warning" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Warning</SelectItem>
+                  <SelectItem value="error" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Error</SelectItem>
+                  <SelectItem value="critical" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Critical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-300">Resource Type</Label>
+              <Select value={filterResourceType} onValueChange={setFilterResourceType}>
+                <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                  <SelectItem value="all" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">All Types</SelectItem>
+                  {uniqueResourceTypes.map(type => (
+                    <SelectItem key={type} value={type} className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-300">Date Range</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30"
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {startDate && endDate
+                      ? `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d')}`
+                      : 'All time'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-[#0b132f] border-indigo-500/30">
+                  <CalendarComponent
+                    mode="range"
+                    selected={{ from: startDate, to: endDate }}
+                    onSelect={(range) => {
+                      setStartDate(range?.from);
+                      setEndDate(range?.to);
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        </div>
 
         {/* Logs Table */}
-        <Card>
+        <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
           <CardHeader>
             <CardTitle>Audit Logs</CardTitle>
             <CardDescription>

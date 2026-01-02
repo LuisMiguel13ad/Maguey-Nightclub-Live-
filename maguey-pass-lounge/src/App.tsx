@@ -22,6 +22,9 @@ import TwoFactorSetup from "./pages/TwoFactorSetup";
 import Profile from "./pages/Profile";
 import AccountSettings from "./pages/AccountSettings";
 import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Refund from "./pages/Refund";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import TestTicketViewer from "./pages/TestTicketViewer";
 import VipTableReservation from "./pages/VipTableReservation";
@@ -111,6 +114,10 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          {/* Legal Pages */}
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
+          <Route path="/refund" element={<Refund />} />
           {/* Typography Showcase (dev reference - remove before production) */}
           <Route path="/typography" element={<TypographyShowcase />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

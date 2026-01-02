@@ -18,13 +18,7 @@ import {
   Edit,
   Trash2,
   Search,
-  Users,
   Ticket,
-  DollarSign,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  BarChart3,
   Globe,
   Archive,
   FileText,
@@ -48,7 +42,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { Upload, X, Image as ImageIcon, Wand2, Settings, Key } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Wand2, Settings } from "lucide-react";
 import { generateTicketTypeCode } from "@/lib/ticket-type-utils";
 import { uploadEventImage, validateImageFile } from "@/lib/event-image-service";
 import { EventBulkImport } from "@/components/EventBulkImport";
@@ -66,6 +60,7 @@ import { validateEventDayOfWeek } from "@/lib/event-day-validation";
 import { checkForDuplicateEvent, getDuplicateErrorMessage } from "@/lib/event-duplicate-check";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VIPSetupManager, VIPReservationsList } from "@/components/vip";
+import { logAuditEvent } from "@/lib/audit-service";
 
 interface TicketType {
   name: string;
@@ -170,13 +165,13 @@ const EventManagement = () => {
     setSettingsDialogOpen(false);
   };
 
-  // Redirect employees
+  // Redirect employees (allow owners and promoters)
   useEffect(() => {
-    if (role !== 'owner') {
+    if (role !== 'owner' && role !== 'promoter') {
       toast({
         variant: "destructive",
         title: "Access Denied",
-        description: "Event management is only available to owners.",
+        description: "Event management is only available to owners and promoters.",
       });
       navigate("/scanner");
     }
@@ -184,7 +179,7 @@ const EventManagement = () => {
 
   // Load events
   useEffect(() => {
-    if (role === 'owner') {
+    if (role === 'owner' || role === 'promoter') {
       loadEvents();
     }
   }, [role]);
@@ -656,6 +651,25 @@ const EventManagement = () => {
         description: `Event ${editingEvent ? 'updated' : 'created'} successfully! ${editingEvent ? '' : 'Synced to main and purchase sites.'}`,
       });
 
+      // Audit log: event created or updated
+      logAuditEvent(
+        editingEvent ? 'event_updated' : 'event_created',
+        'event',
+        `Event ${editingEvent ? 'updated' : 'created'}: ${eventName}`,
+        {
+          userId: user?.id,
+          resourceId: eventId,
+          severity: 'info',
+          metadata: {
+            eventName,
+            eventDate,
+            eventTime,
+            status: eventStatus,
+            ticketTypesCount: ticketTypes.length,
+          },
+        }
+      ).catch(() => {}); // Non-blocking
+
       setEditDialogOpen(false);
       loadEvents();
     } catch (error: any) {
@@ -709,6 +723,17 @@ const EventManagement = () => {
         description: `Event "${eventToDelete.name}" has been deleted.`,
       });
 
+      // Audit log: event deleted
+      logAuditEvent('event_deleted', 'event', `Event deleted: ${eventToDelete.name}`, {
+        userId: user?.id,
+        resourceId: eventToDelete.id,
+        severity: 'warning',
+        metadata: {
+          eventName: eventToDelete.name,
+          eventDate: eventToDelete.event_date,
+        },
+      }).catch(() => {}); // Non-blocking
+
       setDeleteDialogOpen(false);
       loadEvents();
     } catch (error: any) {
@@ -758,20 +783,20 @@ const EventManagement = () => {
     }
   };
 
-  if (role !== 'owner') {
+  if (role !== 'owner' && role !== 'promoter') {
     return null;
   }
 
   const headerActions = (
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" size="icon" onClick={() => setSettingsDialogOpen(true)}>
+      <Button variant="outline" size="icon" onClick={() => setSettingsDialogOpen(true)} className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20">
         <Settings className="h-4 w-4" />
       </Button>
       <Button onClick={handleCreateNew}>
         <Plus className="mr-2 h-4 w-4" />
         New Event
       </Button>
-      <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+      <Button variant="outline" onClick={() => setImportDialogOpen(true)} className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20">
         <Upload className="mr-2 h-4 w-4" />
         Bulk Import
       </Button>
@@ -786,7 +811,7 @@ const EventManagement = () => {
       actions={headerActions}
     >
       <div className="space-y-6">
-        <Card>
+        <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
           <CardContent className="pt-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -794,14 +819,14 @@ const EventManagement = () => {
                 placeholder="Search events..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
               />
             </div>
           </CardContent>
         </Card>
 
         {/* Events Table */}
-        <Card>
+        <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
           <CardHeader>
             <CardTitle>Events</CardTitle>
             <CardDescription>

@@ -34,29 +34,20 @@ export function NavigationGrid({ items }: NavigationGridProps) {
       <Card
         key={item.path}
         onClick={() => navigate(item.path)}
-        className={cn(
-          "min-w-0 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg",
-          item.bg || "bg-gradient-to-br from-card to-card/50",
-          item.color && `border-${item.color}/20`
-        )}
+        className="min-w-0 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg bg-card-light border-0 rounded-2xl"
       >
         <CardHeader className={cn(isLarge ? "pb-4" : "pb-3")}>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <CardTitle className={cn(isLarge ? "text-lg" : "text-base")}>
+              <CardTitle className={cn("text-card-light-foreground", isLarge ? "text-lg" : "text-base")}>
                 {item.title}
               </CardTitle>
               <CardDescription className={cn("mt-1", isLarge ? "text-sm" : "text-xs")}>
                 {item.description}
               </CardDescription>
             </div>
-            <div
-              className={cn(
-                "rounded-lg p-2 flex-shrink-0",
-                item.iconBg || "bg-primary/10"
-              )}
-            >
-              <Icon className={cn("h-5 w-5 text-primary", item.color && `text-${item.color}`)} />
+            <div className="rounded-xl p-2.5 flex-shrink-0 bg-muted">
+              <Icon className="h-5 w-5 text-foreground" />
             </div>
           </div>
         </CardHeader>

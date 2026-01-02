@@ -26,6 +26,7 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
+  RefreshCw,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -52,6 +53,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { logAuditEvent } from "@/lib/audit-service";
 import {
   createInvitation,
   getInvitationsByUser,
@@ -66,7 +68,7 @@ const TeamManagement = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const role = useRole();
-  const { getAllUsers, promoteToOwner, demoteToEmployee, deleteUser, loading } = useUserManagement();
+  const { getAllUsers, promoteToOwner, setRoleToPromoter, demoteToEmployee, deleteUser, loading } = useUserManagement();
   
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
@@ -79,6 +81,7 @@ const TeamManagement = () => {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [inviteExpiresIn, setInviteExpiresIn] = useState("168"); // 7 days default
+  const [inviteRole, setInviteRole] = useState<'employee' | 'owner' | 'promoter'>('employee');
   const [generatedInviteUrl, setGeneratedInviteUrl] = useState<string | null>(null);
   const [creatingInvite, setCreatingInvite] = useState(false);
   
@@ -155,17 +158,24 @@ const TeamManagement = () => {
     setCreatingInvite(true);
     try {
       const hours = parseInt(inviteExpiresIn);
-      const result = await createInvitation(user.id, hours);
+      const result = await createInvitation(user.id, hours, { role: inviteRole });
       
       if (result.success && result.token) {
         const url = getInvitationUrl(result.token);
         setGeneratedInviteUrl(url);
         await loadInvitations();
-        
+
         toast({
           title: "Invitation Created!",
           description: "Share this link with new team members.",
         });
+
+        // Audit log: invitation created
+        logAuditEvent('user_created', 'invitation', `Team invitation created for ${inviteRole} role`, {
+          userId: user.id,
+          severity: 'info',
+          metadata: { expiresInHours: hours, role: inviteRole },
+        }).catch(() => {});
       } else {
         throw new Error(result.error || "Failed to create invitation");
       }
@@ -207,6 +217,13 @@ const TeamManagement = () => {
           title: "Invitation Revoked",
           description: "The invitation has been deleted.",
         });
+
+        // Audit log: invitation revoked
+        logAuditEvent('user_deleted', 'invitation', 'Team invitation revoked', {
+          userId: user?.id,
+          resourceId: invitationId,
+          severity: 'info',
+        }).catch(() => {});
       } else {
         throw new Error(result.error);
       }
@@ -222,6 +239,7 @@ const TeamManagement = () => {
   const openInviteDialog = () => {
     setGeneratedInviteUrl(null);
     setInviteExpiresIn("168"); // Reset to 7 days
+    setInviteRole('employee'); // Reset to employee
     setInviteDialogOpen(true);
   };
 
@@ -230,17 +248,63 @@ const TeamManagement = () => {
     setUserDetailsOpen(true);
   };
 
-  const handlePromote = async (userId: string) => {
-    const success = await promoteToOwner(userId);
+  const handlePromoteToPromoter = async (userId: string) => {
+    const success = await setRoleToPromoter(userId);
     if (success) {
       await loadUsers();
+
+      // Audit log: user promoted to promoter
+      logAuditEvent('user_role_changed', 'user', 'User promoted to promoter', {
+        userId: user?.id,
+        resourceId: userId,
+        severity: 'info',
+        metadata: { previousRole: 'employee', newRole: 'promoter' },
+      }).catch(() => {});
     }
   };
 
-  const handleDemote = async (userId: string) => {
+  const handlePromoteToOwner = async (userId: string) => {
+    const success = await promoteToOwner(userId);
+    if (success) {
+      await loadUsers();
+
+      // Audit log: user promoted to owner
+      logAuditEvent('user_role_changed', 'user', 'User promoted to owner', {
+        userId: user?.id,
+        resourceId: userId,
+        severity: 'warning',
+        metadata: { previousRole: 'promoter', newRole: 'owner' },
+      }).catch(() => {});
+    }
+  };
+
+  const handleDemoteToPromoter = async (userId: string) => {
+    const success = await setRoleToPromoter(userId);
+    if (success) {
+      await loadUsers();
+
+      // Audit log: user demoted to promoter
+      logAuditEvent('user_role_changed', 'user', 'User demoted to promoter', {
+        userId: user?.id,
+        resourceId: userId,
+        severity: 'info',
+        metadata: { previousRole: 'owner', newRole: 'promoter' },
+      }).catch(() => {});
+    }
+  };
+
+  const handleDemoteToEmployee = async (userId: string) => {
     const success = await demoteToEmployee(userId);
     if (success) {
       await loadUsers();
+
+      // Audit log: user demoted to employee
+      logAuditEvent('user_role_changed', 'user', 'User demoted to employee', {
+        userId: user?.id,
+        resourceId: userId,
+        severity: 'warning',
+        metadata: { previousRole: 'promoter', newRole: 'employee' },
+      }).catch(() => {});
     }
   };
 
@@ -255,6 +319,14 @@ const TeamManagement = () => {
     const success = await deleteUser(userToDelete.id);
     if (success) {
       await loadUsers();
+
+      // Audit log: user deleted
+      logAuditEvent('user_deleted', 'user', `User deleted: ${userToDelete.email}`, {
+        userId: user?.id,
+        resourceId: userToDelete.id,
+        severity: 'warning',
+        metadata: { deletedEmail: userToDelete.email, deletedRole: userToDelete.role },
+      }).catch(() => {});
     }
     setDeleteDialogOpen(false);
     setUserToDelete(null);
@@ -274,17 +346,32 @@ const TeamManagement = () => {
   }
 
   const ownerCount = users.filter(u => u.role === 'owner').length;
+  const promoterCount = users.filter(u => u.role === 'promoter').length;
   const employeeCount = users.filter(u => u.role === 'employee').length;
+
+  const headerActions = (
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={() => { loadUsers(); loadInvitations(); }}
+        variant="outline"
+        className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20"
+      >
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Refresh
+      </Button>
+    </div>
+  );
 
   return (
     <OwnerPortalLayout
       title="Team Management"
       description="Manage user roles and access permissions"
+      actions={headerActions}
     >
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="border-primary/20">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <Users className="h-4 w-4" />
@@ -297,35 +384,48 @@ const TeamManagement = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20">
+          <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Shield className="h-4 w-4" />
+                <Shield className="h-4 w-4 text-purple-400" />
                 Owners
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-primary">{ownerCount}</div>
+              <div className="text-3xl font-bold text-purple-400">{ownerCount}</div>
               <p className="text-xs text-muted-foreground mt-1">Full access</p>
             </CardContent>
           </Card>
 
-          <Card className="border-secondary/20">
+          <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <UserCog className="h-4 w-4" />
+                <UserPlus className="h-4 w-4 text-blue-400" />
+                Promoters
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-400">{promoterCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">View analytics</p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <UserCog className="h-4 w-4 text-slate-400" />
                 Employees
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-secondary">{employeeCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">Scanner access</p>
+              <div className="text-3xl font-bold text-slate-400">{employeeCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">Scanner only</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Invitation Management */}
-        <Card className="border-primary/20 mb-6">
+        <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)] mb-6">
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
@@ -337,7 +437,7 @@ const TeamManagement = () => {
               </div>
               <Button
                 onClick={openInviteDialog}
-                className="bg-gradient-green hover:shadow-glow-green"
+                className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0"
               >
                 <Link2 className="h-4 w-4 mr-2" />
                 Create Invitation
@@ -397,7 +497,7 @@ const TeamManagement = () => {
         </Card>
 
         {/* Search and Actions */}
-        <Card className="border-primary/20 mb-6">
+        <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)] mb-6">
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
@@ -405,12 +505,12 @@ const TeamManagement = () => {
                 <CardDescription>View and manage user accounts</CardDescription>
               </div>
               <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
                   placeholder="Search users..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
                 />
               </div>
             </div>
@@ -464,9 +564,20 @@ const TeamManagement = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={userProfile.role === 'owner' ? 'default' : 'secondary'}>
+                          <Badge
+                            variant={userProfile.role === 'owner' ? 'default' : 'secondary'}
+                            className={
+                              userProfile.role === 'owner'
+                                ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                                : userProfile.role === 'promoter'
+                                ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                                : 'bg-slate-500/20 text-slate-300 border-slate-500/30'
+                            }
+                          >
                             {userProfile.role === 'owner' && <Shield className="h-3 w-3 mr-1" />}
-                            {userProfile.role}
+                            {userProfile.role === 'promoter' && <UserPlus className="h-3 w-3 mr-1" />}
+                            {userProfile.role === 'employee' && <UserCog className="h-3 w-3 mr-1" />}
+                            {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -482,35 +593,70 @@ const TeamManagement = () => {
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-2">
-                            {userProfile.role === 'employee' ? (
+                            {/* Employee: Can promote to Promoter */}
+                            {userProfile.role === 'employee' && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handlePromote(userProfile.id);
+                                  handlePromoteToPromoter(userProfile.id);
                                 }}
                                 disabled={loading}
-                                className="border-primary/20"
+                                className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
                               >
                                 <ChevronUp className="h-4 w-4 mr-1" />
-                                Promote
+                                Promoter
                               </Button>
-                            ) : userProfile.id !== user?.id && (
+                            )}
+                            {/* Promoter: Can promote to Owner or demote to Employee */}
+                            {userProfile.role === 'promoter' && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePromoteToOwner(userProfile.id);
+                                  }}
+                                  disabled={loading}
+                                  className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                                >
+                                  <ChevronUp className="h-4 w-4 mr-1" />
+                                  Owner
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDemoteToEmployee(userProfile.id);
+                                  }}
+                                  disabled={loading}
+                                  className="border-slate-500/30 text-slate-400 hover:bg-slate-500/10"
+                                >
+                                  <ChevronDown className="h-4 w-4 mr-1" />
+                                  Employee
+                                </Button>
+                              </>
+                            )}
+                            {/* Owner (not self): Can demote to Promoter */}
+                            {userProfile.role === 'owner' && userProfile.id !== user?.id && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleDemote(userProfile.id);
+                                  handleDemoteToPromoter(userProfile.id);
                                 }}
                                 disabled={loading}
-                                className="border-accent/20"
+                                className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
                               >
                                 <ChevronDown className="h-4 w-4 mr-1" />
-                                Demote
+                                Promoter
                               </Button>
                             )}
+                            {/* Delete button (not self) */}
                             {userProfile.id !== user?.id && (
                               <Button
                                 size="sm"
@@ -602,23 +748,54 @@ const TeamManagement = () => {
                   <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
                     <li>This link expires in {parseInt(inviteExpiresIn) / 24} days</li>
                     <li>It can only be used once</li>
-                    <li>New users will be assigned the "Employee" role</li>
+                    <li>New user will be assigned the "{inviteRole === 'owner' ? 'Owner' : inviteRole === 'promoter' ? 'Promoter' : 'Employee'}" role</li>
                   </ul>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Expiration Time</Label>
-                  <Select value={inviteExpiresIn} onValueChange={setInviteExpiresIn}>
-                    <SelectTrigger>
+                  <Label>Role</Label>
+                  <Select value={inviteRole} onValueChange={(value: 'employee' | 'owner' | 'promoter') => setInviteRole(value)}>
+                    <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="24">24 hours</SelectItem>
-                      <SelectItem value="72">3 days</SelectItem>
-                      <SelectItem value="168">7 days (recommended)</SelectItem>
-                      <SelectItem value="720">30 days</SelectItem>
+                    <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                      <SelectItem value="employee" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
+                        <div className="flex items-center gap-2">
+                          <UserCog className="h-4 w-4" />
+                          Employee - Scanner access only
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="promoter" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="h-4 w-4" />
+                          Promoter - Scanner + view analytics
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="owner" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
+                        <div className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          Owner - Full admin access
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    The access level for the new team member.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Expiration Time</Label>
+                  <Select value={inviteExpiresIn} onValueChange={setInviteExpiresIn}>
+                    <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                      <SelectItem value="24" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">24 hours</SelectItem>
+                      <SelectItem value="72" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">3 days</SelectItem>
+                      <SelectItem value="168" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">7 days (recommended)</SelectItem>
+                      <SelectItem value="720" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">30 days</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">

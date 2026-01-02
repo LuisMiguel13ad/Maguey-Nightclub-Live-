@@ -127,15 +127,15 @@ const AdvancedAnalytics = () => {
   const [events, setEvents] = useState<Array<{ name: string }>>([]);
   const [comparisonData, setComparisonData] = useState<any[]>([]);
 
-  // Redirect non-owners
+  // Redirect employees (allow owners and promoters)
   useEffect(() => {
-    if (role !== 'owner') {
+    if (role !== 'owner' && role !== 'promoter') {
       navigate('/scanner');
     }
   }, [role, navigate]);
 
   useEffect(() => {
-    if (role === 'owner') {
+    if (role === 'owner' || role === 'promoter') {
       loadEvents();
       loadAnalytics();
     }
@@ -530,8 +530,8 @@ const AdvancedAnalytics = () => {
     );
   }
 
-  // Redirect non-owners (handled by useEffect, but show nothing while redirecting)
-  if (role !== 'owner') {
+  // Redirect non-owners/promoters (handled by useEffect, but show nothing while redirecting)
+  if (role !== 'owner' && role !== 'promoter') {
     return null;
   }
 
@@ -556,81 +556,81 @@ const AdvancedAnalytics = () => {
     >
 
         {/* Unified Filter Bar */}
-        <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-lg border border-border/50">
+        <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-indigo-500/10 rounded-xl border border-indigo-500/20 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <Label className="text-sm font-medium whitespace-nowrap">Time Range:</Label>
-                <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
-              <SelectTrigger className="w-[140px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="7d">Last 7 Days</SelectItem>
-                    <SelectItem value="30d">Last 30 Days</SelectItem>
-                    <SelectItem value="90d">Last 90 Days</SelectItem>
-                    <SelectItem value="custom">Custom Range</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <Label className="text-sm font-medium whitespace-nowrap text-slate-300">Time Range:</Label>
+            <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
+              <SelectTrigger className="w-[140px] bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                <SelectItem value="7d" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Last 7 Days</SelectItem>
+                <SelectItem value="30d" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Last 30 Days</SelectItem>
+                <SelectItem value="90d" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Last 90 Days</SelectItem>
+                <SelectItem value="custom" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Custom Range</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-              {timeRange === 'custom' && (
-                <>
+          {timeRange === 'custom' && (
+            <>
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium whitespace-nowrap">Start:</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[160px] justify-start text-left font-normal">
-                          <Calendar className="mr-2 h-4 w-4" />
+                <Label className="text-sm font-medium whitespace-nowrap text-slate-300">Start:</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[160px] justify-start text-left font-normal bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30">
+                      <Calendar className="mr-2 h-4 w-4" />
                       {startDate ? format(startDate, "MMM d") : "Pick date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <CalendarComponent
-                          mode="single"
-                          selected={startDate}
-                          onSelect={setStartDate}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-[#0b132f] border-indigo-500/30">
+                    <CalendarComponent
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium whitespace-nowrap">End:</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[160px] justify-start text-left font-normal">
-                          <Calendar className="mr-2 h-4 w-4" />
+                <Label className="text-sm font-medium whitespace-nowrap text-slate-300">End:</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-[160px] justify-start text-left font-normal bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30">
+                      <Calendar className="mr-2 h-4 w-4" />
                       {endDate ? format(endDate, "MMM d") : "Pick date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <CalendarComponent
-                          mode="single"
-                          selected={endDate}
-                          onSelect={setEndDate}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </>
-              )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-[#0b132f] border-indigo-500/30">
+                    <CalendarComponent
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </>
+          )}
 
           <div className="flex items-center gap-2 ml-auto">
-            <Label className="text-sm font-medium whitespace-nowrap">Event:</Label>
-                <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-              <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {events.map((event) => (
-                      <SelectItem key={event.name} value={event.name}>
-                        {event.name === 'all' ? 'All Events' : event.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <Label className="text-sm font-medium whitespace-nowrap text-slate-300">Event:</Label>
+            <Select value={selectedEvent} onValueChange={setSelectedEvent}>
+              <SelectTrigger className="w-[180px] bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                {events.map((event) => (
+                  <SelectItem key={event.name} value={event.name} className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
+                    {event.name === 'all' ? 'All Events' : event.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -644,7 +644,7 @@ const AdvancedAnalytics = () => {
             {/* KPI Cards - Refined */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Total Revenue */}
-              <Card className="border border-border/50">
+              <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -671,7 +671,7 @@ const AdvancedAnalytics = () => {
               </Card>
 
               {/* Total Tickets */}
-              <Card className="border border-border/50">
+              <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Tickets Sold</CardTitle>
                   <Ticket className="h-4 w-4 text-muted-foreground" />
@@ -696,7 +696,7 @@ const AdvancedAnalytics = () => {
               </Card>
 
               {/* Total Scans */}
-              <Card className="border border-border/50">
+              <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Tickets Scanned</CardTitle>
                   <Activity className="h-4 w-4 text-muted-foreground" />
@@ -712,7 +712,7 @@ const AdvancedAnalytics = () => {
               </Card>
 
               {/* Average Ticket Price */}
-              <Card className="border border-border/50">
+              <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground">Avg. Ticket Price</CardTitle>
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
@@ -728,16 +728,16 @@ const AdvancedAnalytics = () => {
 
             {/* Tabbed Organization */}
             <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-                <TabsTrigger value="overview" className="gap-2">
+              <TabsList className="grid w-full grid-cols-3 lg:w-[400px] bg-indigo-500/10 border border-indigo-500/20 p-1 rounded-xl">
+                <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
                   <BarChart3 className="h-4 w-4" />
                   Overview
                 </TabsTrigger>
-                <TabsTrigger value="sales" className="gap-2">
+                <TabsTrigger value="sales" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
                   <ShoppingBag className="h-4 w-4" />
                   Sales
                 </TabsTrigger>
-                <TabsTrigger value="operations" className="gap-2">
+                <TabsTrigger value="operations" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
                   <Settings className="h-4 w-4" />
                   Operations
                 </TabsTrigger>
@@ -745,140 +745,404 @@ const AdvancedAnalytics = () => {
 
               {/* Tab 1: Overview */}
               <TabsContent value="overview" className="space-y-6">
-                {/* Revenue Trend */}
-                <Card className="border border-border/50">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                        <CardTitle>Revenue Trends</CardTitle>
+                {/* Enhanced Revenue Trend */}
+                <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
+                  <CardHeader className="pb-2">
+                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                      <div>
+                        <CardTitle className="text-xl font-bold">Revenue Trends</CardTitle>
                         <CardDescription className="text-muted-foreground">
-                          Daily revenue and ticket sales over time
+                          Daily revenue, ticket sales, and scan performance over time
                         </CardDescription>
-                  </div>
-                      <Badge variant="outline" className="text-xs">
-                    {revenueTrends.length} days
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={350}>
-                  <AreaChart data={revenueTrends}>
-                    <defs>
-                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8}/>
+                      </div>
+                      <Badge variant="outline" className="text-xs w-fit border-indigo-500/30 bg-indigo-500/10">
+                        {revenueTrends.length} days
+                      </Badge>
+                    </div>
+
+                    {/* Summary Stats Row */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-white/10">
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Revenue</p>
+                        <p className="text-lg font-bold text-white mt-1">
+                          ${revenueTrends.reduce((sum, d) => sum + d.revenue, 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg Daily Revenue</p>
+                        <p className="text-lg font-bold text-white mt-1">
+                          ${revenueTrends.length > 0 ? (revenueTrends.reduce((sum, d) => sum + d.revenue, 0) / revenueTrends.length).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '0'}
+                        </p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Peak Revenue Day</p>
+                        <p className="text-lg font-bold text-emerald-400 mt-1">
+                          ${Math.max(...revenueTrends.map(d => d.revenue), 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                      <div className="bg-white/5 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Conversion Rate</p>
+                        <p className="text-lg font-bold text-amber-400 mt-1">
+                          {revenueTrends.reduce((sum, d) => sum + d.tickets, 0) > 0
+                            ? ((revenueTrends.reduce((sum, d) => sum + d.scans, 0) / revenueTrends.reduce((sum, d) => sum + d.tickets, 0)) * 100).toFixed(1)
+                            : '0'}%
+                        </p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <ResponsiveContainer width="100%" height={380}>
+                      <AreaChart data={revenueTrends.map((d, i, arr) => ({
+                        ...d,
+                        cumulative: arr.slice(0, i + 1).reduce((sum, item) => sum + item.revenue, 0),
+                        movingAvg: i >= 2 ? (arr[i].revenue + arr[i-1].revenue + arr[i-2].revenue) / 3 : d.revenue,
+                      }))}>
+                        <defs>
+                          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.6}/>
+                            <stop offset="50%" stopColor="#6366f1" stopOpacity={0.2}/>
                             <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                          </linearGradient>
+                          <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.5}/>
+                            <stop offset="50%" stopColor="#22c55e" stopOpacity={0.15}/>
                             <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                    <XAxis 
-                      dataKey="date" 
-                      tickFormatter={(value) => format(parseISO(value), 'MMM d')}
-                      tick={{ fontSize: 12 }}
-                          stroke="hsl(var(--muted-foreground))"
-                    />
-                        <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                        <Legend />
-                    <Area 
-                      yAxisId="left" 
-                      type="monotone" 
-                      dataKey="revenue" 
-                          stroke="#6366f1" 
-                      fillOpacity={1} 
-                      fill="url(#colorRevenue)" 
-                      name="Revenue ($)"
-                      strokeWidth={2}
-                    />
-                    <Area 
-                      yAxisId="right" 
-                      type="monotone" 
-                      dataKey="tickets" 
-                          stroke="#22c55e" 
-                      fillOpacity={1} 
-                      fill="url(#colorTickets)" 
-                      name="Tickets Sold"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+                          </linearGradient>
+                          <linearGradient id="colorScans" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.15} stroke="rgba(255,255,255,0.1)" />
+                        <XAxis
+                          dataKey="date"
+                          tickFormatter={(value) => format(parseISO(value), 'MMM d')}
+                          tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.6)' }}
+                          stroke="rgba(255,255,255,0.2)"
+                          axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+                        />
+                        <YAxis
+                          yAxisId="left"
+                          tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.6)' }}
+                          stroke="rgba(255,255,255,0.2)"
+                          axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+                          tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                        />
+                        <YAxis
+                          yAxisId="right"
+                          orientation="right"
+                          tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.6)' }}
+                          stroke="rgba(255,255,255,0.2)"
+                          axisLine={{ stroke: 'rgba(255,255,255,0.2)' }}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: 'rgba(11, 19, 47, 0.95)',
+                            border: '1px solid rgba(99, 102, 241, 0.3)',
+                            borderRadius: '12px',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                          }}
+                          labelStyle={{ color: 'white', fontWeight: 'bold', marginBottom: '8px' }}
+                          itemStyle={{ color: 'rgba(255,255,255,0.9)' }}
+                          formatter={(value: any, name: string) => {
+                            if (name === 'Revenue ($)' || name === '3-Day Avg') return [`$${Number(value).toLocaleString()}`, name];
+                            return [value.toLocaleString(), name];
+                          }}
+                          labelFormatter={(label) => format(parseISO(label), 'EEEE, MMM d, yyyy')}
+                        />
+                        <Legend
+                          wrapperStyle={{ paddingTop: '20px' }}
+                          iconType="circle"
+                        />
+                        <Area
+                          yAxisId="left"
+                          type="monotone"
+                          dataKey="revenue"
+                          stroke="#6366f1"
+                          fillOpacity={1}
+                          fill="url(#colorRevenue)"
+                          name="Revenue ($)"
+                          strokeWidth={2.5}
+                          dot={{ fill: '#6366f1', strokeWidth: 0, r: 3 }}
+                          activeDot={{ r: 6, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
+                        />
+                        <Line
+                          yAxisId="left"
+                          type="monotone"
+                          dataKey="movingAvg"
+                          stroke="#a78bfa"
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          dot={false}
+                          name="3-Day Avg"
+                        />
+                        <Area
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="tickets"
+                          stroke="#22c55e"
+                          fillOpacity={1}
+                          fill="url(#colorTickets)"
+                          name="Tickets Sold"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 5, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }}
+                        />
+                        <Area
+                          yAxisId="right"
+                          type="monotone"
+                          dataKey="scans"
+                          stroke="#f59e0b"
+                          fillOpacity={1}
+                          fill="url(#colorScans)"
+                          name="Tickets Scanned"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 5, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+
+                    {/* Legend Explanation */}
+                    <div className="flex flex-wrap items-center justify-center gap-4 mt-4 pt-4 border-t border-white/10 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                        <span>Revenue - Total sales value</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-0.5 bg-purple-400 border-dashed border-t-2 border-purple-400"></div>
+                        <span>3-Day Moving Average</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                        <span>Tickets Sold</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+                        <span>Tickets Scanned</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Peak Hours & Quick Insights */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Peak Hours */}
-                  <Card className="border border-border/50">
-                <CardHeader>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Peak Hours - Enhanced */}
+                  <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
+                    <CardHeader className="pb-2">
                       <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-primary" />
-                    Peak Hours Analysis
-                  </CardTitle>
+                        <Clock className="h-5 w-5 text-indigo-400" />
+                        Peak Hours Analysis
+                      </CardTitle>
                       <CardDescription className="text-muted-foreground">
-                        Scan activity by hour of day
+                        Entry activity by hour - optimize staffing based on patterns
                       </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={attendancePatterns}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                      <XAxis 
-                        dataKey="hour" 
-                        label={{ value: 'Hour of Day', position: 'insideBottom', offset: -5 }}
-                        tick={{ fontSize: 11 }}
-                            stroke="hsl(var(--muted-foreground))"
-                      />
-                          <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                      />
-                          <Bar dataKey="scans" fill="#6366f1" radius={[4, 4, 0, 0]} name="Scans" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
 
-                  {/* Quick Insights */}
-                  <Card className="border border-border/50">
-                <CardHeader>
-                      <CardTitle>Quick Insights</CardTitle>
+                      {/* Peak Hour Summary */}
+                      {(() => {
+                        const maxScans = Math.max(...attendancePatterns.map(p => p.scans), 0);
+                        const peakHour = attendancePatterns.find(p => p.scans === maxScans)?.hour || 0;
+                        const totalScans = attendancePatterns.reduce((sum, p) => sum + p.scans, 0);
+                        const busyHours = attendancePatterns.filter(p => p.scans > maxScans * 0.5).length;
+
+                        return (
+                          <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/10">
+                            <div className="bg-indigo-500/10 rounded-lg p-2 text-center">
+                              <p className="text-xs text-muted-foreground">Peak Hour</p>
+                              <p className="text-lg font-bold text-indigo-400">{peakHour}:00</p>
+                            </div>
+                            <div className="bg-emerald-500/10 rounded-lg p-2 text-center">
+                              <p className="text-xs text-muted-foreground">Total Scans</p>
+                              <p className="text-lg font-bold text-emerald-400">{totalScans.toLocaleString()}</p>
+                            </div>
+                            <div className="bg-amber-500/10 rounded-lg p-2 text-center">
+                              <p className="text-xs text-muted-foreground">Busy Hours</p>
+                              <p className="text-lg font-bold text-amber-400">{busyHours}</p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </CardHeader>
+                    <CardContent className="pt-2">
+                      {attendancePatterns.reduce((sum, p) => sum + p.scans, 0) === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-[250px] text-center">
+                          <Clock className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                          <p className="text-muted-foreground text-sm">No scan data available yet</p>
+                          <p className="text-muted-foreground/60 text-xs mt-1">
+                            Scan activity will appear here once tickets are scanned
+                          </p>
+                        </div>
+                      ) : (
+                      <>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <BarChart data={attendancePatterns.map(p => {
+                          const maxScans = Math.max(...attendancePatterns.map(x => x.scans), 1);
+                          return {
+                            ...p,
+                            hourLabel: `${p.hour}:00`,
+                            isPeak: p.scans === maxScans,
+                            intensity: p.scans / maxScans,
+                          };
+                        })}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.1} stroke="rgba(255,255,255,0.1)" />
+                          <XAxis
+                            dataKey="hour"
+                            tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.6)' }}
+                            stroke="rgba(255,255,255,0.2)"
+                            tickFormatter={(h) => h % 3 === 0 ? `${h}:00` : ''}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.6)' }}
+                            stroke="rgba(255,255,255,0.2)"
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: 'rgba(11, 19, 47, 0.95)',
+                              border: '1px solid rgba(99, 102, 241, 0.3)',
+                              borderRadius: '12px',
+                              boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+                            }}
+                            labelStyle={{ color: 'white', fontWeight: 'bold', marginBottom: '4px' }}
+                            itemStyle={{ color: 'rgba(255,255,255,0.9)' }}
+                            formatter={(value: any) => [value.toLocaleString(), 'Scans']}
+                            labelFormatter={(h) => `${h}:00 - ${(h + 1) % 24}:00`}
+                          />
+                          <Bar
+                            dataKey="scans"
+                            radius={[4, 4, 0, 0]}
+                            name="Scans"
+                          >
+                            {attendancePatterns.map((entry, index) => {
+                              const maxScans = Math.max(...attendancePatterns.map(x => x.scans), 1);
+                              const intensity = entry.scans / maxScans;
+                              let fill = '#3b3b5c'; // Low activity
+                              if (intensity > 0.75) fill = '#6366f1'; // Peak
+                              else if (intensity > 0.5) fill = '#818cf8'; // High
+                              else if (intensity > 0.25) fill = '#a5b4fc'; // Medium
+                              return <Cell key={`cell-${index}`} fill={fill} />;
+                            })}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+
+                      {/* Legend */}
+                      <div className="flex items-center justify-center gap-3 mt-3 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded bg-[#6366f1]"></div>
+                          <span>Peak</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded bg-[#818cf8]"></div>
+                          <span>High</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded bg-[#a5b4fc]"></div>
+                          <span>Medium</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded bg-[#3b3b5c]"></div>
+                          <span>Low</span>
+                        </div>
+                      </div>
+                      </>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Quick Insights - Enhanced */}
+                  <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-emerald-400" />
+                        Quick Insights
+                      </CardTitle>
                       <CardDescription className="text-muted-foreground">
-                        Key performance highlights
+                        Key business metrics at a glance
                       </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      {comparisonData.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="rounded-lg border border-border/50 p-4">
-                            <p className="text-sm font-medium text-muted-foreground mb-1">Top Performing Event</p>
-                            <p className="text-lg font-semibold">{comparisonData[0]?.name || 'N/A'}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              ${comparisonData[0]?.revenue?.toLocaleString() || 0} revenue
+                    <CardContent className="space-y-3">
+                      {/* Revenue Per Attendee */}
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide">Revenue Per Attendee</p>
+                            <p className="text-xl font-bold text-white mt-1">
+                              ${kpiData.totalScans > 0 ? (kpiData.totalRevenue / kpiData.totalScans).toFixed(2) : '0.00'}
                             </p>
                           </div>
-                          <div className="rounded-lg border border-border/50 p-4">
-                            <p className="text-sm font-medium text-muted-foreground mb-1">Total Events</p>
-                            <p className="text-lg font-semibold">{comparisonData.length}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {comparisonData.reduce((sum, e) => sum + (e.tickets || 0), 0).toLocaleString()} total tickets
-                            </p>
+                          <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                            <DollarSign className="h-5 w-5 text-emerald-400" />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">Based on scanned tickets</p>
+                      </div>
+
+                      {/* Top Event */}
+                      {comparisonData.length > 0 && (
+                        <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-muted-foreground uppercase tracking-wide">Top Performing Event</p>
+                              <p className="text-lg font-bold text-white mt-1 truncate">{comparisonData[0]?.name || 'N/A'}</p>
+                            </div>
+                            <div className="h-10 w-10 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0 ml-2">
+                              <BarChart3 className="h-5 w-5 text-indigo-400" />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span className="text-emerald-400 font-medium">${comparisonData[0]?.revenue?.toLocaleString() || 0}</span>
+                            <span>{comparisonData[0]?.tickets?.toLocaleString() || 0} tickets</span>
+                            <span>{(comparisonData[0]?.scan_rate || 0).toFixed(0)}% scanned</span>
                           </div>
                         </div>
                       )}
+
+                      {/* Scan Health */}
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide">Scan Rate Health</p>
+                            <p className="text-xl font-bold text-white mt-1">{kpiData.scanRate.toFixed(1)}%</p>
+                          </div>
+                          <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                            kpiData.scanRate >= 80 ? 'bg-emerald-500/20' :
+                            kpiData.scanRate >= 60 ? 'bg-amber-500/20' : 'bg-rose-500/20'
+                          }`}>
+                            <Activity className={`h-5 w-5 ${
+                              kpiData.scanRate >= 80 ? 'text-emerald-400' :
+                              kpiData.scanRate >= 60 ? 'text-amber-400' : 'text-rose-400'
+                            }`} />
+                          </div>
+                        </div>
+                        <div className="w-full bg-white/10 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              kpiData.scanRate >= 80 ? 'bg-emerald-500' :
+                              kpiData.scanRate >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+                            }`}
+                            style={{ width: `${Math.min(kpiData.scanRate, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {kpiData.totalScans.toLocaleString()} of {kpiData.totalTickets.toLocaleString()} tickets scanned
+                        </p>
+                      </div>
+
+                      {/* Events Summary */}
+                      <div className="rounded-xl border border-white/10 bg-white/5 p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide">Events Analyzed</p>
+                            <p className="text-xl font-bold text-white mt-1">{comparisonData.length}</p>
+                          </div>
+                          <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                            <Calendar className="h-5 w-5 text-purple-400" />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {comparisonData.reduce((sum, e) => sum + (e.tickets || 0), 0).toLocaleString()} total tickets sold
+                        </p>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
@@ -887,7 +1151,7 @@ const AdvancedAnalytics = () => {
               {/* Tab 2: Sales Performance */}
               <TabsContent value="sales" className="space-y-6">
                 {/* Tier Distribution */}
-                <Card className="border border-border/50">
+                <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5 text-primary" />
@@ -912,7 +1176,7 @@ const AdvancedAnalytics = () => {
                         label={({ tier, percent }) => `${tier} ${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
                       >
-                        {tierPerformance.map((entry, index) => (
+                        {tierPerformance.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
@@ -931,7 +1195,7 @@ const AdvancedAnalytics = () => {
               </Card>
 
                 {/* Event Comparison */}
-                <Card className="border border-border/50">
+                <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <BarChart3 className="h-5 w-5 text-primary" />
@@ -971,7 +1235,7 @@ const AdvancedAnalytics = () => {
                 </Card>
 
             {/* Ticket Tier Performance */}
-                <Card className="border border-border/50">
+                <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                     <CardTitle>Ticket Tier Performance</CardTitle>
                     <CardDescription className="text-muted-foreground">
@@ -1004,7 +1268,7 @@ const AdvancedAnalytics = () => {
               {/* Tab 3: Operations */}
               <TabsContent value="operations" className="space-y-6">
             {/* Staff Performance */}
-                <Card className="border border-border/50">
+                <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-primary" />
@@ -1048,7 +1312,7 @@ const AdvancedAnalytics = () => {
 
                 {/* Scan Rates Breakdown */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card className="border border-border/50">
+                  <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                       <CardTitle>Scan Rate Summary</CardTitle>
                       <CardDescription className="text-muted-foreground">
@@ -1084,7 +1348,7 @@ const AdvancedAnalytics = () => {
                   </Card>
 
                   {/* Attendance Patterns */}
-                  <Card className="border border-border/50">
+                  <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
                     <CardHeader>
                       <CardTitle>Attendance Patterns</CardTitle>
                       <CardDescription className="text-muted-foreground">

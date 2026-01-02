@@ -5,6 +5,7 @@ import { isSupabaseConfigured } from "@/integrations/supabase/client";
 import { setUserRole, getUserRole, type UserRole } from "@/lib/auth";
 import { useAuth, useRole } from "@/contexts/AuthContext";
 import { validateInvitation, consumeInvitation } from "@/lib/invitation-service";
+import { logAuditEvent } from "@/lib/audit-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +32,7 @@ const Auth = () => {
   const [validatingInvite, setValidatingInvite] = useState(!!inviteToken);
   const [inviteValid, setInviteValid] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [invitationData, setInvitationData] = useState<{ role?: 'employee' | 'owner' | 'promoter' } | null>(null);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   
@@ -46,7 +48,7 @@ const Auth = () => {
       return;
     }
     const userRole = getUserRole(userData);
-    if (userRole === 'owner') {
+    if (userRole === 'owner' || userRole === 'promoter') {
       navigate("/dashboard");
     } else {
       navigate("/scanner");
@@ -80,10 +82,12 @@ const Auth = () => {
 
       try {
         const validation = await validateInvitation(inviteToken);
-        if (validation.valid) {
+        if (validation.valid && validation.invitation) {
           setInviteValid(true);
           setInviteError(null);
           setIsLogin(false); // Show signup form
+          // Store invitation metadata (including role)
+          setInvitationData(validation.invitation.metadata as { role?: 'employee' | 'owner' | 'promoter' } | null);
         } else {
           setInviteValid(false);
           setInviteError(validation.error || "Invalid invitation");
@@ -184,6 +188,11 @@ const Auth = () => {
         description: "Your password has been updated. Please log in.",
       });
 
+      // Audit log: password reset
+      logAuditEvent('password_changed', 'user', 'Password reset completed', {
+        severity: 'info',
+      }).catch(() => {});
+
       // Clear reset state and show login
       setIsResetConfirm(false);
       setIsPasswordReset(false);
@@ -230,7 +239,7 @@ const Auth = () => {
           
           // Redirect based on role
           const userRole = getUserRole(data.user);
-          if (userRole === 'owner') {
+          if (userRole === 'owner' || userRole === 'promoter') {
             navigate("/dashboard");
           } else {
             navigate("/scanner");
@@ -244,6 +253,13 @@ const Auth = () => {
           title: "Welcome back!",
           description: "Successfully logged in.",
         });
+
+        // Audit log: successful login
+        logAuditEvent('login', 'user', 'User logged in', {
+          userId: data.user?.id,
+          severity: 'info',
+          metadata: { email: data.user?.email },
+        }).catch(() => {});
       } else {
         // Signup flow
         const { data, error } = await supabase.auth.signUp({
@@ -263,8 +279,12 @@ const Auth = () => {
         // Set role in user metadata after signup
         if (data.user && isSupabaseConfigured()) {
           try {
-            await setUserRole('employee');
-            
+            // Use role from invitation if available, otherwise default to employee
+            const assignedRole = (inviteToken && inviteValid && invitationData?.role)
+              ? invitationData.role
+              : 'employee';
+            await setUserRole(assignedRole);
+
             // If signing up via invitation, consume the invitation
             if (inviteToken && inviteValid) {
               await consumeInvitation(inviteToken, data.user.id);
@@ -280,18 +300,33 @@ const Auth = () => {
             title: "Account Created!",
             description: "Please check your email to verify your account before logging in.",
           });
+
+          // Audit log: user signup (pending email verification)
+          logAuditEvent('user_created', 'user', 'New user signed up (pending email verification)', {
+            userId: data.user?.id,
+            severity: 'info',
+            metadata: { email: data.user?.email, viaInvite: !!inviteToken, assignedRole: (inviteToken && inviteValid && invitationData?.role) ? invitationData.role : 'employee' },
+          }).catch(() => {});
+
           setIsLogin(true);
         } else {
           toast({
             title: "Account created!",
             description: inviteToken ? "Your invitation has been accepted. You can now log in." : "You can now log in.",
           });
-          
+
+          // Audit log: user signup successful
+          logAuditEvent('user_created', 'user', 'New user signed up successfully', {
+            userId: data.user?.id,
+            severity: 'info',
+            metadata: { email: data.user?.email, viaInvite: !!inviteToken, assignedRole: (inviteToken && inviteValid && invitationData?.role) ? invitationData.role : 'employee' },
+          }).catch(() => {});
+
           // If invited, redirect based on role after successful signup
           if (inviteToken && data.user) {
             setTimeout(() => {
               const userRole = getUserRole(data.user);
-              if (userRole === 'owner') {
+              if (userRole === 'owner' || userRole === 'promoter') {
                 navigate("/dashboard");
               } else {
                 navigate("/scanner");
@@ -579,16 +614,16 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="absolute inset-0 bg-gradient-scan opacity-50" />
       
-      <Card className="w-full max-w-md relative border-primary/20 shadow-glow-green">
-        <CardHeader className="text-center space-y-4">
+      <Card className="w-full max-w-md relative rounded-3xl bg-card border-0 text-card-foreground shadow-glow-lime">
+        <CardHeader className="text-center space-y-2 pb-4">
           <div className="flex justify-center">
-            <img 
-              src="/logo.png" 
-              alt="Maguey Logo" 
-              className="h-64 w-auto object-contain"
+            <img
+              src="/logo.png"
+              alt="Maguey Logo"
+              className="h-20 w-auto object-contain"
             />
           </div>
-          <CardTitle className="text-3xl font-bold bg-gradient-green bg-clip-text text-transparent">
+          <CardTitle className="text-2xl font-bold bg-gradient-lime bg-clip-text text-transparent">
             {inviteToken ? (
               <span className="flex items-center justify-center gap-2">
                 <UserPlus className="h-8 w-8" />
@@ -619,13 +654,13 @@ const Auth = () => {
         <CardContent>
           {/* Quick Access Selection - For Testing */}
           {!inviteToken && !isPasswordReset && !isResetConfirm && (
-            <div className="mb-6 pb-6 border-b border-primary/20">
-              <p className="text-sm font-semibold text-center mb-4 text-muted-foreground">Quick Access (Testing Mode)</p>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="mb-4 pb-4 border-b border-primary/20">
+              <p className="text-xs font-medium text-center mb-2 text-muted-foreground">Quick Access</p>
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-20 flex flex-col items-center justify-center gap-2 border-primary/30 hover:border-primary hover:bg-primary/10 transition-all"
+                  className="h-12 flex items-center justify-center gap-2 border-primary/30 hover:border-primary hover:bg-primary/10 transition-all"
                   onClick={async () => {
                     setLoading(true);
                     try {
@@ -693,14 +728,13 @@ const Auth = () => {
                   }}
                   disabled={loading}
                 >
-                  <User className="h-6 w-6 text-primary" />
-                  <span className="font-semibold">Employee</span>
-                  <span className="text-xs text-muted-foreground">Ticket Scanner</span>
+                  <User className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Employee</span>
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-20 flex flex-col items-center justify-center gap-2 border-primary/30 hover:border-primary hover:bg-primary/10 transition-all"
+                  className="h-12 flex items-center justify-center gap-2 border-primary/30 hover:border-primary hover:bg-primary/10 transition-all"
                   onClick={async () => {
                     setLoading(true);
                     try {
@@ -774,14 +808,10 @@ const Auth = () => {
                   }}
                   disabled={loading}
                 >
-                  <Crown className="h-6 w-6 text-primary" />
-                  <span className="font-semibold">Owner</span>
-                  <span className="text-xs text-muted-foreground">Dashboard</span>
+                  <Crown className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Owner</span>
                 </Button>
               </div>
-              <p className="text-xs text-center text-muted-foreground mt-3">
-                ⚠️ Testing mode - creates mock user session
-              </p>
             </div>
           )}
 
@@ -854,7 +884,7 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-green hover:shadow-glow-green transition-all"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
                 disabled={loading}
               >
                 {loading ? "Sending..." : "Send Reset Link"}
@@ -936,7 +966,7 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                className="w-full bg-gradient-green hover:shadow-glow-green transition-all"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all"
                 disabled={loading || password !== confirmPassword || password.length < 8}
               >
                 {loading ? "Resetting..." : "Reset Password"}
@@ -961,7 +991,7 @@ const Auth = () => {
 
           {/* Regular Login/Signup Form */}
           {!isPasswordReset && !isResetConfirm && (
-          <form onSubmit={handleAuth} className="space-y-4">
+          <form onSubmit={handleAuth} className="space-y-3">
             {!isLogin && (
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
@@ -1040,46 +1070,36 @@ const Auth = () => {
           )}
 
           {/* Demo Login Section - Hide when using invitation */}
-          {!inviteToken && (
-            <div className="mt-6 pt-6 border-t border-primary/10">
-              <div className="text-center space-y-3">
-                <p className="text-sm text-muted-foreground">Quick Access</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full border-accent/20 bg-accent/5 hover:bg-accent/10"
-                  onClick={handleDemoLogin}
-                  disabled={loading}
-                >
-                  <TestTube className="mr-2 h-4 w-4 text-accent" />
-                  Demo Login (Auto)
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Creates or logs into demo account automatically
-                </p>
-              </div>
+          {!inviteToken && !isPasswordReset && !isResetConfirm && (
+            <div className="mt-4 pt-4 border-t border-primary/10">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground hover:text-foreground"
+                onClick={handleDemoLogin}
+                disabled={loading}
+              >
+                <TestTube className="mr-2 h-3 w-3" />
+                Demo Login
+              </Button>
             </div>
           )}
 
           {/* Promote to Owner Section - For Testing/Development */}
           {user && role === 'employee' && (
-            <div className="mt-6 pt-6 border-t border-destructive/10">
-              <div className="text-center space-y-3">
-                <p className="text-sm text-muted-foreground">Development Access</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full border-primary/20 bg-primary/5 hover:bg-primary/10"
-                  onClick={handlePromoteToOwner}
-                  disabled={promoting}
-                >
-                  <Shield className="mr-2 h-4 w-4 text-primary" />
-                  {promoting ? "Promoting..." : "Promote to Owner"}
-                </Button>
-                <p className="text-xs text-destructive">
-                  ⚠️ This promotes your current account to owner role with full access
-                </p>
-              </div>
+            <div className="mt-3 pt-3 border-t border-destructive/10">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-destructive/70 hover:text-destructive"
+                onClick={handlePromoteToOwner}
+                disabled={promoting}
+              >
+                <Shield className="mr-2 h-3 w-3" />
+                {promoting ? "Promoting..." : "Promote to Owner"}
+              </Button>
             </div>
           )}
         </CardContent>

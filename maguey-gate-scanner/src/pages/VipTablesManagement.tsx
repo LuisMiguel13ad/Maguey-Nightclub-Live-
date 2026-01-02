@@ -38,7 +38,6 @@ import {
   Mail,
   Calendar,
   Clock,
-  Plus,
   Search,
   CheckCircle2,
   XCircle,
@@ -60,7 +59,6 @@ import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import {
   getReservationsForEvent,
-  createWalkInReservation,
   updateReservationStatus,
   checkInAllGuests,
   getEventTableStats,
@@ -105,24 +103,9 @@ const VipTablesManagement = () => {
     totalRevenue: number;
     totalGuests: number;
     checkedInGuests: number;
-    walkInCount: number;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Walk-in dialog state
-  const [showWalkInDialog, setShowWalkInDialog] = useState(false);
-  const [walkInData, setWalkInData] = useState({
-    tableId: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    guestCount: 4,
-    bottleChoice: '',
-    notes: '',
-  });
-  const [isCreatingWalkIn, setIsCreatingWalkIn] = useState(false);
 
   // Reservation detail dialog
   const [selectedReservation, setSelectedReservation] = useState<TableReservation | null>(null);
@@ -146,13 +129,13 @@ const VipTablesManagement = () => {
     package_description: string | null;
   } | null>(null);
 
-  // Redirect if not owner
+  // Redirect if not owner or promoter
   useEffect(() => {
-    if (role !== 'owner') {
+    if (role !== 'owner' && role !== 'promoter') {
       toast({
         variant: 'destructive',
         title: 'Access Denied',
-        description: 'VIP Tables management is only available to owners.',
+        description: 'VIP Tables is only available to owners and promoters.',
       });
       navigate('/scanner');
     }
@@ -235,11 +218,12 @@ const VipTablesManagement = () => {
 
     setIsLoading(true);
     try {
-      // Fetch event VIP tables directly from event_vip_tables
+      // Fetch event VIP tables directly from event_vip_tables (only tables 1-20)
       const { data: eventTablesData, error: tablesError } = await supabase
         .from('event_vip_tables')
         .select('*')
         .eq('event_id', selectedEventId)
+        .lte('table_number', 20)
         .order('table_number', { ascending: true });
 
       if (tablesError) {
@@ -336,7 +320,6 @@ const VipTablesManagement = () => {
           .reduce((sum, r) => sum + (r.amount_paid_cents / 100), 0),
         totalGuests: (vipReservations || []).length * 6, // Approximation
         checkedInGuests: (vipReservations || []).filter(r => r.checked_in_at).length,
-        walkInCount: 0,
       });
 
     } catch (error) {
@@ -348,63 +331,6 @@ const VipTablesManagement = () => {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleCreateWalkIn = async () => {
-    if (!selectedEventId || !user) return;
-
-    // Validate
-    if (!walkInData.tableId || !walkInData.firstName || !walkInData.lastName || !walkInData.phone) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing Information',
-        description: 'Please fill in all required fields',
-      });
-      return;
-    }
-
-    setIsCreatingWalkIn(true);
-    try {
-      await createWalkInReservation({
-        eventId: selectedEventId,
-        tableId: walkInData.tableId,
-        customerFirstName: walkInData.firstName,
-        customerLastName: walkInData.lastName,
-        customerEmail: walkInData.email || `walkin-${Date.now()}@maguey.local`,
-        customerPhone: walkInData.phone,
-        guestCount: walkInData.guestCount,
-        bottleChoice: walkInData.bottleChoice || undefined,
-        notes: walkInData.notes || undefined,
-        createdBy: user.id,
-      });
-
-      toast({
-        title: 'Walk-in Created',
-        description: 'VIP table reservation created successfully',
-      });
-
-      setShowWalkInDialog(false);
-      setWalkInData({
-        tableId: '',
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        guestCount: 4,
-        bottleChoice: '',
-        notes: '',
-      });
-      loadReservations();
-    } catch (error) {
-      console.error('Error creating walk-in:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to create reservation',
-      });
-    } finally {
-      setIsCreatingWalkIn(false);
     }
   };
 
@@ -523,7 +449,7 @@ const VipTablesManagement = () => {
     return <Badge className={variant.className}>{variant.label}</Badge>;
   };
 
-  if (role !== 'owner') return null;
+  if (role !== 'owner' && role !== 'promoter') return null;
 
   const selectedEvent = events.find((e) => e.id === selectedEventId);
 
@@ -531,37 +457,31 @@ const VipTablesManagement = () => {
     <OwnerPortalLayout
       title="VIP Tables"
       subtitle="Manage VIP table reservations"
-      description="View reservations, add walk-ins, and track arrivals"
+      description="View reservations and track arrivals"
       actions={
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={loadReservations} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button onClick={() => setShowWalkInDialog(true)} disabled={availableTables.length === 0}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Walk-in
-          </Button>
-        </div>
+        <Button variant="outline" onClick={loadReservations} disabled={isLoading} className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20">
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       }
     >
       <div className="space-y-6">
         {/* Event Selector */}
-        <Card>
+        <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
-                <Label htmlFor="event-select">Select Event</Label>
+                <Label htmlFor="event-select" className="text-sm font-medium text-slate-300">Select Event</Label>
                 <Select
                   value={selectedEventId || ''}
                   onValueChange={setSelectedEventId}
                 >
-                  <SelectTrigger id="event-select">
+                  <SelectTrigger id="event-select" className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
                     <SelectValue placeholder="Select an event" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-[#0b132f] border-indigo-500/30">
                     {events.map((event) => (
-                      <SelectItem key={event.id} value={event.id}>
+                      <SelectItem key={event.id} value={event.id} className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
                         {event.name} - {format(new Date(event.event_date), 'MMM d, yyyy')}
                       </SelectItem>
                     ))}
@@ -569,15 +489,15 @@ const VipTablesManagement = () => {
                 </Select>
               </div>
               <div className="flex-1">
-                <Label htmlFor="search">Search Reservations</Label>
+                <Label htmlFor="search" className="text-sm font-medium text-slate-300">Search Reservations</Label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   <Input
                     id="search"
                     placeholder="Name, phone, or reservation #"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
                   />
                 </div>
               </div>
@@ -587,8 +507,8 @@ const VipTablesManagement = () => {
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            <Card className="border-primary/20">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Crown className="h-5 w-5 text-yellow-500" />
@@ -600,7 +520,7 @@ const VipTablesManagement = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-green-500/20">
+            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5 text-green-500" />
@@ -612,7 +532,7 @@ const VipTablesManagement = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-blue-500/20">
+            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-blue-500" />
@@ -624,7 +544,7 @@ const VipTablesManagement = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-purple-500/20">
+            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <UserCheck className="h-5 w-5 text-purple-500" />
@@ -636,7 +556,7 @@ const VipTablesManagement = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
               <CardContent className="p-4">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -647,29 +567,17 @@ const VipTablesManagement = () => {
                 </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-orange-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Walk-ins</p>
-                    <p className="text-2xl font-bold">{stats.walkInCount}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
 
         {/* Main Content with Tabs */}
         <Tabs defaultValue="floor-plan" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="floor-plan" className="gap-2">
+          <TabsList className="bg-indigo-500/10 border border-indigo-500/20 p-1 rounded-xl">
+            <TabsTrigger value="floor-plan" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
               <Map className="w-4 h-4" />
               Floor Plan
             </TabsTrigger>
-            <TabsTrigger value="reservations" className="gap-2">
+            <TabsTrigger value="reservations" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
               <List className="w-4 h-4" />
               Reservations ({filteredReservations.length})
             </TabsTrigger>
@@ -677,7 +585,7 @@ const VipTablesManagement = () => {
 
           {/* Floor Plan Tab */}
           <TabsContent value="floor-plan">
-            <Card>
+            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader className="pb-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
@@ -702,7 +610,7 @@ const VipTablesManagement = () => {
                       setIsEditMode(!isEditMode);
                       setEditingTableId(null);
                     }}
-                    className={`gap-2 ${isEditMode ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-amber-500/50 text-amber-500 hover:bg-amber-500/10'}`}
+                    className={`gap-2 ${isEditMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10'}`}
                   >
                     <Edit className="h-4 w-4" />
                     {isEditMode ? 'Done Editing' : 'Edit Map & Pricing'}
@@ -774,7 +682,7 @@ const VipTablesManagement = () => {
                     {/* Edit Panel - Only show in edit mode */}
                     {isEditMode && (
                       <div className="w-72 flex-shrink-0">
-                        <Card className="border-primary/20 sticky top-4">
+                        <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] sticky top-4">
                           <CardHeader className="p-3 pb-2">
                             <CardTitle className="text-sm flex items-center gap-2">
                               <Edit className="w-3 h-3" />
@@ -953,7 +861,7 @@ const VipTablesManagement = () => {
 
           {/* Reservations Tab */}
           <TabsContent value="reservations">
-            <Card>
+            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Crown className="h-5 w-5 text-yellow-500" />
@@ -1002,12 +910,7 @@ const VipTablesManagement = () => {
                             <Crown className="h-4 w-4 text-yellow-500" />
                             <div>
                               <p className="font-semibold">{reservation.vip_table?.table_name}</p>
-                              <div className="flex items-center gap-1">
-                                {getTierBadge(reservation.vip_table?.tier || 'regular')}
-                                {reservation.is_walk_in && (
-                                  <Badge variant="outline" className="text-xs">Walk-in</Badge>
-                                )}
-                              </div>
+                              {getTierBadge(reservation.vip_table?.tier || 'regular')}
                             </div>
                           </div>
                         </TableCell>
@@ -1092,135 +995,6 @@ const VipTablesManagement = () => {
         </Card>
           </TabsContent>
         </Tabs>
-
-        {/* Walk-in Dialog */}
-        <Dialog open={showWalkInDialog} onOpenChange={setShowWalkInDialog}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Walk-in Reservation</DialogTitle>
-              <DialogDescription>
-                Create a VIP table reservation for a walk-in customer
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Select Table *</Label>
-                <Select
-                  value={walkInData.tableId}
-                  onValueChange={(value) => setWalkInData({ ...walkInData, tableId: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose available table" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTables.map((table) => (
-                      <SelectItem key={table.id} value={table.id}>
-                        {table.table_name} - ${table.price} ({table.guest_capacity} guests)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>First Name *</Label>
-                  <Input
-                    value={walkInData.firstName}
-                    onChange={(e) => setWalkInData({ ...walkInData, firstName: e.target.value })}
-                    placeholder="John"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Last Name *</Label>
-                  <Input
-                    value={walkInData.lastName}
-                    onChange={(e) => setWalkInData({ ...walkInData, lastName: e.target.value })}
-                    placeholder="Doe"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Phone Number *</Label>
-                <Input
-                  value={walkInData.phone}
-                  onChange={(e) => setWalkInData({ ...walkInData, phone: e.target.value })}
-                  placeholder="(555) 123-4567"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Email (optional)</Label>
-                <Input
-                  type="email"
-                  value={walkInData.email}
-                  onChange={(e) => setWalkInData({ ...walkInData, email: e.target.value })}
-                  placeholder="john@example.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Number of Guests</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  value={walkInData.guestCount}
-                  onChange={(e) =>
-                    setWalkInData({ ...walkInData, guestCount: parseInt(e.target.value) || 1 })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Bottle Choice (optional)</Label>
-                <Select
-                  value={walkInData.bottleChoice}
-                  onValueChange={(value) => setWalkInData({ ...walkInData, bottleChoice: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select bottle" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {BOTTLE_CHOICES.map((bottle) => (
-                      <SelectItem key={bottle.id} value={bottle.id}>
-                        {bottle.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Notes (optional)</Label>
-                <Textarea
-                  value={walkInData.notes}
-                  onChange={(e) => setWalkInData({ ...walkInData, notes: e.target.value })}
-                  placeholder="Any special requests or notes..."
-                  rows={2}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowWalkInDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateWalkIn} disabled={isCreatingWalkIn}>
-                {isCreatingWalkIn ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  'Create Reservation'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {/* Reservation Detail Dialog */}
         <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>

@@ -6,7 +6,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { isSupabaseConfigured } from "@/integrations/supabase/client";
 import { useAuth, useRole } from "@/contexts/AuthContext";
 import { useBranding } from "@/contexts/BrandingContext";
 import OwnerPortalLayout from "@/components/layout/OwnerPortalLayout";
@@ -26,15 +25,8 @@ import {
   Save,
   RefreshCw,
   Globe,
-  Bell,
   Users,
   Clock,
-  CheckCircle2,
-  AlertCircle,
-  Eye,
-  EyeOff,
-  Copy,
-  ExternalLink,
   Loader2,
 } from "lucide-react";
 import {
@@ -173,7 +165,12 @@ const Settings = () => {
       subtitle="SETTINGS"
       description="Configure venue settings, security, and branding"
       actions={
-        <Button variant="outline" onClick={loadSettings} disabled={isLoading}>
+        <Button
+          variant="outline"
+          onClick={loadSettings}
+          disabled={isLoading}
+          className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20"
+        >
           <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
@@ -202,7 +199,7 @@ const Settings = () => {
 
           {/* General Settings Tab */}
           <TabsContent value="general" className="space-y-6">
-            <Card>
+            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Globe className="h-5 w-5" />
@@ -220,6 +217,7 @@ const Settings = () => {
                       id="venueName"
                       value={generalSettings.venueName}
                       onChange={(e) => setGeneralSettings({ ...generalSettings, venueName: e.target.value })}
+                      className="bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                     />
                   </div>
                   <div className="space-y-2">
@@ -228,6 +226,7 @@ const Settings = () => {
                       id="venueCity"
                       value={generalSettings.venueCity}
                       onChange={(e) => setGeneralSettings({ ...generalSettings, venueCity: e.target.value })}
+                      className="bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                     />
                   </div>
                   <div className="space-y-2 md:col-span-2">
@@ -236,6 +235,7 @@ const Settings = () => {
                       id="venueAddress"
                       value={generalSettings.venueAddress}
                       onChange={(e) => setGeneralSettings({ ...generalSettings, venueAddress: e.target.value })}
+                      className="bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                     />
                   </div>
                   <div className="space-y-2">
@@ -244,14 +244,14 @@ const Settings = () => {
                       value={generalSettings.timezone}
                       onValueChange={(value) => setGeneralSettings({ ...generalSettings, timezone: value })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                        <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                        <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
-                        <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                      <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                        <SelectItem value="America/New_York" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Eastern Time (ET)</SelectItem>
+                        <SelectItem value="America/Chicago" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Central Time (CT)</SelectItem>
+                        <SelectItem value="America/Denver" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Mountain Time (MT)</SelectItem>
+                        <SelectItem value="America/Los_Angeles" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Pacific Time (PT)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -262,13 +262,14 @@ const Settings = () => {
                       type="number"
                       value={generalSettings.defaultEventCapacity}
                       onChange={(e) => setGeneralSettings({ ...generalSettings, defaultEventCapacity: parseInt(e.target.value) || 0 })}
+                      className="bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="h-5 w-5" />
@@ -308,9 +309,13 @@ const Settings = () => {
                     max={120}
                     value={generalSettings.scannerTimeout}
                     onChange={(e) => setGeneralSettings({ ...generalSettings, scannerTimeout: parseInt(e.target.value) || 30 })}
+                    className="bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                   />
                 </div>
-                <Button onClick={handleSaveGeneral}>
+                <Button
+                  onClick={handleSaveGeneral}
+                  className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0"
+                >
                   <Save className="h-4 w-4 mr-2" />
                   Save General Settings
                 </Button>
@@ -320,7 +325,7 @@ const Settings = () => {
 
           {/* Security Settings Tab */}
           <TabsContent value="security" className="space-y-6">
-            <Card>
+            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5" />
@@ -362,6 +367,7 @@ const Settings = () => {
                         max={168}
                         value={securitySettings.session_timeout_hours}
                         onChange={(e) => setSecuritySettings({ ...securitySettings, session_timeout_hours: parseInt(e.target.value) || 24 })}
+                        className="bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                       />
                     </div>
                     <div className="space-y-2">
@@ -373,14 +379,23 @@ const Settings = () => {
                         max={10}
                         value={securitySettings.max_login_attempts}
                         onChange={(e) => setSecuritySettings({ ...securitySettings, max_login_attempts: parseInt(e.target.value) || 5 })}
+                        className="bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleSaveSecurity} disabled={saving}>
+                      <Button
+                        onClick={handleSaveSecurity}
+                        disabled={saving}
+                        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0"
+                      >
                         <Save className="h-4 w-4 mr-2" />
                         {saving ? "Saving..." : "Save Security Settings"}
                       </Button>
-                      <Button variant="outline" onClick={() => navigate("/security")}>
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate("/security")}
+                        className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20"
+                      >
                         Advanced Settings
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
@@ -392,7 +407,7 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
@@ -421,7 +436,7 @@ const Settings = () => {
 
           {/* Branding Settings Tab */}
           <TabsContent value="branding" className="space-y-6">
-            <Card>
+            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Palette className="h-5 w-5" />
@@ -440,12 +455,12 @@ const Settings = () => {
                         type="color"
                         value={primaryColor}
                         onChange={(e) => setPrimaryColor(e.target.value)}
-                        className="w-10 h-10 rounded cursor-pointer"
+                        className="w-10 h-10 rounded cursor-pointer border border-indigo-500/30"
                       />
                       <Input
                         value={primaryColor}
                         onChange={(e) => setPrimaryColor(e.target.value)}
-                        className="font-mono"
+                        className="font-mono bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                       />
                     </div>
                   </div>
@@ -456,19 +471,23 @@ const Settings = () => {
                         type="color"
                         value={accentColor}
                         onChange={(e) => setAccentColor(e.target.value)}
-                        className="w-10 h-10 rounded cursor-pointer"
+                        className="w-10 h-10 rounded cursor-pointer border border-indigo-500/30"
                       />
                       <Input
                         value={accentColor}
                         onChange={(e) => setAccentColor(e.target.value)}
-                        className="font-mono"
+                        className="font-mono bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-4 flex gap-2">
-                  <Button variant="outline" onClick={() => navigate("/branding")}>
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate("/branding")}
+                    className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20"
+                  >
                     <Palette className="h-4 w-4 mr-2" />
                     Full Branding Editor
                     <ArrowRight className="h-4 w-4 ml-2" />
@@ -477,7 +496,7 @@ const Settings = () => {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
                 <CardTitle>Brand Preview</CardTitle>
                 <CardDescription>See how your branding looks</CardDescription>

@@ -33,7 +33,7 @@ export const RevenueTrend = ({
   const formattedTrend = `${trendPositive ? "+" : ""}${trendDelta.toFixed(1)}%`;
 
   return (
-    <Card className="h-full">
+    <Card className="h-full rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
       <CardHeader className="space-y-2">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -43,7 +43,7 @@ export const RevenueTrend = ({
           <div
             className={cn(
               "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
-              trendPositive ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600",
+              trendPositive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive",
             )}
           >
             <span>{trendPositive ? "▲" : "▼"}</span>
@@ -69,11 +69,11 @@ export const RevenueTrend = ({
           config={{
             revenue: {
               label: "Revenue",
-              theme: { light: "#6366f1", dark: "#818cf8" },
+              theme: { light: "hsl(66 70% 54%)", dark: "hsl(66 70% 54%)" },
             },
             tickets: {
               label: "Tickets",
-              theme: { light: "#22c55e", dark: "#4ade80" },
+              theme: { light: "hsl(142 76% 36%)", dark: "hsl(142 76% 36%)" },
             },
           }}
           className="h-[280px]"

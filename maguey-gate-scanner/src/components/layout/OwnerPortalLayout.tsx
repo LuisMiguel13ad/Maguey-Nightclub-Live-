@@ -2,6 +2,7 @@ import { type ReactNode, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { localStorageService } from "@/lib/localStorage";
+import { logAuditEvent } from "@/lib/audit-service";
 import { useAuth, useRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +16,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  ScanLine,
-  Settings,
   ShoppingCart,
   Users,
   Wine,
@@ -32,47 +31,40 @@ interface OwnerPortalLayoutProps {
   children: ReactNode;
 }
 
+// Navigation items with role-based access control
+// ownerOnly: true = only visible to owners
+// All items visible to owners, filtered items visible to promoters
 const sidebarSections = [
   {
     title: "MAIN",
     items: [
       { title: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
       { title: "Events", path: "/events", icon: Calendar },
-      { title: "Scanner", path: "/scanner", icon: ScanLine },
     ],
   },
   {
     title: "SALES",
     items: [
-      { title: "Orders", path: "/orders", icon: ShoppingCart },
+      { title: "Ticket Sales", path: "/orders", icon: ShoppingCart },
       { title: "VIP Tables", path: "/vip-tables", icon: Wine },
       { title: "Analytics", path: "/analytics", icon: BarChart3 },
     ],
   },
   {
     title: "TEAM",
+    ownerOnly: true, // Hide entire section for promoters
     items: [
-      { title: "Staff", path: "/team", icon: Users },
-      { title: "Audit Log", path: "/audit-log", icon: FileText },
+      { title: "Staff", path: "/team", icon: Users, ownerOnly: true },
+      { title: "Audit Log", path: "/audit-log", icon: FileText, ownerOnly: true },
     ],
   },
   {
     title: "SETTINGS",
+    ownerOnly: true, // Hide settings for promoters
     items: [
-      { title: "Notifications", path: "/notifications/preferences", icon: Bell },
-      { title: "Settings", path: "/settings", icon: Settings },
+      { title: "Notifications", path: "/notifications/preferences", icon: Bell, ownerOnly: true },
     ],
   },
-  // REMOVED ITEMS (commented out for reference):
-  // - Sites (/sites)
-  // - Devices (/devices)
-  // - Door Counters (/door-counters)
-  // - Queue (/queue)
-  // - Waitlist (/waitlist)
-  // - Branding (/branding) - merged into Settings
-  // - Security (/security) - merged into Settings
-  // - Staff Scheduling (/staff-scheduling)
-  // - VIP Scanner (/scan/vip) - can access via Scanner page
 ];
 
 export const OwnerPortalLayout = ({ title, subtitle, description, actions, hero, children }: OwnerPortalLayoutProps) => {
@@ -85,6 +77,13 @@ export const OwnerPortalLayout = ({ title, subtitle, description, actions, hero,
   const isActivePath = (path: string) => location.pathname === path;
 
   const handleSignOut = async () => {
+    // Audit log: user logout
+    await logAuditEvent('logout', 'user', `${role?.charAt(0).toUpperCase()}${role?.slice(1)} logged out`, {
+      userId: user?.id,
+      severity: 'info',
+      metadata: { role, email: user?.email },
+    }).catch(() => {}); // Non-blocking
+
     try {
       if (isSupabaseConfigured()) {
         await supabase.auth.signOut();
@@ -96,6 +95,17 @@ export const OwnerPortalLayout = ({ title, subtitle, description, actions, hero,
     }
   };
 
+  // Filter sections based on user role
+  const filteredSections = sidebarSections
+    .filter((section) => !section.ownerOnly || role === 'owner')
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !(item as any).ownerOnly || role === 'owner'),
+    }))
+    .filter((section) => section.items.length > 0);
+
+  const suiteTitle = role === 'owner' ? 'Owner Suite' : role === 'promoter' ? 'Promoter View' : 'Staff Portal';
+
   const renderSidebar = (className: string, showCloseButton = false) => (
     <aside className={cn(className, "overflow-y-auto")}>
       <div className="flex h-full flex-col gap-8 px-6 py-8">
@@ -104,7 +114,7 @@ export const OwnerPortalLayout = ({ title, subtitle, description, actions, hero,
             <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-blue-500 shadow-lg shadow-indigo-900/40" />
             <div>
               <p className="text-[10px] uppercase tracking-[0.3em] text-slate-400">Maguey</p>
-              <p className="text-lg font-semibold text-white">Owner Suite</p>
+              <p className="text-lg font-semibold text-white">{suiteTitle}</p>
             </div>
           </div>
           {showCloseButton && (
@@ -120,7 +130,7 @@ export const OwnerPortalLayout = ({ title, subtitle, description, actions, hero,
         </div>
 
         <nav className="flex-1 space-y-8">
-          {sidebarSections.map((section) => (
+          {filteredSections.map((section) => (
             <div key={section.title} className="space-y-3">
               <p className="text-xs uppercase tracking-[0.3em] text-slate-500">{section.title}</p>
               <div className="space-y-2">
@@ -148,12 +158,7 @@ export const OwnerPortalLayout = ({ title, subtitle, description, actions, hero,
                       >
                         <Icon className="h-4 w-4" />
                       </span>
-                      <div className="text-left">
-                        <p>{item.title}</p>
-                        {item.path === "/scanner" && (
-                          <span className="text-[11px] font-normal text-indigo-300">Quick access to scan</span>
-                        )}
-                      </div>
+                      <span>{item.title}</span>
                     </button>
                   );
                 })}

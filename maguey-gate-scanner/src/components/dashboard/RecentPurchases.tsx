@@ -39,7 +39,7 @@ export const RecentPurchases = ({ orders, currencyFormatter }: RecentPurchasesPr
   };
 
   return (
-    <Card>
+    <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>

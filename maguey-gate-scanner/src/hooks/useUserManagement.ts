@@ -19,6 +19,30 @@ export const useUserManagement = () => {
   const { toast } = useToast();
 
   /**
+   * Ensure current user has a profile in user_profiles table
+   * This syncs auth users with the profiles table
+   */
+  const ensureUserProfile = async (): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      // Upsert current user's profile
+      await supabase.from('user_profiles').upsert({
+        id: user.id,
+        email: user.email || '',
+        role: user.user_metadata?.role || 'employee',
+        full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+        created_at: user.created_at || new Date().toISOString(),
+        last_sign_in_at: user.last_sign_in_at || null,
+      }, { onConflict: 'id' });
+    } catch (error) {
+      // Silently fail - the table may not exist yet
+      console.warn('Could not sync user profile:', error);
+    }
+  };
+
+  /**
    * Get all users - Note: In production, this should be a server-side function
    * For now, we'll use a user_profiles table approach
    */
@@ -29,8 +53,10 @@ export const useUserManagement = () => {
 
     setLoading(true);
     try {
-      // For now, we'll query from a user_profiles table
-      // In production, use auth.admin.listUsers() from a server function
+      // First, ensure current user's profile exists
+      await ensureUserProfile();
+
+      // Query from user_profiles table
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -38,7 +64,7 @@ export const useUserManagement = () => {
 
       if (error) {
         console.error('Error fetching users:', error);
-        
+
         // Fallback: Return current user only if table doesn't exist
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -51,7 +77,7 @@ export const useUserManagement = () => {
             full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
           }];
         }
-        
+
         return [];
       }
 
@@ -63,7 +89,7 @@ export const useUserManagement = () => {
         title: 'Error',
         description: 'Failed to fetch users. Using fallback.',
       });
-      
+
       // Return current user as fallback
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -76,7 +102,7 @@ export const useUserManagement = () => {
           full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
         }];
       }
-      
+
       return [];
     } finally {
       setLoading(false);
@@ -157,14 +183,21 @@ export const useUserManagement = () => {
   };
 
   /**
-   * Promote a user to owner role
+   * Set user role to owner
    */
   const promoteToOwner = async (userId: string): Promise<boolean> => {
     return updateUserRole(userId, 'owner');
   };
 
   /**
-   * Demote a user to employee role
+   * Set user role to promoter
+   */
+  const setRoleToPromoter = async (userId: string): Promise<boolean> => {
+    return updateUserRole(userId, 'promoter');
+  };
+
+  /**
+   * Set user role to employee
    */
   const demoteToEmployee = async (userId: string): Promise<boolean> => {
     return updateUserRole(userId, 'employee');
@@ -235,6 +268,7 @@ export const useUserManagement = () => {
     getAllUsers,
     updateUserRole,
     promoteToOwner,
+    setRoleToPromoter,
     demoteToEmployee,
     deleteUser,
     loading,

@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { isSupabaseConfigured, supabase } from "@/integrations/supabase/client";
 import { localStorageService } from "@/lib/localStorage";
+import { logAuditEvent } from "@/lib/audit-service";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Menu, QrCode, ListChecks, Settings, LogOut, X } from "lucide-react";
 import RoleSwitcher from "@/components/RoleSwitcher";
@@ -48,6 +48,13 @@ export const EmployeePortalLayout = ({
   }, [user?.email]);
 
   const handleSignOut = async () => {
+    // Audit log: employee logout
+    await logAuditEvent('logout', 'user', 'Employee logged out', {
+      userId: user?.id,
+      severity: 'info',
+      metadata: { role: 'employee', email: user?.email },
+    }).catch(() => {}); // Non-blocking
+
     try {
       if (isSupabaseConfigured()) {
         await supabase.auth.signOut();
@@ -62,14 +69,19 @@ export const EmployeePortalLayout = ({
   const renderNav = () => (
     <div className="flex flex-col gap-4 px-6 py-6">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.3em] text-purple-200/70">Maguey</p>
-          <p className="text-lg font-semibold text-white">Crew Suite</p>
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-2xl bg-gradient-lime flex items-center justify-center">
+            <span className="text-lg font-bold text-primary-foreground">M</span>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-widest text-sidebar-muted">Maguey</p>
+            <p className="text-base font-semibold text-sidebar-foreground">Crew Suite</p>
+          </div>
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="text-purple-100/70 hover:text-white"
+          className="text-sidebar-muted hover:text-sidebar-foreground hover:bg-white/10"
           onClick={() => setMenuOpen(false)}
         >
           <X className="h-5 w-5" />
@@ -88,26 +100,26 @@ export const EmployeePortalLayout = ({
               }}
               className={cn(
                 "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all",
-                isActive ? "bg-white/15 text-white shadow-lg shadow-purple-900/40" : "text-purple-50/70 hover:bg-white/5",
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground",
               )}
             >
-              <span
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-purple-100",
-                  isActive && "bg-purple-500/30 text-white",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-              </span>
-              <p>{item.title}</p>
+              <Icon className="h-5 w-5" />
+              <span>{item.title}</span>
             </button>
           );
         })}
       </nav>
-      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <p className="text-xs text-purple-100/70">Signed in</p>
-        <p className="text-sm font-semibold text-white">{user?.email ?? "staff@venue.com"}</p>
-        <Button variant="ghost" size="sm" className="mt-3 text-purple-100/80 hover:text-white" onClick={handleSignOut}>
+      <div className="rounded-2xl border border-border-dark bg-white/5 p-4">
+        <p className="text-xs text-sidebar-muted">Signed in</p>
+        <p className="text-sm font-semibold text-sidebar-foreground">{user?.email ?? "staff@venue.com"}</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mt-3 text-sidebar-muted hover:text-sidebar-foreground hover:bg-white/10"
+          onClick={handleSignOut}
+        >
           <LogOut className="mr-2 h-4 w-4" />
           Logout
         </Button>
@@ -116,51 +128,57 @@ export const EmployeePortalLayout = ({
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#140327] via-[#0a0116] to-[#05000b] text-purple-50">
-      <div className="sticky top-0 z-40 border-b border-white/5 bg-[#090015]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 px-4 py-4">
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-40 border-b border-border bg-card backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4">
           <div className="flex min-w-0 flex-1 items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-2xl border border-white/10 bg-white/5 text-white hover:bg-white/10"
+              className="rounded-2xl border border-border-dark bg-white/5 text-card-foreground hover:bg-white/10"
               onClick={() => setMenuOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </Button>
             <div>
-              {subtitle && <p className="text-[11px] uppercase tracking-[0.3em] text-purple-200/70">{subtitle}</p>}
-              {title && <h1 className="text-xl font-semibold text-white">{title}</h1>}
-              {description && <p className="text-sm text-purple-100/70">{description}</p>}
+              {subtitle && <p className="text-[11px] uppercase tracking-widest text-muted-foreground">{subtitle}</p>}
+              {title && <h1 className="text-xl font-semibold text-card-foreground">{title}</h1>}
+              {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
           </div>
           <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
-          <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
-            {actions}
-            <RoleSwitcher />
-          </div>
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-sm font-semibold">
+            <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
+              {actions}
+              <RoleSwitcher />
+            </div>
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-primary/20 text-primary text-sm font-semibold">
               {initials}
             </div>
           </div>
         </div>
         {hero && (
-          <div className="mx-auto w-full max-w-4xl px-4 pb-4">
+          <div className="mx-auto w-full max-w-7xl px-4 pb-4">
             {hero}
           </div>
         )}
       </div>
 
-      <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 pb-28">{children}</div>
+      {/* Main content */}
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 pb-28">{children}</div>
 
+      {/* Mobile sidebar overlay */}
       {menuOpen && (
         <>
           <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
-          <div className="fixed inset-y-0 left-0 z-50 w-72 bg-[#0d011a] border-r border-white/5 shadow-2xl">{renderNav()}</div>
+          <div className="fixed inset-y-0 left-0 z-50 w-72 bg-sidebar border-r border-border-dark shadow-2xl">
+            {renderNav()}
+          </div>
         </>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/5 bg-[#0c0115]/95 pb-[max(0.75rem,_env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
+      {/* Mobile bottom navigation */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border-dark bg-sidebar pb-[max(0.75rem,_env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex max-w-md items-center justify-around px-6 py-3">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
@@ -171,13 +189,13 @@ export const EmployeePortalLayout = ({
                 onClick={() => navigate(item.path)}
                 className={cn(
                   "flex flex-col items-center gap-1 text-[11px] font-medium transition-all",
-                  isActive ? "text-white" : "text-purple-200/60",
+                  isActive ? "text-sidebar-foreground" : "text-sidebar-muted",
                 )}
               >
                 <span
                   className={cn(
-                    "rounded-xl border border-white/10 bg-white/5 p-2.5",
-                    isActive && "bg-purple-500/30 text-white border-white/20",
+                    "rounded-xl border border-border-dark bg-white/5 p-2.5 transition-all",
+                    isActive && "bg-primary text-primary-foreground border-primary shadow-glow-lime",
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -193,4 +211,3 @@ export const EmployeePortalLayout = ({
 };
 
 export default EmployeePortalLayout;
-

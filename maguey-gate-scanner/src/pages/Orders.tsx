@@ -49,9 +49,8 @@ import {
   AlertCircle,
   CreditCard,
   Loader2,
-  Filter,
 } from "lucide-react";
-import { format, subDays, parseISO } from "date-fns";
+import { format, subDays } from "date-fns";
 
 interface Order {
   id: string;
@@ -111,13 +110,13 @@ const Orders = () => {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [loadingTickets, setLoadingTickets] = useState(false);
 
-  // Redirect employees
+  // Redirect employees (allow owners and promoters)
   useEffect(() => {
-    if (role !== 'owner') {
+    if (role !== 'owner' && role !== 'promoter') {
       toast({
         variant: "destructive",
         title: "Access Denied",
-        description: "Orders management is only available to owners.",
+        description: "Orders is only available to owners and promoters.",
       });
       navigate("/scanner");
     }
@@ -125,10 +124,11 @@ const Orders = () => {
 
   // Load orders
   useEffect(() => {
-    if (role === 'owner') {
+    if (role === 'owner' || role === 'promoter') {
       loadOrders();
       loadEvents();
-      setupRealtimeSubscription();
+      const cleanup = setupRealtimeSubscription();
+      return cleanup;
     }
   }, [role]);
 
@@ -357,20 +357,20 @@ const Orders = () => {
     );
   };
 
-  if (role !== 'owner') return null;
+  if (role !== 'owner' && role !== 'promoter') return null;
 
   return (
     <OwnerPortalLayout
-      title="Orders"
+      title="Ticket Sales"
       subtitle="SALES"
       description="View and manage all ticket purchases"
       actions={
         <div className="flex gap-2">
-          <Button variant="outline" onClick={loadOrders} disabled={isLoading}>
+          <Button variant="outline" onClick={loadOrders} disabled={isLoading} className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20">
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" onClick={exportOrders} disabled={filteredOrders.length === 0}>
+          <Button variant="outline" onClick={exportOrders} disabled={filteredOrders.length === 0} className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20">
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
@@ -380,7 +380,7 @@ const Orders = () => {
       <div className="space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card className="border-primary/20">
+          <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-primary" />
@@ -392,7 +392,7 @@ const Orders = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-green-500/20">
+          <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-green-500" />
@@ -404,7 +404,7 @@ const Orders = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-blue-500/20">
+          <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <Ticket className="h-5 w-5 text-blue-500" />
@@ -416,7 +416,7 @@ const Orders = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-emerald-500/20">
+          <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
@@ -428,7 +428,7 @@ const Orders = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-yellow-500/20">
+          <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
             <CardContent className="p-4">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-yellow-500" />
@@ -442,7 +442,7 @@ const Orders = () => {
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="md:col-span-2">
@@ -454,7 +454,7 @@ const Orders = () => {
                     placeholder="Email, name, phone, or order ID..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
                   />
                 </div>
               </div>
@@ -462,16 +462,16 @@ const Orders = () => {
               <div>
                 <Label>Status</Label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="paid">Paid</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="failed">Failed</SelectItem>
-                    <SelectItem value="refunded">Refunded</SelectItem>
+                  <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                    <SelectItem value="all" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">All Statuses</SelectItem>
+                    <SelectItem value="completed" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Completed</SelectItem>
+                    <SelectItem value="paid" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Paid</SelectItem>
+                    <SelectItem value="pending" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Pending</SelectItem>
+                    <SelectItem value="failed" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Failed</SelectItem>
+                    <SelectItem value="refunded" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Refunded</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -479,13 +479,13 @@ const Orders = () => {
               <div>
                 <Label>Event</Label>
                 <Select value={eventFilter} onValueChange={setEventFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
                     <SelectValue placeholder="All events" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Events</SelectItem>
+                  <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                    <SelectItem value="all" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">All Events</SelectItem>
                     {events.map((event) => (
-                      <SelectItem key={event.id} value={event.id}>
+                      <SelectItem key={event.id} value={event.id} className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
                         {event.name}
                       </SelectItem>
                     ))}
@@ -496,14 +496,14 @@ const Orders = () => {
               <div>
                 <Label>Date Range</Label>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
                     <SelectValue placeholder="All time" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Time</SelectItem>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="week">Last 7 Days</SelectItem>
-                    <SelectItem value="month">Last 30 Days</SelectItem>
+                  <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                    <SelectItem value="all" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">All Time</SelectItem>
+                    <SelectItem value="today" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Today</SelectItem>
+                    <SelectItem value="week" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Last 7 Days</SelectItem>
+                    <SelectItem value="month" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Last 30 Days</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -512,19 +512,19 @@ const Orders = () => {
         </Card>
 
         {/* Orders Table */}
-        <Card>
+        <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-primary" />
-              Orders
+              Ticket Sales
               <Badge variant="outline" className="ml-2">
-                {filteredOrders.length} {filteredOrders.length === 1 ? 'order' : 'orders'}
+                {filteredOrders.length} {filteredOrders.length === 1 ? 'sale' : 'sales'}
               </Badge>
             </CardTitle>
             <CardDescription>
               {searchQuery || statusFilter !== 'all' || eventFilter !== 'all' || dateFilter !== 'all'
                 ? 'Filtered results'
-                : 'All ticket purchases and orders'}
+                : 'All ticket purchases'}
             </CardDescription>
           </CardHeader>
           <CardContent>

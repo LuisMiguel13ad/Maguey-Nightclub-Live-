@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Bell, Mail, MessageSquare, Smartphone, Globe, Save, TestTube } from "lucide-react";
+import { Mail, Globe, Save, TestTube } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type NotificationSeverity = 'low' | 'medium' | 'high' | 'critical';
@@ -188,7 +188,7 @@ const NotificationPreferences = () => {
 
         <div className="space-y-6">
           {/* Channel Preferences */}
-          <Card>
+          <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
             <CardHeader>
               <CardTitle>Notification Channels</CardTitle>
               <CardDescription>
@@ -217,44 +217,6 @@ const NotificationPreferences = () => {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Smartphone className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <Label htmlFor="sms-enabled">SMS Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications via text message
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  id="sms-enabled"
-                  checked={preferences.sms_enabled}
-                  onCheckedChange={(checked) =>
-                    setPreferences({ ...preferences, sms_enabled: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Bell className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <Label htmlFor="push-enabled">Push Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive push notifications on mobile devices
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  id="push-enabled"
-                  checked={preferences.push_enabled}
-                  onCheckedChange={(checked) =>
-                    setPreferences({ ...preferences, push_enabled: checked })
-                  }
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
                   <Globe className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <Label htmlFor="browser-enabled">Browser Notifications</Label>
@@ -275,6 +237,7 @@ const NotificationPreferences = () => {
                     variant="outline"
                     size="sm"
                     onClick={testNotification}
+                    className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20"
                   >
                     <TestTube className="h-4 w-4 mr-1" />
                     Test
@@ -285,7 +248,7 @@ const NotificationPreferences = () => {
           </Card>
 
           {/* Severity Threshold */}
-          <Card>
+          <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
             <CardHeader>
               <CardTitle>Severity Threshold</CardTitle>
               <CardDescription>
@@ -299,21 +262,21 @@ const NotificationPreferences = () => {
                   setPreferences({ ...preferences, min_severity: value })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low - All notifications</SelectItem>
-                  <SelectItem value="medium">Medium - Medium, High, Critical</SelectItem>
-                  <SelectItem value="high">High - High and Critical only</SelectItem>
-                  <SelectItem value="critical">Critical - Critical only</SelectItem>
+                <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                  <SelectItem value="low" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Low - All notifications</SelectItem>
+                  <SelectItem value="medium" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Medium - Medium, High, Critical</SelectItem>
+                  <SelectItem value="high" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">High - High and Critical only</SelectItem>
+                  <SelectItem value="critical" className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">Critical - Critical only</SelectItem>
                 </SelectContent>
               </Select>
             </CardContent>
           </Card>
 
           {/* Quiet Hours */}
-          <Card>
+          <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
             <CardHeader>
               <CardTitle>Quiet Hours</CardTitle>
               <CardDescription>
@@ -331,6 +294,7 @@ const NotificationPreferences = () => {
                     onChange={(e) =>
                       setPreferences({ ...preferences, quiet_hours_start: e.target.value || null })
                     }
+                    className="bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                   />
                 </div>
                 <div className="space-y-2">
@@ -342,6 +306,7 @@ const NotificationPreferences = () => {
                     onChange={(e) =>
                       setPreferences({ ...preferences, quiet_hours_end: e.target.value || null })
                     }
+                    className="bg-indigo-500/20 border-indigo-500/30 text-white focus:border-indigo-400 focus:ring-indigo-500/50"
                   />
                 </div>
               </div>
@@ -356,7 +321,7 @@ const NotificationPreferences = () => {
           </Card>
 
           {/* Integration Webhooks */}
-          <Card>
+          <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
             <CardHeader>
               <CardTitle>Integration Webhooks</CardTitle>
               <CardDescription>
@@ -380,6 +345,7 @@ const NotificationPreferences = () => {
                       },
                     })
                   }
+                  className="bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
                 />
               </div>
 
@@ -399,6 +365,7 @@ const NotificationPreferences = () => {
                       },
                     })
                   }
+                  className="bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
                 />
               </div>
 
@@ -418,38 +385,27 @@ const NotificationPreferences = () => {
                       },
                     })
                   }
+                  className="bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
                 />
               </div>
 
-              {preferences.sms_enabled && (
-                <div className="space-y-2">
-                  <Label htmlFor="phone-number">Phone Number (for SMS)</Label>
-                  <Input
-                    id="phone-number"
-                    type="tel"
-                    placeholder="+1234567890"
-                    value={preferences.preferences?.phone_number || ''}
-                    onChange={(e) =>
-                      setPreferences({
-                        ...preferences,
-                        preferences: {
-                          ...preferences.preferences,
-                          phone_number: e.target.value || undefined,
-                        },
-                      })
-                    }
-                  />
-                </div>
-              )}
             </CardContent>
           </Card>
 
           {/* Save Button */}
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => navigate(-1)}>
+            <Button
+              variant="outline"
+              onClick={() => navigate(-1)}
+              className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20"
+            >
               Cancel
             </Button>
-            <Button onClick={savePreferences} disabled={saving}>
+            <Button
+              onClick={savePreferences}
+              disabled={saving}
+              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0"
+            >
               <Save className="h-4 w-4 mr-2" />
               {saving ? 'Saving...' : 'Save Preferences'}
             </Button>

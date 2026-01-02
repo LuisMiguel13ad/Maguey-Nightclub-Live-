@@ -1,14 +1,12 @@
 // @ts-nocheck
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { addDays, format, parseISO, startOfDay, subDays } from "date-fns";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { localStorageService } from "@/lib/localStorage";
 import { useAuth, useRole } from "@/contexts/AuthContext";
-import { NavigationGrid } from "@/components/dashboard/NavigationGrid";
 import { RecentPurchases } from "@/components/dashboard/RecentPurchases";
-import { RevenueTrend } from "@/components/dashboard/RevenueTrend";
-import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
 import OwnerPortalLayout from "@/components/layout/OwnerPortalLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,21 +22,16 @@ import {
   Calendar,
   CalendarDays,
   Clock,
-  DollarSign,
   DoorOpen,
   FileText,
   Globe,
-  ArrowRight,
   Shield,
   Smartphone,
   Sparkles,
-  TrendingUp,
   Users,
   UsersRound,
   Zap,
 } from "lucide-react";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Legend } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 interface DailyPerformancePoint {
   date: Date;
@@ -137,12 +130,14 @@ const OwnerDashboard = () => {
   const [weekOverWeek, setWeekOverWeek] = useState(0);
   const [ticketTypeDistribution, setTicketTypeDistribution] = useState<Array<{ name: string; value: number; color: string }>>([]);
   const [peakBuyingTimes, setPeakBuyingTimes] = useState<Array<{ hour: string; orders: number }>>([]);
+  const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     if (authLoading) {
       return;
     }
-    if (role !== "owner") {
+    // Allow owners and promoters to access dashboard
+    if (role !== "owner" && role !== "promoter") {
       navigate("/scanner");
     }
   }, [role, navigate, authLoading, user]);
@@ -151,7 +146,8 @@ const OwnerDashboard = () => {
     if (authLoading) {
       return;
     }
-    if (role !== "owner") {
+    // Allow owners and promoters
+    if (role !== "owner" && role !== "promoter") {
       return;
     }
 
@@ -168,7 +164,7 @@ const OwnerDashboard = () => {
 
           if (!session) {
             const localUser = localStorageService.getUser();
-            if (localUser && localUser.role === 'owner') {
+            if (localUser && (localUser.role === 'owner' || localUser.role === 'promoter')) {
               loadData();
               return;
             }
@@ -178,7 +174,7 @@ const OwnerDashboard = () => {
         } catch (error: any) {
           console.error("[OwnerDashboard] Auth error:", error);
           const localUser = localStorageService.getUser();
-          if (localUser && localUser.role === 'owner') {
+          if (localUser && (localUser.role === 'owner' || localUser.role === 'promoter')) {
             loadData();
             return;
           }
@@ -187,7 +183,7 @@ const OwnerDashboard = () => {
         }
       } else {
         const localUser = localStorageService.getUser();
-        if (!localUser || localUser.role !== 'owner') {
+        if (!localUser || (localUser.role !== 'owner' && localUser.role !== 'promoter')) {
           navigate("/auth");
           return;
         }
@@ -456,6 +452,62 @@ const OwnerDashboard = () => {
     }
   };
 
+  // Real-time subscription for live dashboard updates
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return;
+
+    // Set up real-time subscription for dashboard updates
+    const channel = supabase
+      .channel('dashboard-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'scan_logs',
+        },
+        () => {
+          // Refresh dashboard stats when new scan occurs
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tickets',
+        },
+        () => {
+          // Refresh dashboard stats when tickets change
+          loadData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders',
+        },
+        () => {
+          // Refresh dashboard stats when new order is placed
+          loadData();
+        }
+      )
+      .subscribe();
+
+    realtimeChannelRef.current = channel;
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
+      }
+    };
+  }, []);
+
   const ownerName = useMemo(() => {
     if (!user) return "Owner";
     return (
@@ -558,7 +610,6 @@ const OwnerDashboard = () => {
     },
   ];
 
-  const nextEvent = upcomingEvents[0] ?? null;
 
   if (isLoading) {
     return (
@@ -575,7 +626,7 @@ const OwnerDashboard = () => {
     <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
       <Button
         variant="outline"
-        className="w-full border-white/20 bg-white/5 text-white hover:bg-white/10 sm:w-auto"
+        className="w-full border-indigo-500/30 bg-indigo-500/10 text-white hover:bg-indigo-500/20 sm:w-auto"
         onClick={() => navigate("/scanner")}
       >
         <Zap className="mr-2 h-4 w-4" />
@@ -592,8 +643,8 @@ const OwnerDashboard = () => {
   );
 
   const heroSection = (
-    <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] p-6 shadow-[0_45px_90px_rgba(3,7,23,0.7)] sm:p-8 xl:col-span-2">
+    <section>
+            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] p-6 shadow-[0_45px_90px_rgba(3,7,23,0.7)] sm:p-8">
               <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.4em] text-indigo-200/80">
                 <span className="rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold text-indigo-100">
                   Owner Pulse
@@ -628,7 +679,7 @@ const OwnerDashboard = () => {
               </div>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button
-                  className="w-full justify-center rounded-2xl bg-white/10 text-white hover:bg-white/20 sm:flex-1"
+                  className="w-full justify-center rounded-2xl bg-indigo-500/20 text-white hover:bg-indigo-500/30 sm:flex-1"
                   onClick={() => navigate("/analytics")}
                 >
                   <BarChart3 className="mr-2 h-4 w-4" />
@@ -636,62 +687,13 @@ const OwnerDashboard = () => {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full justify-center rounded-2xl border-white/20 bg-transparent text-white hover:bg-white/10 sm:flex-1"
+                  className="w-full justify-center rounded-2xl border-indigo-500/30 bg-indigo-500/10 text-white hover:bg-indigo-500/20 sm:flex-1"
                   onClick={() => navigate("/events")}
                 >
                   <Calendar className="mr-2 h-4 w-4" />
                   Manage events
                 </Button>
               </div>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-[0_25px_60px_rgba(5,9,21,0.65)] sm:p-6">
-              {nextEvent ? (
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Next event</p>
-                    <h3 className="mt-2 text-2xl font-semibold text-white">{nextEvent.name}</h3>
-                    <p className="text-sm text-slate-400">{nextEvent.dateLabel}</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-[#0c1127] p-4">
-                    <p className="text-xs text-slate-400">Capacity</p>
-                    <p className="mt-1 text-lg font-semibold text-white">
-                      {nextEvent.ticketsSold} / {nextEvent.capacity}
-                    </p>
-                    <div className="mt-3 h-2 w-full rounded-full bg-white/10">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500"
-                        style={{ width: `${nextEvent.percentSold}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 text-xs text-slate-400">
-                      {nextEvent.percentSold.toFixed(0)}% sold •{" "}
-                      {nextEvent.status === "sellout"
-                        ? "Selling out fast"
-                        : nextEvent.status === "monitor"
-                          ? "Monitor pace"
-                          : "On track"}
-                    </p>
-                  </div>
-                  <Button
-                    className="w-full rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white"
-                    onClick={() => navigate("/events")}
-                  >
-                    Go to events
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4 text-center">
-                  <p className="text-sm text-slate-400">No active events yet.</p>
-                  <Button
-                    className="rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white"
-                    onClick={() => navigate("/events?new=true")}
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Create first event
-                  </Button>
-                </div>
-              )}
             </div>
     </section>
   );
@@ -704,214 +706,49 @@ const OwnerDashboard = () => {
       actions={headerActions}
       hero={heroSection}
     >
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Card className="rounded-3xl border border-white/5 bg-[#050b1a]/90 text-white shadow-lg shadow-black/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Total Revenue</CardTitle>
-                <div className="h-10 w-10 rounded-2xl bg-white/5 text-indigo-300 flex items-center justify-center">
-                  <DollarSign className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-semibold">{currencyFormatter.format(stats.totalRevenue)}</div>
-                <p className="text-xs text-slate-500 mt-2">
-                  {stats.totalTicketsSold.toLocaleString()} tickets sold lifetime
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-3xl border border-white/5 bg-[#050b1a]/90 text-white shadow-lg shadow-black/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Revenue Today</CardTitle>
-                <div className="h-10 w-10 rounded-2xl bg-white/5 text-emerald-300 flex items-center justify-center">
-                  <TrendingUp className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-semibold">{currencyFormatter.format(stats.todayRevenue)}</div>
-                <p className="text-xs text-slate-500 mt-2">
-                  {stats.todayTickets.toLocaleString()} tickets sold today
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-3xl border border-white/5 bg-[#050b1a]/90 text-white shadow-lg shadow-black/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Weekly Revenue</CardTitle>
-                <div className="h-10 w-10 rounded-2xl bg-white/5 text-sky-300 flex items-center justify-center">
-                  <BarChart3 className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-semibold">{currencyFormatter.format(stats.weekRevenue)}</div>
-                <p className="text-xs text-slate-500 mt-2">
-                  {weekOverWeek >= 0 ? "+" : ""}
-                  {weekOverWeek.toFixed(1)}% from last week
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-3xl border border-white/5 bg-[#050b1a]/90 text-white shadow-lg shadow-black/40">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Conversion Rate</CardTitle>
-                <div className="h-10 w-10 rounded-2xl bg-white/5 text-purple-300 flex items-center justify-center">
-                  <Users className="h-4 w-4" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-semibold">{stats.conversionRate.toFixed(1)}%</div>
-                <p className="text-xs text-slate-500 mt-2">
-                  {stats.totalTicketsScanned.toLocaleString()} checked in
-                </p>
-              </CardContent>
-            </Card>
-          </section>
-
-          <section className="grid gap-8 lg:grid-cols-2 xl:grid-cols-7">
-            <div className="space-y-8 lg:col-span-2 xl:col-span-4">
-              <div className="rounded-3xl border border-white/5 bg-[#050b1a]/80 p-3 sm:p-4">
-                <RevenueTrend
-                  data={dailyPerformance.map((point) => ({
-                    date: format(point.date, "yyyy-MM-dd"),
-                    label: point.label,
-                    revenue: point.revenue,
-                    tickets: point.tickets,
-                  }))}
-                  trendDelta={trendDelta}
-                  caption="Revenue performance over the last 14 days"
-                  revenueLabel="Revenue (7-day)"
-                  revenueTotal={currencyFormatter.format(stats.weekRevenue)}
-                  ticketsLabel="Tickets"
-                  ticketsTotal={stats.weekTickets.toLocaleString()}
-                />
-              </div>
-
-              <Card className="rounded-3xl border border-white/5 bg-[#050b1a]/80 text-white shadow-lg shadow-black/40">
-                <CardHeader>
-                  <CardTitle>Ticket Sales Distribution</CardTitle>
-                  <CardDescription className="text-slate-400">Breakdown by ticket type</CardDescription>
-                </CardHeader>
-                <CardContent className="pl-0">
-                  {ticketTypeDistribution.length > 0 ? (
-                    <ChartContainer
-                      config={{
-                        sales: { label: "Sales" },
-                      }}
-                      className="h-[300px] w-full"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={ticketTypeDistribution} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                            {ticketTypeDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <ChartTooltip content={<ChartTooltipContent />} />
-                          <Legend verticalAlign="bottom" height={36} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
-                  ) : (
-                    <div className="h-[300px] flex items-center justify-center text-slate-500">No data available</div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-8 lg:col-span-2 xl:col-span-3">
-              <Card className="rounded-3xl border border-white/5 bg-[#050b1a]/80 text-white shadow-lg shadow-black/40">
-                <CardHeader>
-                  <CardTitle>Operational Insights</CardTitle>
-                  <CardDescription className="text-slate-400">Key performance indicators</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {insights.map((item) => (
-                    <div key={item.title} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <div className="space-y-0.5">
-                        <p className="text-sm font-medium leading-none text-white">{item.title}</p>
-                        <p className="text-xs text-slate-400">{item.helper}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-lg font-bold">{item.value}</span>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="rounded-2xl border border-white/10 bg-[#0e1431] p-4">
-                    <div className="flex items-center gap-4">
-                      <div className="rounded-full bg-indigo-500/20 p-3 text-indigo-200">
-                        <Smartphone className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <p className="text-sm font-medium leading-none text-white">Scan Status</p>
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                          <span>{stats.totalTicketsScanned} scanned</span>
-                          <span>•</span>
-                          <span>{Math.max(stats.totalTicketsSold - stats.totalTicketsScanned, 0)} pending</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="rounded-3xl border border-white/5 bg-[#050b1a]/80 p-2">
-                <UpcomingEventsCard events={upcomingEvents} onManageEvents={() => navigate("/events")} />
-              </div>
-            </div>
-          </section>
-
-          <section className="grid gap-8 md:grid-cols-2">
-            <div className="rounded-3xl border border-white/5 bg-[#050b1a]/80 p-2 sm:p-3">
+          {/* Recent Purchases + Operational Insights - Side by Side */}
+          <section className="grid gap-6 md:grid-cols-2">
+            <div>
               <RecentPurchases orders={recentOrders} currencyFormatter={currencyFormatter} />
             </div>
 
-            <Card className="rounded-3xl border border-white/5 bg-[#050b1a]/80 text-white shadow-lg shadow-black/40">
+            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)] text-white">
               <CardHeader>
-                <CardTitle>Peak Buying Hours</CardTitle>
-                <CardDescription className="text-slate-400">When your customers are purchasing</CardDescription>
+                <CardTitle>Operational Insights</CardTitle>
+                <CardDescription className="text-slate-400">Key performance indicators</CardDescription>
               </CardHeader>
-              <CardContent>
-                {peakBuyingTimes.length > 0 ? (
-                  <ChartContainer
-                    config={{
-                      orders: { label: "Orders", theme: { light: "#6366f1", dark: "#818cf8" } },
-                    }}
-                    className="h-[300px] w-full"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={peakBuyingTimes}>
-                        <XAxis
-                          dataKey="hour"
-                          tickLine={false}
-                          axisLine={false}
-                          fontSize={12}
-                          tickFormatter={(value) => value.split(":")[0]}
-                        />
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Bar dataKey="orders" fill="var(--color-orders)" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                ) : (
-                  <div className="h-[300px] flex items-center justify-center text-slate-500">No data available</div>
-                )}
+              <CardContent className="space-y-4">
+                {insights.map((item) => (
+                  <div key={item.title} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium leading-none text-white">{item.title}</p>
+                      <p className="text-xs text-slate-400">{item.helper}</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold">{item.value}</span>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="rounded-full bg-indigo-500/20 p-3 text-indigo-200">
+                      <Smartphone className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <p className="text-sm font-medium leading-none text-white">Scan Status</p>
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <span>{stats.totalTicketsScanned} scanned</span>
+                        <span>•</span>
+                        <span>{Math.max(stats.totalTicketsSold - stats.totalTicketsScanned, 0)} pending</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </section>
 
-          <section className="rounded-3xl border border-white/5 bg-[#050b1a]/80 p-6 shadow-lg shadow-black/30">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-semibold tracking-tight text-white">Administration</h2>
-                <p className="text-sm text-slate-400">Manage your venue and settings</p>
-              </div>
-              <Button variant="ghost" size="sm" className="gap-1 text-indigo-200 hover:text-white" onClick={() => navigate("/sites")}>
-                View All Sites <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-            <NavigationGrid items={navigationItems} />
-          </section>
     </OwnerPortalLayout>
   );
 };

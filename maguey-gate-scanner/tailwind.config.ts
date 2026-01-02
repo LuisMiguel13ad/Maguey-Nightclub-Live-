@@ -50,19 +50,35 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+          light: "hsl(var(--card-light))",
+          "light-foreground": "hsl(var(--card-light-foreground))",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          muted: "hsl(var(--sidebar-muted))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        "border-dark": "hsl(var(--border-dark))",
       },
       backgroundImage: {
         'gradient-purple': 'var(--gradient-purple)',
         'gradient-gold': 'var(--gradient-gold)',
         'gradient-green': 'var(--gradient-green)',
         'gradient-scan': 'var(--gradient-scan)',
+        'gradient-lime': 'var(--gradient-lime)',
+        'gradient-dark': 'var(--gradient-dark)',
+        'gradient-sage': 'var(--gradient-sage)',
       },
       boxShadow: {
         'glow-purple': 'var(--glow-purple)',
         'glow-gold': 'var(--glow-gold)',
         'glow-green': 'var(--glow-green)',
         'glow-success': 'var(--glow-success)',
+        'glow-lime': 'var(--glow-lime)',
       },
       transitionProperty: {
         'smooth': 'var(--transition-smooth)',
