@@ -96,33 +96,37 @@ const Index = () => {
       <div className="fixed top-0 left-0 right-0 z-50">
         <Navigation transparent={true} />
       </div>
-      
+
       <Hero />
 
       {/* Intro Section */}
       <section className="py-20 px-4 bg-black">
         <div className="container mx-auto max-w-4xl text-center">
-          <motion.h2 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-50px" }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="text-2xl md:text-3xl lg:text-4xl font-bold text-center mb-6 tracking-widest text-[#39B54A]"
-            style={{WebkitTextStroke: '1px white', color: 'transparent', textShadow: '3px 3px 6px rgba(255, 255, 255, 0.6)', animation: 'glow 4s ease-in-out infinite'}}
           >
-            VOTED BEST NIGHTCLUB IN DELAWARE
-          </motion.h2>
-          <motion.p 
+            <div className="flex flex-col items-center mb-8">
+              <span className="text-[#39B54A] font-bold tracking-widest uppercase text-sm mb-2 animate-pulse">Experience The Best</span>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight uppercase text-neon text-center">
+                Voted Best Nightclub in Delaware
+              </h2>
+              <div className="h-1 w-24 bg-[#39B54A] mt-6 rounded-full shadow-[0_0_15px_rgba(57,181,74,0.8)]" />
+            </div>
+          </motion.div>
+          <motion.p
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
             className="text-lg md:text-xl text-white/80 leading-relaxed"
           >
-            Welcome to Maguey, Delaware's destination for nightlife, luxury, and rhythm. 
-            Inspired by Latin culture, world-class sound, and VIP hospitality, every night 
-            at Maguey is a celebration. Enjoy premium bottle service, top DJs, and an 
-            atmosphere built for unforgettable moments. Experience the best of Latin music 
+            Welcome to Maguey, Delaware's destination for nightlife, luxury, and rhythm.
+            Inspired by Latin culture, world-class sound, and VIP hospitality, every night
+            at Maguey is a celebration. Enjoy premium bottle service, top DJs, and an
+            atmosphere built for unforgettable moments. Experience the best of Latin music
             with live performances featuring banda, corridos, cumbia norteñas, and more.
           </motion.p>
         </div>
@@ -136,111 +140,144 @@ const Index = () => {
 
       {/* Events Section */}
       <section className="bg-black">
-         <div className="container mx-auto py-12">
-          <motion.h2 
+        <div className="container mx-auto py-12">
+          <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="text-2xl md:text-3xl font-bold text-center mb-6 tracking-widest text-[#39B54A]" 
-            style={{WebkitTextStroke: '1px white', color: 'transparent', textShadow: '2px 2px 4px rgba(255, 255, 255, 0.5)', animation: 'glow 4s ease-in-out infinite'}}
           >
-            UPCOMING EVENTS
-          </motion.h2>
+            <div className="flex flex-col items-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight uppercase text-neon text-center">
+                Upcoming Events
+              </h2>
+              <div className="h-1 w-24 bg-[#39B54A] mt-4 rounded-full shadow-[0_0_15px_rgba(57,181,74,0.8)]" />
+            </div>
+          </motion.div>
         </div>
 
-          {loading ? (
-            <div className="text-center text-white py-20">
-              <p>Loading events...</p>
-            </div>
-          ) : events.length === 0 ? (
-            <div className="container mx-auto px-4 pb-12">
-              <div className="max-w-xl mx-auto bg-black/40 backdrop-blur-sm border border-white/10 rounded-2xl p-8 text-center">
-                {/* Calendar Icon */}
-                <div className="w-16 h-16 mx-auto mb-5 rounded-full border-2 border-[#39B54A]/30 flex items-center justify-center bg-[#39B54A]/10">
-                  <svg className="w-8 h-8 text-[#39B54A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                
-                {/* Heading */}
-                <h3 className="text-2xl md:text-3xl font-light text-white mb-2 italic">
-                  The Night Awaits
-                </h3>
-                
-                {/* Subtitle */}
-                <p className="text-[#39B54A] text-xs tracking-[0.3em] uppercase mb-4">
-                  NEW EVENTS COMING SOON
-                </p>
-                
-                {/* Description */}
-                <p className="text-white/60 text-sm mb-6">
-                  Something big is brewing. Sign up to hear it first.
-                </p>
-                
-                {/* Email Signup */}
-                <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-2 max-w-sm mx-auto mb-3">
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    value={newsletterEmail}
-                    onChange={(e) => setNewsletterEmail(e.target.value)}
-                    disabled={newsletterLoading}
-                    className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/40 focus:outline-none focus:border-[#39B54A]/50 transition-colors disabled:opacity-50"
-                  />
-                  <button
-                    type="submit"
-                    disabled={newsletterLoading || !newsletterEmail.trim()}
-                    className="px-5 py-3 bg-[#39B54A] text-black text-sm font-bold tracking-wider uppercase rounded-lg hover:bg-[#2d9a3c] transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {newsletterLoading ? "..." : "NOTIFY ME"}
-                  </button>
-                </form>
+        {loading ? (
+          <div className="text-center text-white py-20">
+            <p>Loading events...</p>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="container mx-auto px-4 pb-12">
+            <div className="relative w-full max-w-4xl mx-auto overflow-hidden rounded-3xl border border-white/10 shadow-[0_0_50px_-12px_rgba(57,181,74,0.3)] group">
+              {/* Background Image with Parallax-like feel */}
+              <div
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 group-hover:scale-105"
+                style={{
+                  backgroundImage: `url(${venueMainstage})`,
+                  filter: 'grayscale(100%) brightness(0.3)'
+                }}
+              />
 
-                {/* Feedback Message */}
-                {newsletterMessage && (
-                  <p className={`text-sm mb-2 ${newsletterSuccess ? 'text-[#39B54A]' : 'text-red-400'}`}>
-                    {newsletterMessage}
+              {/* Cinematic Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-black/40" />
+
+              {/* Neon Accent Lines */}
+              <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#39B54A] to-transparent opacity-50" />
+              <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#39B54A] to-transparent opacity-50" />
+
+              <div className="relative z-10 p-8 md:p-16 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-12">
+
+                {/* Text Content */}
+                <div className="flex-1 text-center md:text-left">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#39B54A]/10 border border-[#39B54A]/20 mb-6 backdrop-blur-md">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#39B54A] animate-pulse" />
+                    <span className="text-[#39B54A] text-[10px] font-bold tracking-[0.2em] uppercase">Private Access</span>
+                  </div>
+
+                  <h3 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight leading-none italic">
+                    UNLEASH THE <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#39B54A] to-emerald-200">NIGHT</span>
+                  </h3>
+
+                  <p className="text-white/60 text-sm md:text-base max-w-md leading-relaxed mb-8">
+                    An exclusive lineup is being curated for the upcoming season.
+                    Unlock the guest list before the public knows.
                   </p>
-                )}
 
-                {/* Disclaimer */}
-                <p className="text-white/40 text-xs">
-                  No spam, just vibes. Unsubscribe anytime.
-                </p>
+                  <div className="flex items-center gap-4 text-xs font-mono text-white/30 uppercase tracking-widest">
+                    <span>Coming Soon</span>
+                    <span className="w-1 h-1 rounded-full bg-white/20" />
+                    <span>Fall 2026</span>
+                  </div>
+                </div>
+
+                {/* Cyber Access Form */}
+                <div className="w-full md:w-auto min-w-[320px] bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#39B54A]/20 rounded-full blur-[50px] pointer-events-none" />
+
+                  <h4 className="text-white font-bold tracking-wider mb-4 text-sm flex items-center gap-2">
+                    <svg className="w-4 h-4 text-[#39B54A]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    GET NOTIFIED
+                  </h4>
+
+                  <form onSubmit={handleNewsletterSubmit} className="flex flex-col gap-3">
+                    <div className="relative group/input">
+                      <input
+                        type="email"
+                        placeholder="vip@example.com"
+                        value={newsletterEmail}
+                        onChange={(e) => setNewsletterEmail(e.target.value)}
+                        disabled={newsletterLoading}
+                        className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white outline-none focus:border-[#39B54A]/50 focus:bg-white/10 transition-all placeholder:text-white/20 text-sm"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={newsletterLoading || !newsletterEmail.trim()}
+                      className="w-full py-4 bg-[#39B54A] hover:bg-[#2d963d] text-black font-bold tracking-widest uppercase rounded-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(57,181,74,0.3)] disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                    >
+                      {newsletterLoading ? "GRANTING ACCESS..." : "JOIN GUEST LIST"}
+                    </button>
+
+                    {/* Feedback Message */}
+                    {newsletterMessage && (
+                      <div className={`mt-2 text-xs text-center font-medium py-2 rounded-lg bg-black/50 border ${newsletterSuccess ? 'border-[#39B54A]/30 text-[#39B54A]' : 'border-red-500/30 text-red-400'}`}>
+                        {newsletterMessage}
+                      </div>
+                    )}
+                  </form>
+                </div>
+
               </div>
             </div>
-          ) : (
-            <div className="container mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {events.slice(0, visibleEventsCount).map((event) => (
-                <div key={event.id} className="h-full">
-                  <EventCard
-                    image={event.image}
-                    artist={event.artist}
-                    schedule={event.scheduleLabel}
-                    location={event.locationLine}
-                    eventId={event.eventId}
-                    purchaseUrl={event.purchaseUrl}
-                    category={event.category}
-                    status={event.status}
-                    tags={event.tags}
-                    bannerUrl={event.bannerUrl}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        
+          </div>
+        ) : (
+          <div className="container mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {events.slice(0, visibleEventsCount).map((event) => (
+              <div key={event.id} className="h-full">
+                <EventCard
+                  image={event.image}
+                  artist={event.artist}
+                  schedule={event.scheduleLabel}
+                  location={event.locationLine}
+                  eventId={event.eventId}
+                  purchaseUrl={event.purchaseUrl}
+                  category={event.category}
+                  status={event.status}
+                  tags={event.tags}
+                  bannerUrl={event.bannerUrl}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
         {events.length > visibleEventsCount && (
-            <div className="py-12 text-center">
-                <button 
-                  onClick={() => setVisibleEventsCount(events.length)}
-                  className="inline-flex items-center px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 font-semibold tracking-wider rounded-2xl shadow-[0_0_30px_rgba(255,0,180,0.25)] transition-all duration-300 cursor-pointer"
-                >
-                  View All Events
-                </button>
-            </div>
-          )}
+          <div className="py-12 text-center">
+            <button
+              onClick={() => setVisibleEventsCount(events.length)}
+              className="inline-flex items-center px-8 py-4 bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 font-semibold tracking-wider rounded-2xl shadow-[0_0_30px_rgba(255,0,180,0.25)] transition-all duration-300 cursor-pointer"
+            >
+              View All Events
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Light Beam Divider */}
@@ -249,19 +286,23 @@ const Index = () => {
       {/* Themed Nights Section */}
       <section className="py-20 px-4 bg-black">
         <div className="container mx-auto">
-          <motion.h2 
+          <motion.div
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="text-2xl md:text-3xl font-bold text-center mb-12 tracking-widest text-[#39B54A]"
-            style={{WebkitTextStroke: '1px white', color: 'transparent', textShadow: '2px 2px 4px rgba(255, 255, 255, 0.5)', animation: 'glow 4s ease-in-out infinite'}}
           >
-            THEMED NIGHTS
-          </motion.h2>
+            <div className="flex flex-col items-center mb-16">
+              <span className="text-[#39B54A] font-bold tracking-widest uppercase text-sm mb-2">Weekly Vibes</span>
+              <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight uppercase text-neon text-center">
+                Themed Nights
+              </h2>
+              <div className="h-1 w-24 bg-[#39B54A] mt-4 rounded-full shadow-[0_0_15px_rgba(57,181,74,0.8)]" />
+            </div>
+          </motion.div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Restaurant */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
@@ -280,15 +321,15 @@ const Index = () => {
                 <div className="text-xs text-gray-300 uppercase tracking-wider mb-2">
                   FINE DINING
                 </div>
-                <h3 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-wide transform hover:scale-110 hover:skew-x-2 transition-all duration-300 active:scale-95" style={{textShadow: '2px 2px 0px #ff6b6b, 4px 4px 0px #4ecdc4, 6px 6px 0px #45b7d1'}}>
+                <h3 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-wide transform hover:scale-105 transition-transform duration-500" style={{ textShadow: '2px 2px 0px #ff6b6b, 4px 4px 0px #4ecdc4, 6px 6px 0px #45b7d1' }}>
                   RESTAURANT
                 </h3>
                 <p className="text-white text-sm leading-relaxed mb-6">
-                  Experience exquisite dining with authentic Latin cuisine. Enjoy premium dishes, 
+                  Experience exquisite dining with authentic Latin cuisine. Enjoy premium dishes,
                   craft cocktails, and an elegant atmosphere perfect for any occasion.
                 </p>
                 <Link to="/restaurant">
-                  <button className="group inline-flex items-center px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 font-semibold tracking-wider rounded-2xl shadow-[0_0_30px_rgba(255,0,180,0.25)] transition-all duration-300 w-fit">
+                  <button className="btn-neon-glow group inline-flex items-center px-6 py-3 font-semibold tracking-wider rounded-2xl w-fit">
                     <span className="relative">
                       VIEW MENU
                       <span className="absolute -inset-1 -z-10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 glow" />
@@ -299,7 +340,7 @@ const Index = () => {
             </motion.div>
 
             {/* Reggaeton Fridays */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
@@ -318,15 +359,15 @@ const Index = () => {
                 <div className="text-xs text-gray-300 uppercase tracking-wider mb-2">
                   EVERY FRIDAY
                 </div>
-                <h3 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-wide transform hover:scale-110 hover:skew-x-2 transition-all duration-300 active:scale-95" style={{textShadow: '2px 2px 0px #ff6b6b, 4px 4px 0px #4ecdc4, 6px 6px 0px #45b7d1'}}>
+                <h3 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-wide transform hover:scale-105 transition-transform duration-500" style={{ textShadow: '2px 2px 0px #ff6b6b, 4px 4px 0px #4ecdc4, 6px 6px 0px #45b7d1' }}>
                   REGGAETON FRIDAYS
                 </h3>
                 <p className="text-white text-sm leading-relaxed mb-6">
-                  Get ready for the hottest reggaeton night in Delaware. Dance to the latest hits 
+                  Get ready for the hottest reggaeton night in Delaware. Dance to the latest hits
                   from Bad Bunny, J Balvin, Karol G, and more with our world-class DJs.
                 </p>
                 <a href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"} target="_self">
-                  <button className="group inline-flex items-center px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 font-semibold tracking-wider rounded-2xl shadow-[0_0_30px_rgba(255,0,180,0.25)] transition-all duration-300 w-fit">
+                  <button className="btn-neon-glow group inline-flex items-center px-6 py-3 font-semibold tracking-wider rounded-2xl w-fit">
                     <span className="relative">
                       BUY TICKETS
                       <span className="absolute -inset-1 -z-10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 glow" />
@@ -337,7 +378,7 @@ const Index = () => {
             </motion.div>
 
             {/* Regional Mexicano */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
@@ -356,15 +397,15 @@ const Index = () => {
                 <div className="text-xs text-gray-300 uppercase tracking-wider mb-2">
                   AUTHENTIC SOUNDS
                 </div>
-                <h3 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-wide transform hover:scale-110 hover:skew-x-2 transition-all duration-300 active:scale-95" style={{textShadow: '2px 2px 0px #ff6b6b, 4px 4px 0px #4ecdc4, 6px 6px 0px #45b7d1'}}>
+                <h3 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-wide transform hover:scale-105 transition-transform duration-500" style={{ textShadow: '2px 2px 0px #ff6b6b, 4px 4px 0px #4ecdc4, 6px 6px 0px #45b7d1' }}>
                   REGIONAL MEXICANO
                 </h3>
                 <p className="text-white text-sm leading-relaxed mb-6">
-                  Experience the rich sounds of Mexico with corridos, norteñas, banda, and more. 
+                  Experience the rich sounds of Mexico with corridos, norteñas, banda, and more.
                   Our live performances bring the authentic Mexican music experience to Delaware.
                 </p>
                 <a href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"} target="_self">
-                  <button className="group inline-flex items-center px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 font-semibold tracking-wider rounded-2xl shadow-[0_0_30px_rgba(255,0,180,0.25)] transition-all duration-300 w-fit">
+                  <button className="btn-neon-glow group inline-flex items-center px-6 py-3 font-semibold tracking-wider rounded-2xl w-fit">
                     <span className="relative">
                       BUY TICKETS
                       <span className="absolute -inset-1 -z-10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 glow" />
@@ -375,7 +416,7 @@ const Index = () => {
             </motion.div>
 
             {/* Cumbias */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
@@ -394,15 +435,15 @@ const Index = () => {
                 <div className="text-xs text-gray-300 uppercase tracking-wider mb-2">
                   DANCE THE NIGHT AWAY
                 </div>
-                <h3 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-wide transform hover:scale-110 hover:skew-x-2 transition-all duration-300 active:scale-95" style={{textShadow: '2px 2px 0px #ff6b6b, 4px 4px 0px #4ecdc4, 6px 6px 0px #45b7d1'}}>
+                <h3 className="text-3xl md:text-4xl font-bold text-white mb-4 tracking-wide transform hover:scale-105 transition-transform duration-500" style={{ textShadow: '2px 2px 0px #ff6b6b, 4px 4px 0px #4ecdc4, 6px 6px 0px #45b7d1' }}>
                   CUMBIAS
                 </h3>
                 <p className="text-white text-sm leading-relaxed mb-6">
-                  Feel the rhythm of cumbia music that gets everyone on the dance floor. 
+                  Feel the rhythm of cumbia music that gets everyone on the dance floor.
                   From classic hits to modern cumbia, experience the infectious beats that define Latin culture.
                 </p>
                 <a href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"} target="_self">
-                  <button className="group inline-flex items-center px-6 py-3 bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 font-semibold tracking-wider rounded-2xl shadow-[0_0_30px_rgba(255,0,180,0.25)] transition-all duration-300 w-fit">
+                  <button className="btn-neon-glow group inline-flex items-center px-6 py-3 font-semibold tracking-wider rounded-2xl w-fit">
                     <span className="relative">
                       BUY TICKETS
                       <span className="absolute -inset-1 -z-10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 glow" />

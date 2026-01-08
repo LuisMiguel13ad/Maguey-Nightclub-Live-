@@ -99,7 +99,7 @@ const EventManagement = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const role = useRole();
-  
+
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -108,7 +108,7 @@ const EventManagement = () => {
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  
+
   // Form state
   const [eventName, setEventName] = useState("");
   const [eventDescription, setEventDescription] = useState("");
@@ -118,7 +118,7 @@ const EventManagement = () => {
   const DEFAULT_VENUE_NAME = "Maguey Delaware";
   const DEFAULT_VENUE_ADDRESS = "3320 Old Capitol Trl";
   const DEFAULT_CITY = "Wilmington";
-  
+
   const [venueName, setVenueName] = useState(DEFAULT_VENUE_NAME);
   const [venueAddress, setVenueAddress] = useState(DEFAULT_VENUE_ADDRESS);
   const [city, setCity] = useState(DEFAULT_CITY);
@@ -129,6 +129,7 @@ const EventManagement = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [ticketTypes, setTicketTypes] = useState<TicketType[]>([
     { name: "General Admission", price: 25, capacity: 100 },
+    { name: "VIP Table", price: 250, capacity: 10 },
   ]);
   const [saving, setSaving] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -351,7 +352,7 @@ const EventManagement = () => {
     setEditingEvent(event);
     setEventName(event.name);
     setEventDescription(event.description || "");
-    
+
     const eventDateTime = new Date(event.event_date);
     setEventDate(eventDateTime.toISOString().split('T')[0]);
     setEventTime(event.event_time || "20:00");
@@ -408,7 +409,7 @@ const EventManagement = () => {
       reader.readAsDataURL(imageFile);
       reader.onload = async () => {
         const base64Image = reader.result;
-        
+
         const { data, error } = await supabase.functions.invoke('scan-flyer', {
           body: { image: base64Image, apiKey: openaiKey }
         });
@@ -422,7 +423,7 @@ const EventManagement = () => {
           if (data.venue) setVenueName(data.venue);
           if (data.city) setCity(data.city);
           if (data.description) setEventDescription(data.description);
-          
+
           toast({
             title: "Flyer Scanned",
             description: "Event details auto-filled from flyer!",
@@ -595,16 +596,16 @@ const EventManagement = () => {
       }
 
       const eventDateTime = new Date(`${eventDate}T${eventTime}`);
-      
+
       // Parse categories and tags from comma-separated input
       const parsedCategories = categoriesInput.split(',').map(c => c.trim()).filter(c => c.length > 0);
       const parsedTags = tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0);
-      
+
       // Determine published_at timestamp
       const shouldSetPublishedAt = eventStatus === 'published' && (!editingEvent || editingEvent.status !== 'published');
-      const publishedAtValue = shouldSetPublishedAt ? new Date().toISOString() : 
+      const publishedAtValue = shouldSetPublishedAt ? new Date().toISOString() :
         (editingEvent?.status === 'published' ? editingEvent.published_at : null);
-      
+
       const eventData = {
         name: eventName.trim(),
         description: eventDescription.trim() || null,
@@ -634,23 +635,23 @@ const EventManagement = () => {
           console.error('Error updating event:', updateError);
           throw updateError;
         }
-        
+
         // Verify the update succeeded by fetching the event
         const { data: fetchedData, error: fetchError } = await supabase
           .from("events")
           .select("id")
           .eq("id", editingEvent.id)
           .maybeSingle();
-        
+
         if (fetchError) {
           console.error('Error verifying event update:', fetchError);
           throw new Error(`Event update verification failed: ${fetchError.message}`);
         }
-        
+
         if (!fetchedData) {
           throw new Error("Event not found after update");
         }
-        
+
         // Update succeeded, use the eventId
         eventId = editingEvent.id;
 
@@ -737,7 +738,7 @@ const EventManagement = () => {
             ticketTypesCount: ticketTypes.length,
           },
         }
-      ).catch(() => {}); // Non-blocking
+      ).catch(() => { }); // Non-blocking
 
       setEditDialogOpen(false);
       loadEvents();
@@ -801,7 +802,7 @@ const EventManagement = () => {
           eventName: eventToDelete.name,
           eventDate: eventToDelete.event_date,
         },
-      }).catch(() => {}); // Non-blocking
+      }).catch(() => { }); // Non-blocking
 
       setDeleteDialogOpen(false);
       loadEvents();
@@ -970,280 +971,280 @@ const EventManagement = () => {
               </TabsList>
 
               <TabsContent value="details" className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="event-name">Event Name *</Label>
-                <Input
-                  id="event-name"
-                  value={eventName}
-                  onChange={(e) => setEventName(e.target.value)}
-                  placeholder="e.g., Perreo Fridays"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="venue-name">Venue Name</Label>
+                  <Label htmlFor="event-name">Event Name *</Label>
                   <Input
-                    id="venue-name"
-                    value={venueName}
-                    onChange={(e) => setVenueName(e.target.value)}
-                    placeholder="e.g., Club Maguey"
+                    id="event-name"
+                    value={eventName}
+                    onChange={(e) => setEventName(e.target.value)}
+                    placeholder="e.g., Perreo Fridays"
                   />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="venue-name">Venue Name</Label>
+                    <Input
+                      id="venue-name"
+                      value={venueName}
+                      onChange={(e) => setVenueName(e.target.value)}
+                      placeholder="e.g., Club Maguey"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="city">City (optional)</Label>
+                    <Input
+                      id="city"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Wilmington (default)"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="city">City (optional)</Label>
+                  <Label htmlFor="venue-address">Venue Address</Label>
                   <Input
-                    id="city"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Wilmington (default)"
+                    id="venue-address"
+                    value={venueAddress}
+                    onChange={(e) => setVenueAddress(e.target.value)}
+                    placeholder="e.g., 123 Main St"
                   />
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="venue-address">Venue Address</Label>
-                <Input
-                  id="venue-address"
-                  value={venueAddress}
-                  onChange={(e) => setVenueAddress(e.target.value)}
-                  placeholder="e.g., 123 Main St"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="event-status">Status *</Label>
-                <Select value={eventStatus} onValueChange={(value: 'draft' | 'published' | 'archived') => setEventStatus(value)}>
-                  <SelectTrigger id="event-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">
-                      <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Draft
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="published">
-                      <div className="flex items-center gap-2">
-                        <Globe className="h-4 w-4" />
-                        Published
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="archived">
-                      <div className="flex items-center gap-2">
-                        <Archive className="h-4 w-4" />
-                        Archived
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  {eventStatus === 'draft' && 'Event is not visible to public'}
-                  {eventStatus === 'published' && 'Event is visible on main and purchase sites'}
-                  {eventStatus === 'archived' && 'Event is hidden but preserved'}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="event-description">Description</Label>
-                <RichTextEditor
-                  content={eventDescription}
-                  onChange={setEventDescription}
-                  placeholder="Event description... (supports rich text formatting)"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="categories">Categories</Label>
-                  <Input
-                    id="categories"
-                    value={categoriesInput}
-                    onChange={(e) => setCategoriesInput(e.target.value)}
-                    placeholder="Music, Nightlife, Latin (comma-separated)"
-                  />
+                  <Label htmlFor="event-status">Status *</Label>
+                  <Select value={eventStatus} onValueChange={(value: 'draft' | 'published' | 'archived') => setEventStatus(value)}>
+                    <SelectTrigger id="event-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Draft
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="published">
+                        <div className="flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          Published
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="archived">
+                        <div className="flex items-center gap-2">
+                          <Archive className="h-4 w-4" />
+                          Archived
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground">
-                    Comma-separated categories for organizing events
+                    {eventStatus === 'draft' && 'Event is not visible to public'}
+                    {eventStatus === 'published' && 'Event is visible on main and purchase sites'}
+                    {eventStatus === 'archived' && 'Event is hidden but preserved'}
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tags">Tags</Label>
-                  <Input
-                    id="tags"
-                    value={tagsInput}
-                    onChange={(e) => setTagsInput(e.target.value)}
-                    placeholder="reggaeton, friday, vip (comma-separated)"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Comma-separated tags for filtering and search
-                  </p>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="event-date">Event Date *</Label>
-                  <Input
-                    id="event-date"
-                    type="date"
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
+                  <Label htmlFor="event-description">Description</Label>
+                  <RichTextEditor
+                    content={eventDescription}
+                    onChange={setEventDescription}
+                    placeholder="Event description... (supports rich text formatting)"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="event-time">Event Time *</Label>
-                  <Input
-                    id="event-time"
-                    type="time"
-                    value={eventTime}
-                    onChange={(e) => setEventTime(e.target.value)}
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label>Event Image / Flyer</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="categories">Categories</Label>
+                    <Input
+                      id="categories"
+                      value={categoriesInput}
+                      onChange={(e) => setCategoriesInput(e.target.value)}
+                      placeholder="Music, Nightlife, Latin (comma-separated)"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Comma-separated categories for organizing events
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tags">Tags</Label>
+                    <Input
+                      id="tags"
+                      value={tagsInput}
+                      onChange={(e) => setTagsInput(e.target.value)}
+                      placeholder="reggaeton, friday, vip (comma-separated)"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Comma-separated tags for filtering and search
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="event-date">Event Date *</Label>
+                    <Input
+                      id="event-date"
+                      type="date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="event-time">Event Time *</Label>
+                    <Input
+                      id="event-time"
+                      type="time"
+                      value={eventTime}
+                      onChange={(e) => setEventTime(e.target.value)}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  {imagePreview ? (
-                    <div className="relative">
-                      <img
-                        src={imagePreview}
-                        alt="Event preview"
-                        className="w-full h-48 object-cover rounded-lg border"
-                      />
+                  <Label>Event Image / Flyer</Label>
+                  <div className="space-y-2">
+                    {imagePreview ? (
+                      <div className="relative">
+                        <img
+                          src={imagePreview}
+                          alt="Event preview"
+                          className="w-full h-48 object-cover rounded-lg border"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute top-2 right-2"
+                          onClick={removeImage}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                        <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Upload event flyer or image
+                        </p>
+                        <Input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          onChange={handleImageSelect}
+                          className="max-w-xs mx-auto"
+                        />
+                      </div>
+                    )}
+                    {imageFile && !imagePreview && (
                       <Button
                         type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2"
-                        onClick={removeImage}
+                        variant="outline"
+                        onClick={handleImageUpload}
+                        disabled={uploadingImage}
                       >
-                        <X className="h-4 w-4" />
+                        {uploadingImage ? "Uploading..." : "Upload Image"}
                       </Button>
-                    </div>
-                  ) : (
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                      <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Upload event flyer or image
+                    )}
+
+                    {imageFile && openaiKey && (
+                      <div className="mt-2 flex gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          onClick={handleScanFlyer}
+                          disabled={isScanning || uploadingImage}
+                          className="w-full"
+                        >
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          {isScanning ? "Reading Flyer..." : "Auto-fill Details from Flyer"}
+                        </Button>
+                      </div>
+                    )}
+
+                    {imageUrl && !imageFile && (
+                      <p className="text-xs text-muted-foreground">
+                        Current image URL: {imageUrl.substring(0, 50)}...
                       </p>
-                      <Input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/gif"
-                        onChange={handleImageSelect}
-                        className="max-w-xs mx-auto"
-                      />
-                    </div>
-                  )}
-                  {imageFile && !imagePreview && (
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Ticket Types *</Label>
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={handleImageUpload}
-                      disabled={uploadingImage}
+                      size="sm"
+                      onClick={addTicketType}
                     >
-                      {uploadingImage ? "Uploading..." : "Upload Image"}
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Type
                     </Button>
-                  )}
-                  
-                  {imageFile && openaiKey && (
-                    <div className="mt-2 flex gap-2">
-                       <Button
-                        type="button"
-                        variant="secondary"
-                        onClick={handleScanFlyer}
-                        disabled={isScanning || uploadingImage}
-                        className="w-full"
-                      >
-                        <Wand2 className="mr-2 h-4 w-4" />
-                        {isScanning ? "Reading Flyer..." : "Auto-fill Details from Flyer"}
-                      </Button>
+                  </div>
+                  <div className="space-y-3 border rounded-lg p-4">
+                    {ticketTypes.map((ticketType, index) => (
+                      <div key={index} className="grid grid-cols-12 gap-2 items-end">
+                        <div className="col-span-4 space-y-1">
+                          <Label className="text-xs">Name</Label>
+                          <Input
+                            value={ticketType.name}
+                            onChange={(e) => updateTicketType(index, "name", e.target.value)}
+                            placeholder="e.g., VIP"
+                          />
+                        </div>
+                        <div className="col-span-3 space-y-1">
+                          <Label className="text-xs">Price ($)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={ticketType.price}
+                            onChange={(e) => updateTicketType(index, "price", parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div className="col-span-3 space-y-1">
+                          <Label className="text-xs">Capacity</Label>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={ticketType.capacity}
+                            onChange={(e) => updateTicketType(index, "capacity", parseInt(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div className="col-span-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeTicketType(index)}
+                            disabled={ticketTypes.length === 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="text-sm text-muted-foreground mt-2">
+                      Total Ticket Capacity: {ticketTypes.reduce((sum, tt) => sum + tt.capacity, 0)}
                     </div>
-                  )}
-
-                  {imageUrl && !imageFile && (
-                    <p className="text-xs text-muted-foreground">
-                      Current image URL: {imageUrl.substring(0, 50)}...
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Ticket Types *</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addTicketType}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Type
-                  </Button>
-                </div>
-                <div className="space-y-3 border rounded-lg p-4">
-                  {ticketTypes.map((ticketType, index) => (
-                    <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                      <div className="col-span-4 space-y-1">
-                        <Label className="text-xs">Name</Label>
-                        <Input
-                          value={ticketType.name}
-                          onChange={(e) => updateTicketType(index, "name", e.target.value)}
-                          placeholder="e.g., VIP"
-                        />
-                      </div>
-                      <div className="col-span-3 space-y-1">
-                        <Label className="text-xs">Price ($)</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={ticketType.price}
-                          onChange={(e) => updateTicketType(index, "price", parseFloat(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="col-span-3 space-y-1">
-                        <Label className="text-xs">Capacity</Label>
-                        <Input
-                          type="number"
-                          min="1"
-                          value={ticketType.capacity}
-                          onChange={(e) => updateTicketType(index, "capacity", parseInt(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeTicketType(index)}
-                          disabled={ticketTypes.length === 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <div className="text-sm text-muted-foreground mt-2">
-                    Total Ticket Capacity: {ticketTypes.reduce((sum, tt) => sum + tt.capacity, 0)}
                   </div>
                 </div>
-              </div>
               </TabsContent>
 
               {editingEvent && (
                 <>
                   <TabsContent value="vip-setup" className="py-4">
-                    <VIPSetupManager 
+                    <VIPSetupManager
                       eventId={editingEvent.id}
                       eventName={editingEvent.name}
                     />
                   </TabsContent>
 
                   <TabsContent value="vip-reservations" className="py-4">
-                    <VIPReservationsList 
+                    <VIPReservationsList
                       eventId={editingEvent.id}
                     />
                   </TabsContent>
@@ -1295,7 +1296,7 @@ const EventManagement = () => {
                 Download the template to see the required format.
               </DialogDescription>
             </DialogHeader>
-            
+
             <EventBulkImport
               onImportComplete={() => {
                 loadEvents();

@@ -203,6 +203,18 @@ export default {
       },
       fontFamily: {
         montserrat: ['Montserrat', 'sans-serif'],
+        sans: ['Montserrat', 'sans-serif'],
+      },
+      fontSize: {
+        'h1': ['48px', { lineHeight: '1.2', letterSpacing: '0.15em', fontWeight: '800' }],
+        'h2': ['36px', { lineHeight: '1.2', letterSpacing: '0.12em', fontWeight: '700' }],
+        'h3': ['28px', { lineHeight: '1.2', letterSpacing: '0.1em', fontWeight: '600' }],
+        'h4': ['22px', { lineHeight: '1.3', letterSpacing: '0.08em', fontWeight: '600' }],
+        'h5': ['18px', { lineHeight: '1.4', letterSpacing: '0.06em', fontWeight: '500' }],
+        'h6': ['16px', { lineHeight: '1.4', letterSpacing: '0.05em', fontWeight: '500' }],
+        'body': ['17px', { lineHeight: '1.6', fontWeight: '400' }],
+        'body-sm': ['15px', { lineHeight: '1.6', fontWeight: '400' }],
+        'body-lg': ['19px', { lineHeight: '1.6', fontWeight: '400' }],
       },
       keyframes: {
         "accordion-down": {

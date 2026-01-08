@@ -8,7 +8,7 @@ import { securityHeaders } from "./src/lib/security-headers";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 3000,
+    port: 3017,
     headers: securityHeaders,
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),

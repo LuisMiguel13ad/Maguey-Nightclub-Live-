@@ -31,6 +31,7 @@ import {
   Users,
   UsersRound,
   Zap,
+  Wine,
 } from "lucide-react";
 
 interface DailyPerformancePoint {
@@ -110,6 +111,8 @@ const OwnerDashboard = () => {
     conversionRate: 0,
     averageOrderValue: 0,
     ticketsPerOrder: 0,
+    vipTablesSold: 0,
+    vipRevenue: 0,
   });
   const [recentOrders, setRecentOrders] = useState<Array<{
     id: string;
@@ -212,7 +215,18 @@ const OwnerDashboard = () => {
 
       const { data: ticketsData, error: ticketsError } = await supabase
         .from<any>("tickets")
-        .select("price, created_at, purchase_date, scanned_at, event_name");
+        .select(`
+          price, 
+          created_at, 
+          purchase_date, 
+          scanned_at, 
+          event_name,
+          ticket_type_id,
+          ticket_types (
+            name,
+            category
+          )
+        `);
       if (ticketsError) throw ticketsError;
 
       const { data: ordersData, error: ordersError } = await supabase
@@ -220,21 +234,10 @@ const OwnerDashboard = () => {
         .select("id, total, created_at, status, purchaser_email, purchaser_name, event_id, events(name)");
       if (ordersError) throw ordersError;
 
-      // Fetch tickets with ticket type information for distribution chart
-      const { data: ticketsWithTypes, error: ticketsTypesError } = await supabase
-        .from("tickets")
-        .select(`
-          ticket_type_id,
-          ticket_types (
-            name,
-            category
-          )
-        `);
-      if (ticketsTypesError) console.warn("Error fetching ticket types:", ticketsTypesError);
-
-      // Calculate ticket type distribution
+      // Transform tickets for distribution calculation
       const typeCounts = new Map<string, number>();
-      (ticketsWithTypes || []).forEach((ticket: any) => {
+      (ticketsData || []).forEach((ticket: any) => {
+        // Handle nested ticket_types object
         const typeName = ticket.ticket_types?.name || "Unknown";
         typeCounts.set(typeName, (typeCounts.get(typeName) || 0) + 1);
       });
@@ -266,13 +269,22 @@ const OwnerDashboard = () => {
 
       setPeakBuyingTimes(peakTimes);
 
-      const { data: eventsData, error: eventsError } = await supabase
-        .from<any>("events")
-        .select("id, name, event_date, venue_capacity, ticket_types, metadata")
+      const { data: eventsData, error: eventsError } = await (supabase as any)
+        .from("events")
+        .select("id, name, event_date, metadata")
         .eq("is_active", true)
         .gte("event_date", new Date().toISOString())
         .order("event_date", { ascending: true });
       if (eventsError) throw eventsError;
+
+      // Fetch ticket types for active events to calculate capacity
+      const eventIds = (eventsData || []).map((e: any) => e.id);
+      const { data: eventTicketTypes, error: ttError } = await supabase
+        .from("ticket_types")
+        .select("event_id, capacity:total_inventory")
+        .in("event_id", eventIds);
+
+      if (ttError) console.warn("Error fetching event ticket types:", ttError);
 
       const parsePrice = (value: number | string | null | undefined) => {
         if (value === null || value === undefined) return 0;
@@ -357,10 +369,10 @@ const OwnerDashboard = () => {
       const upcomingSummaries: UpcomingEventSummary[] = (eventsData || []).slice(0, 4).map((event) => {
         const eventDate = parseISO(event.event_date as string);
         const ticketsSold = ticketsByEvent.get(event.name) || 0;
-        const capacityFromTiers = Array.isArray(event.ticket_types)
-          ? event.ticket_types.reduce((sum: number, tier: { capacity?: number }) => sum + (tier?.capacity || 0), 0)
-          : 0;
-        const capacity = event.venue_capacity || capacityFromTiers;
+        const currentEventTypes = (eventTicketTypes || []).filter((tt: any) => tt.event_id === event.id);
+        const capacityFromTiers = currentEventTypes.reduce((sum: number, tier: any) => sum + (tier?.capacity || 0), 0);
+        // Fallback to 100 if no capacity found to avoid division by zero visual errors
+        const capacity = capacityFromTiers > 0 ? capacityFromTiers : 100;
         const percentSold = capacity > 0 ? Math.min((ticketsSold / capacity) * 100, 100) : 0;
         let status: UpcomingEventSummary["status"] = "on-track";
         if (percentSold >= 85) status = "sellout";
@@ -396,6 +408,12 @@ const OwnerDashboard = () => {
         conversionRate,
         averageOrderValue,
         ticketsPerOrder,
+        vipTablesSold: distribution.find(d => d.name.toLowerCase().includes('table'))?.value || 0,
+        vipRevenue: revenueTickets
+          .filter((t: any) =>
+            t.ticket_types?.name?.toLowerCase().includes('vip')
+          )
+          .reduce((sum, t: any) => sum + parsePrice(t.price), 0),
       });
       setDailyPerformance(fourteenDayPoints);
       setTrendDelta(revenueTrendDelta);
@@ -642,112 +660,138 @@ const OwnerDashboard = () => {
     </div>
   );
 
+  const vipStatsCard = (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 transition-all hover:bg-white/10">
+      <div className="flex items-center gap-4">
+        <div className="rounded-full bg-gradient-to-br from-amber-500/20 to-orange-500/20 p-3 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+          <Wine className="h-4 w-4" />
+        </div>
+        <div className="flex-1 space-y-1">
+          <p className="text-sm font-medium leading-none text-white">VIP Experience</p>
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <span className="text-amber-400 font-semibold">{stats.vipTablesSold} tables sold</span>
+            <span className="text-slate-600">•</span>
+            <span>{currencyFormatter.format(stats.vipRevenue)} revenue</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const heroSection = (
     <section>
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] p-6 shadow-[0_45px_90px_rgba(3,7,23,0.7)] sm:p-8">
-              <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.4em] text-indigo-200/80">
-                <span className="rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold text-indigo-100">
-                  Owner Pulse
-                </span>
-                <span>{format(new Date(), "PPPP")}</span>
-              </div>
-              <div className="mt-6 space-y-4">
-                <h2 className="text-2xl font-semibold text-white sm:text-3xl">Stay ahead of every ticket, table, and trend</h2>
-                <p className="text-slate-300">
-                  Monitor live performance, unlock insights, and launch new experiences without leaving this control center.
-                </p>
-              </div>
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Week Revenue</p>
-                  <p className="mt-2 text-2xl font-semibold">{currencyFormatter.format(stats.weekRevenue)}</p>
-                  <p className="text-xs text-emerald-300 mt-1">
-                    {weekOverWeek >= 0 ? "+" : ""}
-                    {weekOverWeek.toFixed(1)}% vs last week
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Total Tickets</p>
-                  <p className="mt-2 text-2xl font-semibold">{stats.totalTicketsSold.toLocaleString()}</p>
-                  <p className="text-xs text-slate-400 mt-1">Lifetime sold</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Active Events</p>
-                  <p className="mt-2 text-2xl font-semibold">{stats.activeEvents}</p>
-                  <p className="text-xs text-slate-400 mt-1">On sale now</p>
-                </div>
-              </div>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Button
-                  className="w-full justify-center rounded-2xl bg-indigo-500/20 text-white hover:bg-indigo-500/30 sm:flex-1"
-                  onClick={() => navigate("/analytics")}
-                >
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  View analytics
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full justify-center rounded-2xl border-indigo-500/30 bg-indigo-500/10 text-white hover:bg-indigo-500/20 sm:flex-1"
-                  onClick={() => navigate("/events")}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Manage events
-                </Button>
-              </div>
-            </div>
+      <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] p-6 shadow-[0_45px_90px_rgba(3,7,23,0.7)] sm:p-8">
+        <div className="text-xs uppercase tracking-[0.4em] text-indigo-200/80">
+          <span>{format(new Date(), "PPPP")}</span>
+        </div>
+        <div className="mt-6">
+          <p className="text-lg text-slate-300">
+            Monitor live performance, unlock insights, and launch new experiences without leaving this control center.
+          </p>
+        </div>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Week Revenue</p>
+            <p className="mt-2 text-2xl font-semibold">{currencyFormatter.format(stats.weekRevenue)}</p>
+            <p className="text-xs text-emerald-300 mt-1">
+              {weekOverWeek >= 0 ? "+" : ""}
+              {weekOverWeek.toFixed(1)}% vs last week
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Total Tickets</p>
+            <p className="mt-2 text-2xl font-semibold">{stats.totalTicketsSold.toLocaleString()}</p>
+            <p className="text-xs text-slate-400 mt-1">Lifetime sold</p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Active Events</p>
+            <p className="mt-2 text-2xl font-semibold">{stats.activeEvents}</p>
+            <p className="text-xs text-slate-400 mt-1">On sale now</p>
+          </div>
+        </div>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Button
+            className="w-full justify-center rounded-2xl bg-indigo-500/20 text-white hover:bg-indigo-500/30 sm:flex-1"
+            onClick={() => navigate("/analytics")}
+          >
+            <BarChart3 className="mr-2 h-4 w-4" />
+            View analytics
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full justify-center rounded-2xl border-indigo-500/30 bg-indigo-500/10 text-white hover:bg-indigo-500/20 sm:flex-1"
+            onClick={() => navigate("/events")}
+          >
+            <Calendar className="mr-2 h-4 w-4" />
+            Manage events
+          </Button>
+        </div>
+      </div>
     </section>
   );
 
   return (
     <OwnerPortalLayout
-      subtitle={`${getGreeting()}, ${ownerName}`}
-      title="Control every venue moment"
-      description={format(new Date(), "EEEE, MMMM d, yyyy")}
+      title={`${getGreeting()}, Felix`}
       actions={headerActions}
       hero={heroSection}
     >
-          {/* Recent Purchases + Operational Insights - Side by Side */}
-          <section className="grid gap-6 md:grid-cols-2">
-            <div>
-              <RecentPurchases orders={recentOrders} currencyFormatter={currencyFormatter} />
-            </div>
+      {/* Recent Purchases + Operational Insights - Side by Side */}
+      <section className="grid gap-6 md:grid-cols-2">
+        <div>
+          <RecentPurchases orders={recentOrders} currencyFormatter={currencyFormatter} />
+        </div>
 
-            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)] text-white">
-              <CardHeader>
-                <CardTitle>Operational Insights</CardTitle>
-                <CardDescription className="text-slate-400">Key performance indicators</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {insights.map((item) => (
-                  <div key={item.title} className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-medium leading-none text-white">{item.title}</p>
-                      <p className="text-xs text-slate-400">{item.helper}</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-lg font-bold">{item.value}</span>
-                    </div>
-                  </div>
-                ))}
+        <Card className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-md shadow-2xl transition-all duration-300 hover:border-white/20">
+          <CardHeader>
+            <CardTitle className="bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">Operational Insights</CardTitle>
+            <CardDescription className="text-slate-400">Key performance indicators</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {insights.map((item) => (
+              <div key={item.title} className="flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium leading-none text-white">{item.title}</p>
+                  <p className="text-xs text-slate-400">{item.helper}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-lg font-bold text-white">{item.value}</span>
+                  {item.trendLabel && (
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mt-1">
+                      {item.trendValue} {item.trendLabel}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
 
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-indigo-500/20 p-3 text-indigo-200">
-                      <Smartphone className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none text-white">Scan Status</p>
-                      <div className="flex items-center gap-2 text-xs text-slate-400">
-                        <span>{stats.totalTicketsScanned} scanned</span>
-                        <span>•</span>
-                        <span>{Math.max(stats.totalTicketsSold - stats.totalTicketsScanned, 0)} pending</span>
-                      </div>
-                    </div>
+            <div className="rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10">
+              <div className="flex items-center gap-4">
+                <div className="rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 p-3 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                  <Smartphone className="h-4 w-4" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium leading-none text-white">Scan Status</p>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="text-emerald-400 font-semibold">{stats.totalTicketsScanned} scanned</span>
+                    <span className="text-slate-600">•</span>
+                    <span>{Math.max(stats.totalTicketsSold - stats.totalTicketsScanned, 0)} pending</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </section>
+              </div>
+              {/* Progress bar visual */}
+              <div className="mt-3 h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                  style={{ width: `${stats.totalTicketsSold > 0 ? (stats.totalTicketsScanned / stats.totalTicketsSold) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+
+            {vipStatsCard}
+          </CardContent>
+        </Card>
+      </section>
 
     </OwnerPortalLayout>
   );

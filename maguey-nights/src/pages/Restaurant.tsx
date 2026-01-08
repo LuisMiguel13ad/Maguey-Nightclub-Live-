@@ -212,7 +212,7 @@ const Restaurant = () => {
                     NIGHTCLUB
                   </h1>
                 </div>
-                <p className="text-[#FFD700] text-xl md:text-2xl font-light italic mb-4" style={{ fontFamily: 'serif' }}>
+                <p className="text-[#FFD700] text-xl md:text-2xl font-light italic mb-4">
                   Taste of Mexico
                 </p>
                 <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 tracking-tight">
@@ -435,7 +435,7 @@ const Restaurant = () => {
               viewport={{ once: true }}
               transition={{ duration: 0.6 }}
             >
-              <p className="text-[#FFD700] text-xl font-light italic mb-4" style={{ fontFamily: 'serif' }}>
+              <p className="text-[#FFD700] text-xl font-light italic mb-4">
                 About Our Restaurant
               </p>
               <h2 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tight">

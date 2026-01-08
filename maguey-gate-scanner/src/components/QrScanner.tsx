@@ -9,9 +9,10 @@ interface QrScannerProps {
   onScanSuccess: (decodedText: string) => void;
   isScanning: boolean;
   onError?: (error: string) => void;
+  minimal?: boolean;
 }
 
-export const QrScanner = ({ onScanSuccess, isScanning, onError }: QrScannerProps) => {
+export const QrScanner = ({ onScanSuccess, isScanning, onError, minimal = false }: QrScannerProps) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isInitialized = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +20,7 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError }: QrScannerProps
 
   const getErrorMessage = (err: any): string => {
     const errorMessage = err?.message || String(err);
-    
+
     if (errorMessage.includes("Permission") || errorMessage.includes("permission")) {
       return "Camera permission denied. Please allow camera access in your browser settings.";
     }
@@ -35,13 +36,13 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError }: QrScannerProps
     if (errorMessage.includes("HTTPS") || errorMessage.includes("secure context")) {
       return "Camera requires HTTPS connection. Please use a secure connection.";
     }
-    
+
     return `Camera error: ${errorMessage}. Please try again or use manual entry.`;
   };
 
   const initScanner = async () => {
     if (!isScanning || isInitialized.current) return;
-    
+
     setError(null);
     setIsRetrying(false);
 
@@ -53,7 +54,7 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError }: QrScannerProps
       // Use back camera on mobile, auto-select on desktop
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       const facingMode = isMobile ? "environment" : { exact: "environment" };
-      
+
       await scanner.start(
         facingMode,
         {
@@ -87,7 +88,7 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError }: QrScannerProps
       const errorMsg = getErrorMessage(err);
       setError(errorMsg);
       isInitialized.current = false;
-      
+
       if (onError) {
         onError(errorMsg);
       }
@@ -133,18 +134,20 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError }: QrScannerProps
 
   return (
     <>
-      <CardHeader className="text-center bg-gradient-scan">
-        <div className="flex justify-center mb-4">
-          <div className="p-3 bg-primary/10 rounded-full">
-            {error ? (
-              <Camera className="h-8 w-8 text-destructive" />
-            ) : (
-              <Scan className="h-8 w-8 text-primary animate-pulse" />
-            )}
+      {!minimal && (
+        <CardHeader className="text-center bg-gradient-scan">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 bg-primary/10 rounded-full">
+              {error ? (
+                <Camera className="h-8 w-8 text-destructive" />
+              ) : (
+                <Scan className="h-8 w-8 text-primary animate-pulse" />
+              )}
+            </div>
           </div>
-        </div>
-        <CardTitle className="text-2xl">Scan Ticket QR Code</CardTitle>
-      </CardHeader>
+          <CardTitle className="text-2xl">Scan Ticket QR Code</CardTitle>
+        </CardHeader>
+      )}
       <CardContent className="p-6 space-y-4">
         {error ? (
           <Alert variant="destructive">
@@ -168,8 +171,8 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError }: QrScannerProps
             <div className="relative rounded-lg overflow-hidden border-2 border-primary/30 bg-black">
               <div id="qr-reader" className="w-full min-h-[300px] md:min-h-[400px]" />
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="border-2 border-primary/50 rounded-lg animate-pulse" 
-                     style={{ width: '80%', maxWidth: '300px', aspectRatio: '1' }} />
+                <div className="border-2 border-primary/50 rounded-lg animate-pulse"
+                  style={{ width: '80%', maxWidth: '300px', aspectRatio: '1' }} />
               </div>
             </div>
             <p className="text-center text-muted-foreground mt-4 text-sm md:text-base">

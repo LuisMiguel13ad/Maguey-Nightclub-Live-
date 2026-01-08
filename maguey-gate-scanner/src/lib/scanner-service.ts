@@ -22,6 +22,7 @@ import { createScanSpan, createValidationSpan, createLookupSpan, createStatusUpd
 import { errorTracker } from './errors/error-tracker';
 import { ScanError, ScanErrorType, getScanErrorRecovery } from './errors/scanner-errors';
 import { DatabaseError, ErrorSeverity, ErrorCategory } from './errors/error-types';
+import { logAuditEvent } from './audit-service';
 import {
   applyPagination,
   buildPaginatedResponse,
@@ -137,10 +138,10 @@ export const validateQRSignature = async (
     return isValid;
   } catch (error) {
     log.error('QR signature validation error', error);
-    
+
     // Track QR validation error
     errorTracker.captureError(
-      error instanceof Error ? error : new Error(String(error)),
+      error instanceof Error ? error : new Error(error?.message || JSON.stringify(error)),
       {
         severity: ErrorSeverity.HIGH,
         category: ErrorCategory.VALIDATION,
@@ -436,7 +437,6 @@ export const scanTicket = async (
           status,
           scanned_at,
           issued_at,
-          tier,
           ticket_type,
           event_name,
           events (
@@ -462,7 +462,7 @@ export const scanTicket = async (
         
         const dbError = new DatabaseError(
           'lookup_ticket',
-          fetchError instanceof Error ? fetchError : new Error(String(fetchError)),
+          fetchError instanceof Error ? fetchError : new Error(fetchError?.message || JSON.stringify(fetchError)),
           {
             ticketId,
             scannerId: scannedBy,
@@ -522,10 +522,10 @@ export const scanTicket = async (
     });
     span.addEvent('ticket.fetched', { event_id: ticket.event_id });
     
-    log.debug('Ticket fetched', { 
-      status: ticket.status, 
+    log.debug('Ticket fetched', {
+      status: ticket.status,
       eventId: ticket.event_id,
-      tier: ticket.tier,
+      ticketType: ticket.ticket_type,
     });
 
   const normalizedTicket = ticket as TicketQueryRow;
@@ -608,6 +608,19 @@ export const scanTicket = async (
         }).catch(() => {});
       }
       
+      // Audit log: duplicate scan attempt
+      logAuditEvent('ticket_scanned', 'ticket', `Duplicate scan rejected - already scanned at ${scannedAt}`, {
+        userId: scannedBy,
+        resourceId: ticketId,
+        severity: 'warning',
+        metadata: {
+          eventId: ticketWithRelations.event_id,
+          scanMethod,
+          previousScannedAt: ticketWithRelations.scanned_at,
+          result: 'already_scanned',
+        },
+      }).catch(() => {}); // Non-blocking
+
       endTimer();
       return {
         success: false,
@@ -646,7 +659,7 @@ export const scanTicket = async (
         
         const dbError = new DatabaseError(
           'update_ticket_status',
-          updateError instanceof Error ? updateError : new Error(String(updateError)),
+          updateError instanceof Error ? updateError : new Error(updateError?.message || JSON.stringify(updateError)),
           {
             ticketId,
             scannerId: scannedBy,
@@ -687,7 +700,8 @@ export const scanTicket = async (
   // Calculate scan duration
   const durationMs = Date.now() - startTime;
 
-    // Log to scan_logs with duration, tier, override information, scan method, and trace_id
+    // Log to scan_logs - only use columns that exist in the database
+    // Extra fields go into metadata JSON
     const traceContext = getCurrentTraceContext();
     const { data: scanLogData, error: logError } = await traceQuery('scanner.insertScanLog', async () => {
       const insertData: any = {
@@ -695,25 +709,19 @@ export const scanTicket = async (
         scan_result: 'valid',
         scanned_at: scannedAt,
         scanned_by: scannedBy ?? null,
-        scan_duration_ms: durationMs,
-        scan_method: scanMethod,
-        override_used: overrideUsed,
-        override_reason: overrideReason,
         metadata: {
-          tier: ticketWithRelations.tier || null,
           ticket_type: ticketWithRelations.ticket_type || null,
           ticket_id: ticketWithRelations.ticket_id || null,
           scan_method: scanMethod,
+          scan_duration_ms: durationMs,
+          override_used: overrideUsed,
+          override_reason: overrideReason,
+          trace_id: traceContext?.traceId || null,
         },
       };
 
-      // Add trace_id if available
-      if (traceContext) {
-        insertData.trace_id = traceContext.traceId;
-      }
-
       const { data, error } = await supabase.from('scan_logs').insert(insertData).select('id').single();
-      
+
       if (error) {
         throw error;
       }
@@ -782,7 +790,7 @@ export const scanTicket = async (
           // Track fraud detection error (non-blocking)
           const traceContextForFraud = getCurrentTraceContext();
           errorTracker.captureError(
-            error instanceof Error ? error : new Error(String(error)),
+            error instanceof Error ? error : new Error(error?.message || JSON.stringify(error)),
             {
               severity: ErrorSeverity.LOW,
               category: ErrorCategory.UNKNOWN,
@@ -962,6 +970,22 @@ export const scanTicket = async (
     
     endTimer();
 
+    // Audit log: successful scan
+    logAuditEvent('ticket_scanned', 'ticket', `Ticket scanned successfully${overrideUsed ? ' (override used)' : ''}`, {
+      userId: scannedBy,
+      resourceId: ticketId,
+      severity: 'info',
+      metadata: {
+        eventId: ticketWithRelations.event_id,
+        scanMethod,
+        durationMs,
+        overrideUsed,
+        overrideReason: overrideReason || undefined,
+        scanType,
+        result: 'valid',
+      },
+    }).catch(() => {}); // Non-blocking
+
     span.setOk();
     return { success: true, ticket: updatedTicket, durationMs };
   }, {
@@ -1090,7 +1114,7 @@ export async function getScanLogsPaginated(
     .select('id', { count: 'exact', head: true })
     .eq('ticket_id', ticketId);
   
-  // Build data query
+  // Build data query - only select columns that exist in the database
   let dataQuery = supabase
     .from('scan_logs')
     .select(`
@@ -1099,10 +1123,6 @@ export async function getScanLogsPaginated(
       scan_result,
       scanned_at,
       scanned_by,
-      scan_duration_ms,
-      scan_method,
-      override_used,
-      override_reason,
       metadata,
       created_at,
       tickets (
@@ -1168,24 +1188,24 @@ export async function getScanLogsPaginated(
     throw new Error(`Failed to get scan logs: ${dataError.message}`);
   }
   
-  // Transform data
+  // Transform data - read extra fields from metadata JSON
   const scanLogs: ScanLogEntry[] = (data ?? []).map((row: any) => ({
     id: row.id,
     ticket_id: row.ticket_id,
     scan_result: row.scan_result,
     scanned_at: row.scanned_at,
     scanned_by: row.scanned_by,
-    scan_duration_ms: row.scan_duration_ms,
-    scan_method: row.scan_method,
-    override_used: row.override_used ?? false,
-    override_reason: row.override_reason,
+    scan_duration_ms: row.metadata?.scan_duration_ms ?? null,
+    scan_method: row.metadata?.scan_method ?? null,
+    override_used: row.metadata?.override_used ?? false,
+    override_reason: row.metadata?.override_reason ?? null,
     metadata: row.metadata,
     created_at: row.created_at,
     ticket: row.tickets,
   }));
-  
+
   log.debug('Scan logs fetched', { count: scanLogs.length, totalCount });
-  
+
   return buildPaginatedResponse(scanLogs, totalCount, options);
 }
 
@@ -1240,7 +1260,7 @@ export async function getEventScansPaginated(
     .select('id', { count: 'exact', head: true })
     .in('ticket_id', ticketIds);
   
-  // Build data query with event info
+  // Build data query with event info - only select columns that exist
   let dataQuery = supabase
     .from('scan_logs')
     .select(`
@@ -1249,10 +1269,6 @@ export async function getEventScansPaginated(
       scan_result,
       scanned_at,
       scanned_by,
-      scan_duration_ms,
-      scan_method,
-      override_used,
-      override_reason,
       metadata,
       created_at,
       tickets!inner (
@@ -1323,17 +1339,17 @@ export async function getEventScansPaginated(
     throw new Error(`Failed to get event scans: ${dataError.message}`);
   }
   
-  // Transform data
+  // Transform data - read extra fields from metadata JSON
   const scanLogs: ScanLogEntry[] = (data ?? []).map((row: any) => ({
     id: row.id,
     ticket_id: row.ticket_id,
     scan_result: row.scan_result,
     scanned_at: row.scanned_at,
     scanned_by: row.scanned_by,
-    scan_duration_ms: row.scan_duration_ms,
-    scan_method: row.scan_method,
-    override_used: row.override_used ?? false,
-    override_reason: row.override_reason,
+    scan_duration_ms: row.metadata?.scan_duration_ms ?? null,
+    scan_method: row.metadata?.scan_method ?? null,
+    override_used: row.metadata?.override_used ?? false,
+    override_reason: row.metadata?.override_reason ?? null,
     metadata: row.metadata,
     created_at: row.created_at,
     ticket: row.tickets ? {
@@ -1344,9 +1360,9 @@ export async function getEventScansPaginated(
     } : null,
     event: row.tickets?.events ?? null,
   }));
-  
+
   log.debug('Event scans fetched', { eventId, count: scanLogs.length, totalCount });
-  
+
   return buildPaginatedResponse(scanLogs, totalCount, options);
 }
 
@@ -1383,7 +1399,7 @@ export async function getRecentScansPaginated(
     .select('id', { count: 'exact', head: true })
     .eq('scanned_by', scannerId);
   
-  // Build data query with ticket and event info
+  // Build data query with ticket and event info - only select columns that exist
   let dataQuery = supabase
     .from('scan_logs')
     .select(`
@@ -1392,10 +1408,6 @@ export async function getRecentScansPaginated(
       scan_result,
       scanned_at,
       scanned_by,
-      scan_duration_ms,
-      scan_method,
-      override_used,
-      override_reason,
       metadata,
       created_at,
       tickets (
@@ -1461,17 +1473,17 @@ export async function getRecentScansPaginated(
     throw new Error(`Failed to get scanner scans: ${dataError.message}`);
   }
   
-  // Transform data
+  // Transform data - read extra fields from metadata JSON
   const scanLogs: ScanLogEntry[] = (data ?? []).map((row: any) => ({
     id: row.id,
     ticket_id: row.ticket_id,
     scan_result: row.scan_result,
     scanned_at: row.scanned_at,
     scanned_by: row.scanned_by,
-    scan_duration_ms: row.scan_duration_ms,
-    scan_method: row.scan_method,
-    override_used: row.override_used ?? false,
-    override_reason: row.override_reason,
+    scan_duration_ms: row.metadata?.scan_duration_ms ?? null,
+    scan_method: row.metadata?.scan_method ?? null,
+    override_used: row.metadata?.override_used ?? false,
+    override_reason: row.metadata?.override_reason ?? null,
     metadata: row.metadata,
     created_at: row.created_at,
     ticket: row.tickets ? {
@@ -1482,9 +1494,9 @@ export async function getRecentScansPaginated(
     } : null,
     event: row.tickets?.events ?? null,
   }));
-  
+
   log.debug('Scanner scans fetched', { count: scanLogs.length, totalCount });
-  
+
   return buildPaginatedResponse(scanLogs, totalCount, options);
 }
 
@@ -1519,6 +1531,7 @@ export async function getScanLogsCursor(
 ): Promise<CursorPaginatedResult<ScanLogEntry>> {
   const log = logger.child({ operation: 'getScanLogsCursor' });
   
+  // Only select columns that exist in the database
   let query = supabase
     .from('scan_logs')
     .select(`
@@ -1527,10 +1540,6 @@ export async function getScanLogsCursor(
       scan_result,
       scanned_at,
       scanned_by,
-      scan_duration_ms,
-      scan_method,
-      override_used,
-      override_reason,
       metadata,
       created_at,
       tickets (
@@ -1545,7 +1554,7 @@ export async function getScanLogsCursor(
         )
       )
     `);
-  
+
   // Filter by ticket if provided
   if (ticketId) {
     query = query.eq('ticket_id', ticketId);
@@ -1586,17 +1595,17 @@ export async function getScanLogsCursor(
     throw new Error(`Failed to get scan logs: ${error.message}`);
   }
   
-  // Transform data
+  // Transform data - read extra fields from metadata JSON
   const scanLogs: ScanLogEntry[] = (data ?? []).map((row: any) => ({
     id: row.id,
     ticket_id: row.ticket_id,
     scan_result: row.scan_result,
     scanned_at: row.scanned_at,
     scanned_by: row.scanned_by,
-    scan_duration_ms: row.scan_duration_ms,
-    scan_method: row.scan_method,
-    override_used: row.override_used ?? false,
-    override_reason: row.override_reason,
+    scan_duration_ms: row.metadata?.scan_duration_ms ?? null,
+    scan_method: row.metadata?.scan_method ?? null,
+    override_used: row.metadata?.override_used ?? false,
+    override_reason: row.metadata?.override_reason ?? null,
     metadata: row.metadata,
     created_at: row.created_at,
     ticket: row.tickets ? {
@@ -1607,7 +1616,7 @@ export async function getScanLogsCursor(
     } : null,
     event: row.tickets?.events ?? null,
   }));
-  
+
   return buildCursorPaginatedResponse(
     scanLogs,
     options,
@@ -1657,6 +1666,7 @@ export async function getEventScansCursor(
     };
   }
   
+  // Only select columns that exist in the database
   let query = supabase
     .from('scan_logs')
     .select(`
@@ -1665,10 +1675,6 @@ export async function getEventScansCursor(
       scan_result,
       scanned_at,
       scanned_by,
-      scan_duration_ms,
-      scan_method,
-      override_used,
-      override_reason,
       metadata,
       created_at,
       tickets!inner (
@@ -1684,45 +1690,45 @@ export async function getEventScansCursor(
       )
     `)
     .in('ticket_id', ticketIds);
-  
+
   // Apply filters
   if (filters.scanResult) {
     query = query.eq('scan_result', filters.scanResult);
   }
-  
+
   if (filters.scanMethod) {
     query = query.eq('scan_method', filters.scanMethod);
   }
-  
+
   if (filters.scannedBy) {
     query = query.eq('scanned_by', filters.scannedBy);
   }
-  
+
   // Apply cursor pagination
   query = applyCursorPagination(query, {
     ...options,
     cursorColumn: 'id',
     sortBy: options.sortBy ?? 'scanned_at',
   });
-  
+
   const { data, error } = await query;
-  
+
   if (error) {
     log.error('Failed to get event scans with cursor', { error: error.message });
     throw new Error(`Failed to get event scans: ${error.message}`);
   }
-  
-  // Transform data
+
+  // Transform data - read extra fields from metadata JSON
   const scanLogs: ScanLogEntry[] = (data ?? []).map((row: any) => ({
     id: row.id,
     ticket_id: row.ticket_id,
     scan_result: row.scan_result,
     scanned_at: row.scanned_at,
     scanned_by: row.scanned_by,
-    scan_duration_ms: row.scan_duration_ms,
-    scan_method: row.scan_method,
-    override_used: row.override_used ?? false,
-    override_reason: row.override_reason,
+    scan_duration_ms: row.metadata?.scan_duration_ms ?? null,
+    scan_method: row.metadata?.scan_method ?? null,
+    override_used: row.metadata?.override_used ?? false,
+    override_reason: row.metadata?.override_reason ?? null,
     metadata: row.metadata,
     created_at: row.created_at,
     ticket: row.tickets ? {
@@ -1733,7 +1739,7 @@ export async function getEventScansCursor(
     } : null,
     event: row.tickets?.events ?? null,
   }));
-  
+
   return buildCursorPaginatedResponse(
     scanLogs,
     options,
@@ -1760,6 +1766,7 @@ export async function getRecentScansCursor(
     throw new Error('Scanner ID is required');
   }
   
+  // Only select columns that exist in the database
   let query = supabase
     .from('scan_logs')
     .select(`
@@ -1768,10 +1775,6 @@ export async function getRecentScansCursor(
       scan_result,
       scanned_at,
       scanned_by,
-      scan_duration_ms,
-      scan_method,
-      override_used,
-      override_reason,
       metadata,
       created_at,
       tickets (
@@ -1787,49 +1790,49 @@ export async function getRecentScansCursor(
       )
     `)
     .eq('scanned_by', scannerId);
-  
+
   // Apply filters
   if (filters.scanResult) {
     query = query.eq('scan_result', filters.scanResult);
   }
-  
+
   if (filters.scanMethod) {
     query = query.eq('scan_method', filters.scanMethod);
   }
-  
+
   if (filters.dateFrom) {
     query = query.gte('scanned_at', filters.dateFrom);
   }
-  
+
   if (filters.dateTo) {
     query = query.lte('scanned_at', filters.dateTo);
   }
-  
+
   // Apply cursor pagination
   query = applyCursorPagination(query, {
     ...options,
     cursorColumn: 'id',
     sortBy: options.sortBy ?? 'scanned_at',
   });
-  
+
   const { data, error } = await query;
-  
+
   if (error) {
     log.error('Failed to get scanner scans with cursor', { error: error.message });
     throw new Error(`Failed to get scanner scans: ${error.message}`);
   }
-  
-  // Transform data
+
+  // Transform data - read extra fields from metadata JSON
   const scanLogs: ScanLogEntry[] = (data ?? []).map((row: any) => ({
     id: row.id,
     ticket_id: row.ticket_id,
     scan_result: row.scan_result,
     scanned_at: row.scanned_at,
     scanned_by: row.scanned_by,
-    scan_duration_ms: row.scan_duration_ms,
-    scan_method: row.scan_method,
-    override_used: row.override_used ?? false,
-    override_reason: row.override_reason,
+    scan_duration_ms: row.metadata?.scan_duration_ms ?? null,
+    scan_method: row.metadata?.scan_method ?? null,
+    override_used: row.metadata?.override_used ?? false,
+    override_reason: row.metadata?.override_reason ?? null,
     metadata: row.metadata,
     created_at: row.created_at,
     ticket: row.tickets ? {
@@ -1840,7 +1843,7 @@ export async function getRecentScansCursor(
     } : null,
     event: row.tickets?.events ?? null,
   }));
-  
+
   return buildCursorPaginatedResponse(
     scanLogs,
     options,

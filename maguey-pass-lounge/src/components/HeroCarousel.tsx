@@ -40,13 +40,36 @@ const genreThemes: Record<string, { accent: string; badge: string; glow: string 
   },
 };
 
+// Placeholder images for when there are no events
+const placeholderImages = [
+  {
+    url: 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?q=80&w=2940&auto=format&fit=crop',
+    title: 'The Party Starts Here',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1545128485-c400e7702796?q=80&w=2940&auto=format&fit=crop',
+    title: 'Unforgettable Nights',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1571266028243-e4733b0f0bb0?q=80&w=2940&auto=format&fit=crop',
+    title: 'Where Memories Are Made',
+  },
+  {
+    url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?q=80&w=2940&auto=format&fit=crop',
+    title: 'Feel The Rhythm',
+  },
+];
+
 export function HeroCarousel({ events, getEventDateLabel, getEventTimeLabel }: HeroCarouselProps) {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
-  // Only show event slides - no brand slide
-  const slides = events.slice(0, 5).map(event => ({ type: 'event' as const, event }));
+  // Show event slides if available, otherwise show placeholders
+  const hasEvents = events.length > 0;
+  const slides = hasEvents
+    ? events.slice(0, 5).map(event => ({ type: 'event' as const, event }))
+    : placeholderImages.map((placeholder, index) => ({ type: 'placeholder' as const, placeholder, index }));
 
   const goToSlide = useCallback((index: number) => {
     setCurrentSlide(index);
@@ -82,6 +105,72 @@ export function HeroCarousel({ events, getEventDateLabel, getEventTimeLabel }: H
       {/* Slides */}
       {slides.map((slide, index) => {
         const isActive = index === currentSlide;
+
+        // Placeholder slide
+        if (slide.type === 'placeholder') {
+          const placeholder = slide.placeholder!;
+          return (
+            <div
+              key={`placeholder-${slide.index}`}
+              className={cn(
+                'carousel-slide',
+                isActive && 'active-slide'
+              )}
+            >
+              {/* Background Image */}
+              <div className="absolute inset-0 z-0">
+                <div className="absolute inset-0 bg-forest-950/60 z-10" />
+                <img
+                  src={placeholder.url}
+                  alt={placeholder.title}
+                  className="w-full h-full object-cover animate-slow-pan opacity-70 grayscale-[20%]"
+                />
+              </div>
+
+              {/* Content */}
+              <div className="relative z-20 h-full flex flex-col items-center justify-center text-center px-6 slide-content">
+                {/* Badge */}
+                <div className="inline-flex items-center gap-3 mb-8 px-4 py-2 border border-copper-400/30 rounded-full bg-forest-950/40 backdrop-blur-md opacity-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-copper-400 shadow-[0_0_10px_rgba(94,234,212,0.8)]" />
+                  <span className="font-mono text-[9px] tracking-[0.2em] uppercase text-copper-400">
+                    Wilmington, Delaware
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl text-stone-100 tracking-tight leading-none mb-8 drop-shadow-2xl opacity-0">
+                  {placeholder.title.split(' ').slice(0, -1).join(' ')}{' '}
+                  <span className="italic font-light block mt-2 text-4xl md:text-6xl lg:text-7xl text-copper-400">
+                    {placeholder.title.split(' ').slice(-1)[0]}
+                  </span>
+                </h1>
+
+                {/* Description */}
+                <p className="max-w-md mx-auto font-mono text-[10px] md:text-xs text-stone-400 leading-relaxed tracking-widest mt-8 border-t border-white/10 pt-8 uppercase opacity-0">
+                  Maguey Nightclub
+                  <br />
+                  Events Coming Soon
+                </p>
+
+                {/* CTA Button */}
+                <div className="flex flex-col sm:flex-row gap-4 mt-10 opacity-0">
+                  <a
+                    href="#events"
+                    className="group flex items-center justify-center gap-3 px-8 py-4 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-copper-400/50 rounded-sm transition-all duration-500"
+                  >
+                    <Ticket className="w-4 h-4 text-copper-400" />
+                    <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-200 group-hover:text-copper-400 transition-colors">
+                      Get Notified
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-stone-500 group-hover:translate-x-1 transition-transform" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Event slide
         const event = slide.event!;
         const theme = getTheme(event.genre);
         const hasVipTables = true; // You could check this from event data

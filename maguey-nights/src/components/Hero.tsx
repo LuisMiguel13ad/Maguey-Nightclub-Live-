@@ -9,9 +9,9 @@ const Hero = () => {
   const ref = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
-  const { scrollYProgress } = useScroll({ 
-    target: ref, 
-    offset: ["start start","end start"],
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"],
   });
 
   const smoothScroll = useSpring(scrollYProgress, {
@@ -39,13 +39,13 @@ const Hero = () => {
   };
 
   const letterVariants = {
-    hidden: { 
-      opacity: 0, 
+    hidden: {
+      opacity: 0,
       y: 50,
       scale: 0.8,
     },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       y: 0,
       scale: 1,
       transition: {
@@ -58,8 +58,8 @@ const Hero = () => {
 
   const subtitleVariants = {
     hidden: { opacity: 0, y: 30, scale: 0.9 },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       y: 0,
       scale: 1,
       transition: {
@@ -72,8 +72,8 @@ const Hero = () => {
 
   const buttonVariants = {
     hidden: { opacity: 0, scale: 0.8, y: 20 },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       scale: 1,
       y: 0,
       transition: {
@@ -141,7 +141,7 @@ const Hero = () => {
           disableRemotePlayback
         >
           <source src="/Maguey-nights-hero-compressed.mp4" type="video/mp4" />
-          <source src="/1209.mov" type="video/quicktime" />
+          <source src="/1209-compressed.mp4" type="video/mp4" />
         </video>
         {/* Fallback image for browsers that cannot play the video */}
         <div
@@ -158,7 +158,7 @@ const Hero = () => {
       >
         {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
       </button>
-      
+
       {/* Animated Overlay with multiple layers */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
@@ -167,7 +167,7 @@ const Hero = () => {
       >
         {/* Base gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/80" />
-        
+
         {/* Animated neon glow effects */}
         <motion.div
           className="absolute inset-0"
@@ -184,7 +184,7 @@ const Hero = () => {
             ease: "easeInOut",
           }}
         />
-        
+
         {/* Pulsing glow effect */}
         <motion.div
           className="absolute -inset-40 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#39B54A]/20 via-transparent to-transparent blur-3xl"
@@ -198,13 +198,13 @@ const Hero = () => {
             ease: "easeInOut",
           }}
         />
-        
+
         {/* Bottom fade */}
         <div className="absolute inset-x-0 -bottom-20 h-56 bg-gradient-to-t from-black/80 to-transparent" />
       </motion.div>
 
       {/* Content */}
-      <motion.div 
+      <motion.div
         className="relative h-full flex flex-col items-center justify-center text-center px-4 z-10"
         style={{ opacity: contentOpacity, willChange: "opacity" }}
       >
@@ -216,7 +216,10 @@ const Hero = () => {
           className="mb-8"
           aria-label="Club brand"
         >
-          <motion.h1 className="text-7xl md:text-9xl lg:text-[11rem] font-black tracking-wider leading-none flex justify-center items-center gap-2 md:gap-4">
+          <motion.h1
+            className="font-black tracking-wider leading-none flex justify-center items-center gap-2 md:gap-4"
+            style={{ fontSize: 'clamp(4rem, 15vw, 12rem)' }}
+          >
             {letters.map((letter, index) => (
               <motion.span
                 key={index}
@@ -230,14 +233,15 @@ const Hero = () => {
               </motion.span>
             ))}
           </motion.h1>
-          
+
           {/* Subtitle */}
           <motion.h2
             variants={subtitleVariants}
             initial="hidden"
             animate="show"
-            className="mt-4 text-2xl md:text-4xl lg:text-5xl font-light text-white/90 tracking-[0.3em] uppercase"
+            className="mt-4 font-light text-white/90 tracking-[0.3em] uppercase"
             style={{
+              fontSize: 'clamp(1.5rem, 4vw, 3rem)',
               textShadow: "0 0 10px rgba(255, 255, 255, 0.3)",
             }}
           >
@@ -252,14 +256,14 @@ const Hero = () => {
           animate="show"
         >
           <div>
-            <a 
+            <a
               href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"}
               target="_self"
               className="inline-block"
             >
               <Button
                 size="lg"
-                className="group bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 text-xl px-10 py-6 font-semibold tracking-wider rounded-2xl shadow-[0_0_30px_rgba(57,181,74,0.4)] transition-all duration-300 relative overflow-hidden"
+                className="btn-neon-glow group text-xl px-10 py-6 font-bold tracking-wider rounded-2xl relative overflow-hidden"
               >
                 {/* Animated glow effect */}
                 <motion.div

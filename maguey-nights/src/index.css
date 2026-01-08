@@ -9,11 +9,11 @@
 }
 
 .font-jakarta {
-  font-family: 'Plus Jakarta Sans', 'Inter', 'Helvetica Neue', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .font-geist {
-  font-family: 'Geist', 'Inter', 'Helvetica Neue', sans-serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .testimonial-cards-fan {
@@ -144,6 +144,7 @@ body {
 
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -159,7 +160,7 @@ body {
   .will-change-transform {
     will-change: auto;
   }
-  
+
   /* Reduce complex animations on mobile */
   * {
     animation-duration: 0.3s !important;
@@ -167,10 +168,13 @@ body {
 }
 
 @keyframes glow {
-  0%, 100% { 
+
+  0%,
+  100% {
     text-shadow: 0 0 3px #39B54A, 0 0 6px #39B54A;
   }
-  50% { 
+
+  50% {
     text-shadow: 0 0 8px #39B54A, 0 0 12px #39B54A, 0 0 16px #39B54A;
   }
 }
@@ -191,13 +195,31 @@ body {
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.3; }
-  50% { transform: translateY(-20px) rotate(180deg); opacity: 0.8; }
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+    opacity: 0.8;
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.1); }
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
 }
 
 @keyframes light-beam {
@@ -205,13 +227,41 @@ body {
     transform: translateX(-100%) skewX(-15deg);
     opacity: 0;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     transform: translateX(100%) skewX(-15deg);
     opacity: 0;
   }
+}
+
+@keyframes neon-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(57, 181, 74, 0.5), 0 0 20px rgba(57, 181, 74, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(57, 181, 74, 0.8), 0 0 40px rgba(57, 181, 74, 0.5);
+  }
+}
+
+.btn-neon-glow {
+  animation: neon-pulse 3s infinite;
+  background-color: rgba(57, 181, 74, 0.1);
+  border: 1px solid rgba(57, 181, 74, 0.5);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn-neon-glow:hover {
+  background-color: rgba(57, 181, 74, 0.25);
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(57, 181, 74, 0.8);
 }
 
 @keyframes light-beam-reverse {
@@ -219,9 +269,11 @@ body {
     transform: translateX(100%) skewX(15deg);
     opacity: 0;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     transform: translateX(-100%) skewX(15deg);
     opacity: 0;
@@ -246,11 +298,15 @@ body::before {
   width: 100%;
   height: 100%;
   background: radial-gradient(circle at 20% 80%, rgba(57, 181, 74, 0.06) 0%, transparent 55%),
-              radial-gradient(circle at 80% 20%, rgba(57, 181, 74, 0.04) 0%, transparent 55%),
-              radial-gradient(circle at 40% 40%, rgba(57, 181, 74, 0.02) 0%, transparent 55%);
-  animation: float 40s ease-in-out infinite;
+    radial-gradient(circle at 80% 20%, rgba(57, 181, 74, 0.04) 0%, transparent 55%),
+    radial-gradient(circle at 40% 40%, rgba(57, 181, 74, 0.02) 0%, transparent 55%);
+  /* Performance: Removed heavy animation to improve scroll performance */
+  /* animation: float 40s ease-in-out infinite; */
+  background: radial-gradient(circle at 20% 80%, rgba(57, 181, 74, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 80% 20%, rgba(57, 181, 74, 0.03) 0%, transparent 40%);
   pointer-events: none;
   z-index: -1;
+  will-change: opacity;
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
@@ -296,17 +352,17 @@ All colors MUST be HSL.
     --maguey-green: 160 88% 35%;
     --maguey-gold: 45 52% 51%;
     --maguey-red: 349 72% 47%;
-    
+
     /* Gradients */
     --gradient-green-glow: linear-gradient(135deg, hsl(160 88% 35% / 0.3), hsl(160 88% 45% / 0.1));
     --gradient-gold-glow: linear-gradient(135deg, hsl(45 52% 51% / 0.3), hsl(45 62% 61% / 0.1));
     --gradient-overlay: linear-gradient(180deg, hsl(0 0% 0% / 0.7), hsl(0 0% 0% / 0.9));
-    
+
     /* Shadows */
     --shadow-green-glow: 0 0 40px hsl(160 88% 35% / 0.4);
     --shadow-gold-glow: 0 0 40px hsl(45 52% 51% / 0.4);
     --shadow-elegant: 0 10px 30px -10px hsl(0 0% 0% / 0.8);
-    
+
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
@@ -319,17 +375,37 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 17px;
+    line-height: 1.6;
     max-width: 100vw;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  /* Typography System - Montserrat */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Montserrat', sans-serif;
-    text-transform: uppercase;
     letter-spacing: 0.1em;
     font-weight: 700;
+    line-height: 1.2;
   }
-  
+
+  p,
+  span,
+  a,
+  li {
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  /* Default body text size */
+  body {
+    font-size: 17px;
+  }
+
   /* Prevent horizontal scrolling - only constrain width, let html handle overflow */
   #root {
     max-width: 100vw;
@@ -341,45 +417,47 @@ All colors MUST be HSL.
   .glow-green {
     box-shadow: var(--shadow-green-glow);
   }
-  
+
   .glow-gold {
     box-shadow: var(--shadow-gold-glow);
   }
-  
+
   .gradient-green-overlay {
     background: var(--gradient-green-glow);
   }
-  
+
   .gradient-gold-overlay {
     background: var(--gradient-gold-glow);
   }
-  
+
   .text-shadow-glow {
     text-shadow: 0 0 20px currentColor;
   }
-  
+
+  .text-neon {
+    text-shadow: 0 0 10px rgba(57, 181, 74, 0.8), 0 0 20px rgba(57, 181, 74, 0.3);
+  }
+
   /* Prevent horizontal overflow */
   .no-horizontal-scroll {
     overflow-x: hidden;
     max-width: 100%;
     width: 100%;
   }
-  
+
   /* Section divider with light beam effect */
   .section-divider {
     position: relative;
     height: 1px;
     overflow: hidden;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(57, 181, 74, 0.3) 20%,
-      rgba(57, 181, 74, 0.6) 50%,
-      rgba(57, 181, 74, 0.3) 80%,
-      transparent 100%
-    );
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(57, 181, 74, 0.3) 20%,
+        rgba(57, 181, 74, 0.6) 50%,
+        rgba(57, 181, 74, 0.3) 80%,
+        transparent 100%);
   }
-  
+
   .section-divider::before {
     content: '';
     position: absolute;
@@ -387,35 +465,31 @@ All colors MUST be HSL.
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(57, 181, 74, 0.8),
-      transparent
-    );
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(57, 181, 74, 0.8),
+        transparent);
     animation: light-beam 3s ease-in-out infinite;
   }
-  
+
   .section-divider-reverse::before {
     animation: light-beam-reverse 3s ease-in-out infinite;
   }
-  
+
   /* Section divider with enhanced glow */
   .section-divider-glow {
     position: relative;
     height: 2px;
     overflow: hidden;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(57, 181, 74, 0.2) 10%,
-      rgba(57, 181, 74, 0.5) 50%,
-      rgba(57, 181, 74, 0.2) 90%,
-      transparent 100%
-    );
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(57, 181, 74, 0.2) 10%,
+        rgba(57, 181, 74, 0.5) 50%,
+        rgba(57, 181, 74, 0.2) 90%,
+        transparent 100%);
     box-shadow: 0 0 10px rgba(57, 181, 74, 0.3);
   }
-  
+
   .section-divider-glow::before {
     content: '';
     position: absolute;
@@ -423,12 +497,10 @@ All colors MUST be HSL.
     left: 0;
     width: 30%;
     height: 100%;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(57, 181, 74, 1),
-      transparent
-    );
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(57, 181, 74, 1),
+        transparent);
     animation: light-beam 4s ease-in-out infinite;
     box-shadow: 0 0 20px rgba(57, 181, 74, 0.8);
   }
