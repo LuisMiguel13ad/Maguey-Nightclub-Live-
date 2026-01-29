@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 Phase: 1 of 12 (Payment Flow Hardening)
 Plans: 6 (01-01 through 01-06)
 Status: In progress
-Last activity: 2026-01-29 — Completed 01-03-PLAN.md
+Last activity: 2026-01-29 — Completed 01-04-PLAN.md
 
-Progress: [███░░░░░░░] 4.2% (3/72 plans)
+Progress: [████░░░░░░] 5.6% (4/72 plans)
 
 ### Phase 1 Plans
 
@@ -23,26 +23,26 @@ Progress: [███░░░░░░░] 4.2% (3/72 plans)
 | 01-01 | Database constraints and payment_failures table | Complete |
 | 01-02 | Webhook idempotency and non-blocking email | Complete |
 | 01-03 | Frontend error handling with toast/retry | Complete |
-| 01-04 | Owner notification system for payment failures | Pending |
+| 01-04 | Owner notification system for payment failures | Complete |
 | 01-05 | Failure scenario tests (E2E + integration) | Pending |
 | 01-06 | Load tests for 50 concurrent payments | Pending |
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5 min
-- Total execution time: 0.25 hours
+- Total plans completed: 4
+- Average duration: 4.5 min
+- Total execution time: 0.3 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 3 | 15 min | 5 min |
+| 01 | 4 | 17 min | 4.25 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-03 (5 min), 01-02 (8 min), 01-01 (2 min)
-- Trend: Baseline
+- Last 5 plans: 01-04 (2 min), 01-03 (5 min), 01-02 (8 min), 01-01 (2 min)
+- Trend: Improving
 
 *Updated after each plan completion*
 
@@ -64,10 +64,14 @@ Recent decisions affecting current work:
 | 2026-01-29 | 01-03 | Toast notifications for payment errors | User decision: toast (not modal), 5s auto-dismiss, retry button |
 | 2026-01-29 | 01-03 | Shared payment-errors.ts utility | Centralized error handling for consistent GA/VIP UX |
 | 2026-01-29 | 01-03 | No technical details in error messages | User-friendly messages only ("Payment failed. Please try again.") |
+| 2026-01-29 | 01-04 | 5 retries with 500ms base delay | Balances resilience with webhook timeout constraints |
+| 2026-01-29 | 01-04 | Fire-and-forget notifications | Owner notification must not block webhook response |
+| 2026-01-29 | 01-04 | Return 200 on ticket creation failure | Payment succeeded, Stripe shouldn't retry. Failure logged for manual resolution. |
 
 ### Pending Todos
 
 - Phase 2 (Email Reliability): Add email retry queue for failed sends
+- Configure OWNER_EMAIL environment variable in Supabase Dashboard
 
 ### Blockers/Concerns
 
@@ -81,6 +85,6 @@ This is brownfield work — all features are built. Roadmap focuses on reliabili
 
 ## Session Continuity
 
-Last session: 2026-01-29T21:02:32Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-01-29T21:07:00Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: None
