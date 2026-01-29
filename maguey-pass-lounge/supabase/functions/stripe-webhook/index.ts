@@ -4,6 +4,82 @@ import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import QRCode from "https://esm.sh/qrcode@1.5.3";
 
+// ============================================
+// Retry with Exponential Backoff
+// ============================================
+
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 5,
+  baseDelayMs: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+
+      if (attempt === maxRetries - 1) {
+        throw lastError;
+      }
+
+      // Exponential backoff with jitter (capped at 10 seconds to stay within webhook timeout)
+      const delay = Math.min(
+        (baseDelayMs * Math.pow(2, attempt)) + (Math.random() * 500),
+        10000
+      );
+      console.log(`Attempt ${attempt + 1}/${maxRetries} failed: ${lastError.message}. Retrying in ${Math.round(delay)}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
+// ============================================
+// Payment Failure Notification
+// ============================================
+
+interface PaymentFailureData {
+  stripeEventId: string;
+  stripePaymentIntentId: string;
+  customerEmail: string;
+  amountCents: number;
+  errorMessage: string;
+  paymentType: 'ga_ticket' | 'vip_reservation';
+  eventId?: string;
+  eventName?: string;
+  metadata?: Record<string, unknown>;
+}
+
+async function notifyPaymentFailure(data: PaymentFailureData): Promise<void> {
+  try {
+    // Call the notification Edge Function
+    const response = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/notify-payment-failure`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify(data),
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Failed to notify payment failure:', await response.text());
+    } else {
+      console.log('Payment failure notification sent successfully');
+    }
+  } catch (error) {
+    console.error('Error calling notify-payment-failure:', error);
+    // Don't throw - notification failure should not affect webhook response
+  }
+}
+
 // Environment-aware CORS configuration
 // In production, set ALLOWED_ORIGINS env var (comma-separated) to restrict to known domains
 // Example: ALLOWED_ORIGINS=https://tickets.maguey.club,https://www.magueynightclub.com
@@ -716,15 +792,22 @@ serve(async (req) => {
 
               console.log("Creating VIP reservation:", reservationData);
 
-              const { data: reservation, error: reservationError } = await supabase
-                .from("vip_reservations")
-                .insert(reservationData)
-                .select()
-                .single();
+              let reservation: { id: string } | null = null;
+              try {
+                // Retry VIP reservation creation up to 5 times with exponential backoff
+                reservation = await retryWithBackoff(async () => {
+                  const { data, error: reservationError } = await supabase
+                    .from("vip_reservations")
+                    .insert(reservationData)
+                    .select()
+                    .single();
 
-              if (reservationError) {
-                console.error("Error creating VIP reservation:", reservationError);
-              } else {
+                  if (reservationError) {
+                    throw new Error(reservationError.message);
+                  }
+                  return data;
+                }, 5, 500);
+
                 console.log("VIP reservation created:", reservation.id);
 
                 // Generate guest passes for VIP reservation
@@ -827,8 +910,34 @@ serve(async (req) => {
                   // TODO: In Phase 2 (Email Reliability), add to email retry queue
                 });
               }
+              } catch (vipCreateError) {
+                // All retries failed - notify owner
+                console.error("All VIP reservation creation retries failed:", vipCreateError);
+
+                // Fire-and-forget notification (don't block webhook response)
+                notifyPaymentFailure({
+                  stripeEventId: event.id,
+                  stripePaymentIntentId: session.payment_intent || '',
+                  customerEmail: customerEmail || '',
+                  amountCents: Math.round((ticket.unitPrice || 0) * 100),
+                  errorMessage: vipCreateError.message || 'Unknown error',
+                  paymentType: 'vip_reservation',
+                  eventId,
+                  eventName: eventData?.name,
+                  metadata: {
+                    orderId,
+                    sessionId: session.id,
+                    tier: vipInfo.tier,
+                    tableNumber,
+                  }
+                }).catch(err => {
+                  console.error('Failed to send payment failure notification:', err);
+                });
+
+                // Continue processing - payment succeeded, we've logged the failure for manual resolution
+              }
             } else {
-              // This is a regular ticket - create ticket records
+              // This is a regular ticket - create ticket records with retry
               for (let i = 0; i < ticket.quantity; i++) {
                 const ticketId = `MGY-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
                 const qrToken = crypto.randomUUID();
@@ -839,26 +948,33 @@ serve(async (req) => {
                   qrSignature = await generateQrSignature(qrToken, qrSigningSecret);
                 }
 
-                const { error: ticketError } = await supabase
-                  .from("tickets")
-                  .insert({
-                    order_id: orderId,
-                    event_id: eventId,
-                    ticket_type_id: ticket.ticketTypeId,
-                    attendee_email: customerEmail,
-                    attendee_name: customerName,
-                    status: "issued",
-                    price: ticket.unitPrice,
-                    fee_total: ticket.unitFee || 0,
-                    ticket_id: ticketId,
-                    qr_token: qrToken,
-                    qr_signature: qrSignature,
-                    issued_at: new Date().toISOString(),
-                  });
+                const ticketData = {
+                  order_id: orderId,
+                  event_id: eventId,
+                  ticket_type_id: ticket.ticketTypeId,
+                  attendee_email: customerEmail,
+                  attendee_name: customerName,
+                  status: "issued",
+                  price: ticket.unitPrice,
+                  fee_total: ticket.unitFee || 0,
+                  ticket_id: ticketId,
+                  qr_token: qrToken,
+                  qr_signature: qrSignature,
+                  issued_at: new Date().toISOString(),
+                };
 
-                if (ticketError) {
-                  console.error("Error creating ticket:", ticketError);
-                } else {
+                try {
+                  // Retry ticket creation up to 5 times with exponential backoff
+                  await retryWithBackoff(async () => {
+                    const { error: ticketError } = await supabase
+                      .from("tickets")
+                      .insert(ticketData);
+
+                    if (ticketError) {
+                      throw new Error(ticketError.message);
+                    }
+                  }, 5, 500);
+
                   console.log("Ticket created with signature:", ticketId);
 
                   // Add to email list
@@ -872,6 +988,32 @@ serve(async (req) => {
                     customerName,
                     qrToken,
                   });
+                } catch (ticketCreateError) {
+                  // All retries failed - notify owner
+                  console.error("All ticket creation retries failed:", ticketCreateError);
+
+                  // Fire-and-forget notification (don't block webhook response)
+                  notifyPaymentFailure({
+                    stripeEventId: event.id,
+                    stripePaymentIntentId: session.payment_intent || '',
+                    customerEmail: customerEmail || '',
+                    amountCents: Math.round((ticket.unitPrice || 0) * 100),
+                    errorMessage: ticketCreateError.message || 'Unknown error',
+                    paymentType: 'ga_ticket',
+                    eventId,
+                    eventName: eventData?.name,
+                    metadata: {
+                      orderId,
+                      sessionId: session.id,
+                      ticketTypeId: ticket.ticketTypeId,
+                      ticketId,
+                    }
+                  }).catch(err => {
+                    console.error('Failed to send payment failure notification:', err);
+                  });
+
+                  // Continue processing other tickets - don't fail entire webhook
+                  // Payment succeeded, we've logged the failure for manual resolution
                 }
               }
             }
@@ -985,19 +1127,44 @@ serve(async (req) => {
         const inviteCode = crypto.randomUUID().substring(0, 8).toUpperCase();
 
         // Update reservation to confirmed with invite code
-        const { error: updateError } = await supabase
-          .from("vip_reservations")
-          .update({
-            status: "confirmed",
-            invite_code: inviteCode,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", reservationId);
+        // Update reservation with retry
+        try {
+          await retryWithBackoff(async () => {
+            const { error: updateError } = await supabase
+              .from("vip_reservations")
+              .update({
+                status: "confirmed",
+                invite_code: inviteCode,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", reservationId);
 
-        if (updateError) {
-          console.error("Error updating VIP reservation:", updateError);
-        } else {
+            if (updateError) {
+              throw new Error(updateError.message);
+            }
+          }, 5, 500);
+
           console.log("VIP reservation confirmed with invite code:", inviteCode);
+        } catch (updateError) {
+          console.error("All VIP reservation update retries failed:", updateError);
+
+          // Notify owner of failure
+          notifyPaymentFailure({
+            stripeEventId: event.id,
+            stripePaymentIntentId: paymentIntent.id,
+            customerEmail: customerEmail || '',
+            amountCents: paymentIntent.amount || 0,
+            errorMessage: updateError.message || 'Failed to confirm VIP reservation',
+            paymentType: 'vip_reservation',
+            eventId,
+            metadata: {
+              reservationId,
+              action: 'confirm_reservation',
+            }
+          }).catch(err => {
+            console.error('Failed to send payment failure notification:', err);
+          });
+          // Continue - payment succeeded, failure logged for manual resolution
         }
 
         // Get reservation details for guest passes
@@ -1076,7 +1243,7 @@ serve(async (req) => {
             // Get QR signing secret
             const qrSigningSecret = Deno.env.get("QR_SIGNING_SECRET") || Deno.env.get("VITE_QR_SIGNING_SECRET") || "";
 
-            // Create individual GA tickets
+            // Create individual GA tickets with retry
             for (let i = 0; i < gaTicketCount; i++) {
               const ticketId = `MGY-VIP-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
               const qrToken = crypto.randomUUID();
@@ -1087,28 +1254,36 @@ serve(async (req) => {
                 qrSignature = await generateQrSignature(qrToken, qrSigningSecret);
               }
 
-              const { data: ticket, error: ticketError } = await supabase
-                .from("tickets")
-                .insert({
-                  order_id: gaOrder.id,
-                  event_id: eventId,
-                  ticket_type_id: gaTicketTypeId,
-                  attendee_email: customerEmail,
-                  attendee_name: customerName,
-                  status: "issued",
-                  price: gaTicketPrice,
-                  fee_total: 0,
-                  ticket_id: ticketId,
-                  qr_token: qrToken,
-                  qr_signature: qrSignature,
-                  issued_at: new Date().toISOString(),
-                })
-                .select()
-                .single();
+              const ticketData = {
+                order_id: gaOrder.id,
+                event_id: eventId,
+                ticket_type_id: gaTicketTypeId,
+                attendee_email: customerEmail,
+                attendee_name: customerName,
+                status: "issued",
+                price: gaTicketPrice,
+                fee_total: 0,
+                ticket_id: ticketId,
+                qr_token: qrToken,
+                qr_signature: qrSignature,
+                issued_at: new Date().toISOString(),
+              };
 
-              if (ticketError) {
-                console.error("Error creating GA ticket:", ticketError);
-              } else {
+              try {
+                // Retry ticket creation with exponential backoff
+                const ticket = await retryWithBackoff(async () => {
+                  const { data, error: ticketError } = await supabase
+                    .from("tickets")
+                    .insert(ticketData)
+                    .select()
+                    .single();
+
+                  if (ticketError) {
+                    throw new Error(ticketError.message);
+                  }
+                  return data;
+                }, 5, 500);
+
                 console.log("GA ticket created:", ticket.id);
 
                 // Link ticket to VIP reservation
@@ -1128,6 +1303,28 @@ serve(async (req) => {
                 } else {
                   console.log("Ticket linked to VIP reservation:", ticket.id);
                 }
+              } catch (ticketCreateError) {
+                console.error("All GA ticket creation retries failed:", ticketCreateError);
+
+                // Notify owner of failure
+                notifyPaymentFailure({
+                  stripeEventId: event.id,
+                  stripePaymentIntentId: paymentIntent.id,
+                  customerEmail: customerEmail || '',
+                  amountCents: Math.round(gaTicketPrice * 100),
+                  errorMessage: ticketCreateError.message || 'Failed to create GA ticket',
+                  paymentType: 'ga_ticket',
+                  eventId,
+                  metadata: {
+                    reservationId,
+                    ticketIndex: i,
+                    ticketId,
+                    gaOrderId: gaOrder.id,
+                  }
+                }).catch(err => {
+                  console.error('Failed to send payment failure notification:', err);
+                });
+                // Continue processing other tickets
               }
             }
 
