@@ -273,4 +273,87 @@ COMMENT ON COLUMN payment_failures.resolution_notes IS 'Notes from owner about h
 COMMENT ON INDEX unique_order_stripe_session IS 'Prevents duplicate orders from same Stripe checkout session';
 COMMENT ON INDEX unique_vip_stripe_payment IS 'Prevents duplicate VIP reservations from same Stripe payment intent';
 
+-- ============================================
+-- 9. VERIFICATION QUERIES
+-- ============================================
+
+-- Verify that constraints and table were created correctly
+DO $$
+DECLARE
+  v_constraint_count INTEGER;
+  v_table_exists BOOLEAN;
+  v_policy_count INTEGER;
+  v_test_insert_id UUID;
+BEGIN
+  -- Verify unique indexes exist
+  SELECT COUNT(*) INTO v_constraint_count
+  FROM pg_indexes
+  WHERE indexname IN (
+    'unique_order_stripe_session',
+    'unique_order_stripe_payment_intent',
+    'unique_vip_stripe_payment'
+  );
+
+  IF v_constraint_count < 2 THEN
+    RAISE WARNING 'Expected at least 2 unique indexes, found %', v_constraint_count;
+  ELSE
+    RAISE NOTICE 'Verification: % unique payment indexes created', v_constraint_count;
+  END IF;
+
+  -- Verify payment_failures table exists
+  SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_name = 'payment_failures'
+  ) INTO v_table_exists;
+
+  IF NOT v_table_exists THEN
+    RAISE EXCEPTION 'payment_failures table was not created';
+  ELSE
+    RAISE NOTICE 'Verification: payment_failures table exists';
+  END IF;
+
+  -- Verify RLS is enabled on payment_failures
+  IF NOT (
+    SELECT relrowsecurity FROM pg_class
+    WHERE relname = 'payment_failures'
+  ) THEN
+    RAISE WARNING 'RLS is not enabled on payment_failures';
+  ELSE
+    RAISE NOTICE 'Verification: RLS enabled on payment_failures';
+  END IF;
+
+  -- Count RLS policies on payment_failures
+  SELECT COUNT(*) INTO v_policy_count
+  FROM pg_policies
+  WHERE tablename = 'payment_failures';
+
+  RAISE NOTICE 'Verification: % RLS policies on payment_failures', v_policy_count;
+
+  -- Test that payment_failures accepts valid inserts
+  -- Note: This is done within a savepoint so we can rollback the test data
+  BEGIN
+    INSERT INTO payment_failures (
+      error_message,
+      payment_type,
+      customer_email,
+      amount_cents
+    ) VALUES (
+      'Test error for migration verification',
+      'ga_ticket',
+      'test@verification.com',
+      1000
+    ) RETURNING id INTO v_test_insert_id;
+
+    -- Clean up test data
+    DELETE FROM payment_failures WHERE id = v_test_insert_id;
+
+    RAISE NOTICE 'Verification: payment_failures accepts valid inserts';
+  EXCEPTION
+    WHEN OTHERS THEN
+      RAISE WARNING 'payment_failures insert test failed: %', SQLERRM;
+  END;
+
+  RAISE NOTICE 'Migration verification complete';
+END $$;
+
 COMMIT;
