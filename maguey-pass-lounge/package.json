@@ -20,7 +20,11 @@
     "test:coverage": "vitest run --coverage",
     "test:connection": "tsx test-connection.ts",
     "test:availability": "tsx test-availability-api.ts",
-    "test:create-ticket": "tsx test-create-ticket.ts"
+    "test:create-ticket": "tsx test-create-ticket.ts",
+    "load-test:payment": "k6 run load-tests/payment-load.k6.js",
+    "load-test:webhook": "k6 run load-tests/webhook-load.k6.js",
+    "load-test:all": "k6 run load-tests/payment-load.k6.js && k6 run load-tests/webhook-load.k6.js",
+    "load-test:ci": "k6 run --out json=load-test-results.json load-tests/payment-load.k6.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
