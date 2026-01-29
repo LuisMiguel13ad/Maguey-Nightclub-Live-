@@ -1196,12 +1196,44 @@ serve(async (req) => {
       }
     }
 
+    // Update idempotency record with success response (non-blocking)
+    if (idempotencyRecordId) {
+      const responseData = { received: true, eventType: event.type };
+      supabase.rpc('update_webhook_idempotency', {
+        p_record_id: idempotencyRecordId,
+        p_response_data: responseData,
+        p_response_status: 200,
+        p_metadata: {
+          event_type: event.type,
+          processed_at: new Date().toISOString()
+        }
+      }).catch(err => {
+        // Log but don't fail - idempotency update is not critical path
+        console.error('Failed to update idempotency record:', err);
+      });
+    }
+
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...dynamicCorsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
   } catch (error) {
     console.error("Webhook error:", error);
+
+    // Update idempotency record with error response (non-blocking)
+    if (idempotencyRecordId) {
+      // Need to access supabase in catch block
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL") || "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
+      );
+      supabase.rpc('update_webhook_idempotency', {
+        p_record_id: idempotencyRecordId,
+        p_response_data: { error: error.message },
+        p_response_status: 500
+      }).catch(() => {}); // Silent fail
+    }
+
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...dynamicCorsHeaders, "Content-Type": "application/json" },
       status: 500,
