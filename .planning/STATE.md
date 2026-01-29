@@ -10,11 +10,22 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 1 of 12 (Payment Flow Hardening)
-Plan: Planning not started
-Status: Ready to plan
-Last activity: 2026-01-29 — Roadmap created
+Plans: 6 (01-01 through 01-06)
+Status: Ready to execute
+Last activity: 2026-01-29 — Phase 1 planning complete
 
 Progress: [░░░░░░░░░░] 0%
+
+### Phase 1 Plans
+
+| Plan | Objective | Wave |
+|------|-----------|------|
+| 01-01 | Database constraints and payment_failures table | 1 |
+| 01-02 | Webhook idempotency and non-blocking email | 1 |
+| 01-03 | Frontend error handling with toast/retry | 1 |
+| 01-04 | Owner notification system for payment failures | 2 |
+| 01-05 | Failure scenario tests (E2E + integration) | 3 |
+| 01-06 | Load tests for 50 concurrent payments | 3 |
 
 ## Performance Metrics
 
