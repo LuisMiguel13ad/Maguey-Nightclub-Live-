@@ -12,9 +12,9 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 Phase: 1 of 12 (Payment Flow Hardening)
 Plans: 6 (01-01 through 01-06)
 Status: In progress
-Last activity: 2026-01-29 — Completed 01-01-PLAN.md
+Last activity: 2026-01-29 — Completed 01-03-PLAN.md
 
-Progress: [██░░░░░░░░] 2.8% (2/72 plans)
+Progress: [███░░░░░░░] 4.2% (3/72 plans)
 
 ### Phase 1 Plans
 
@@ -22,7 +22,7 @@ Progress: [██░░░░░░░░] 2.8% (2/72 plans)
 |------|-----------|--------|
 | 01-01 | Database constraints and payment_failures table | Complete |
 | 01-02 | Webhook idempotency and non-blocking email | Complete |
-| 01-03 | Frontend error handling with toast/retry | Pending |
+| 01-03 | Frontend error handling with toast/retry | Complete |
 | 01-04 | Owner notification system for payment failures | Pending |
 | 01-05 | Failure scenario tests (E2E + integration) | Pending |
 | 01-06 | Load tests for 50 concurrent payments | Pending |
@@ -30,18 +30,18 @@ Progress: [██░░░░░░░░] 2.8% (2/72 plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 5 min
-- Total execution time: 0.17 hours
+- Total execution time: 0.25 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 2 | 10 min | 5 min |
+| 01 | 3 | 15 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (8 min), 01-01 (2 min)
+- Last 5 plans: 01-03 (5 min), 01-02 (8 min), 01-01 (2 min)
 - Trend: Baseline
 
 *Updated after each plan completion*
@@ -61,6 +61,9 @@ Recent decisions affecting current work:
 | 2026-01-29 | 01-02 | Check idempotency before signature verification | Reduces processing load for replay attacks |
 | 2026-01-29 | 01-02 | Fail-open on idempotency errors | Availability over strict deduplication |
 | 2026-01-29 | 01-02 | Fire-and-forget email pattern | Ensures webhook responds within 5s timeout |
+| 2026-01-29 | 01-03 | Toast notifications for payment errors | User decision: toast (not modal), 5s auto-dismiss, retry button |
+| 2026-01-29 | 01-03 | Shared payment-errors.ts utility | Centralized error handling for consistent GA/VIP UX |
+| 2026-01-29 | 01-03 | No technical details in error messages | User-friendly messages only ("Payment failed. Please try again.") |
 
 ### Pending Todos
 
@@ -78,6 +81,6 @@ This is brownfield work — all features are built. Roadmap focuses on reliabili
 
 ## Session Continuity
 
-Last session: 2026-01-29T21:00:00Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-01-29T21:02:32Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None
