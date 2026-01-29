@@ -67,6 +67,8 @@ Recent decisions affecting current work:
 | 2026-01-29 | 01-04 | 5 retries with 500ms base delay | Balances resilience with webhook timeout constraints |
 | 2026-01-29 | 01-04 | Fire-and-forget notifications | Owner notification must not block webhook response |
 | 2026-01-29 | 01-04 | Return 200 on ticket creation failure | Payment succeeded, Stripe shouldn't retry. Failure logged for manual resolution. |
+| 2026-01-29 | 01-05 | E2E tests use route interception | App uses Stripe Checkout (redirect), so error tests intercept session creation calls |
+| 2026-01-29 | 01-05 | Webhook tests are documentation-focused | Without valid Stripe signatures, tests document expected behavior |
 | 2026-01-29 | 01-06 | 50 VUs target for load tests | Per user decision: typical busy night capacity |
 | 2026-01-29 | 01-06 | p95 < 5s checkout, p95 < 3s webhooks | Performance thresholds for acceptable UX |
 
