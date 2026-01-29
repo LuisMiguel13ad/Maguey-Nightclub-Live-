@@ -5,16 +5,16 @@
  * Uses embedded Stripe Elements for payment processing on the same page
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Wine, 
-  Users, 
-  Calendar, 
-  MapPin, 
-  CreditCard, 
-  Lock, 
+import {
+  ArrowLeft,
+  Wine,
+  Users,
+  Calendar,
+  MapPin,
+  CreditCard,
+  Lock,
   Shield,
   CheckCircle2,
   Loader2,
@@ -28,14 +28,15 @@ import {
 import { supabase } from '@/lib/supabase';
 import { VipProgressIndicator } from '@/components/vip/VipProgressIndicator';
 import { CustomCursor } from '@/components/CustomCursor';
-import { 
-  getStripe, 
-  createVipPaymentIntent, 
+import {
+  getStripe,
+  createVipPaymentIntent,
   confirmVipPayment,
   type VipReservationConfirmation
 } from '@/lib/stripe';
 import { toast } from 'sonner';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { handlePaymentError } from '@/lib/payment-errors';
 
 interface BookingData {
   eventId: string;
@@ -96,33 +97,37 @@ const stripeAppearance = {
 };
 
 // Payment Form Component (uses Stripe hooks)
-function PaymentForm({ 
-  bookingData, 
+function PaymentForm({
+  bookingData,
   reservationId,
   paymentIntentId,
-  onSuccess, 
-  onError 
-}: { 
+  onSuccess,
+  onError,
+  setProcessing: setParentProcessing,
+}: {
   bookingData: BookingData;
   reservationId: string;
   paymentIntentId: string;
   onSuccess: (reservation: VipReservationConfirmation) => void;
-  onError: (error: string) => void;
+  onError: (error: Error | unknown) => void;
+  setProcessing: (processing: boolean) => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = useCallback(async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
     if (!stripe || !elements) {
-      onError('Stripe not loaded. Please refresh the page.');
+      onError(new Error('Stripe not loaded. Please refresh the page.'));
       return;
     }
 
     setProcessing(true);
+    setParentProcessing(true);
 
     try {
       // Confirm the payment with Stripe
@@ -136,15 +141,16 @@ function PaymentForm({
       });
 
       if (paymentError) {
-        onError(paymentError.message || 'Payment failed. Please try again.');
+        onError(paymentError);
         setProcessing(false);
+        setParentProcessing(false);
         return;
       }
 
       if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Payment successful - confirm with backend
         const result = await confirmVipPayment(paymentIntentId, reservationId);
-        
+
         if (result.success && result.reservation) {
           onSuccess(result.reservation);
         } else {
@@ -156,21 +162,22 @@ function PaymentForm({
       }
     } catch (err) {
       console.error('Payment error:', err);
-      onError(err instanceof Error ? err.message : 'Payment failed. Please try again.');
+      onError(err);
     } finally {
       setProcessing(false);
+      setParentProcessing(false);
     }
-  };
+  }, [stripe, elements, bookingData.email, paymentIntentId, reservationId, onSuccess, onError, setParentProcessing]);
 
   return (
-    <form onSubmit={handleSubmit}>
-      <PaymentElement 
+    <form ref={formRef} onSubmit={handleSubmit}>
+      <PaymentElement
         onReady={() => setIsReady(true)}
         options={{
           layout: 'tabs',
         }}
       />
-      
+
       {/* Pay Button */}
       <button
         type="submit"
@@ -393,17 +400,20 @@ export default function VipPayment() {
   const [event, setEvent] = useState<any>(null);
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  
+
   // Stripe state
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [reservationId, setReservationId] = useState<string | null>(null);
   const [initializingPayment, setInitializingPayment] = useState(false);
-  
+  const [processingPayment, setProcessingPayment] = useState(false);
+
   // Confirmation state
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [confirmedReservation, setConfirmedReservation] = useState<VipReservationConfirmation | null>(null);
+
+  // Ref for retry callback - will be set by PaymentForm
+  const retryPaymentRef = useRef<(() => void) | null>(null);
 
   // Get Stripe promise
   const stripePromise = getStripe();
@@ -493,18 +503,32 @@ export default function VipPayment() {
   const handlePaymentSuccess = (reservation: VipReservationConfirmation) => {
     // Clear session storage
     sessionStorage.removeItem('vipBookingData');
-    
+
     // Update state to show confirmation
     setConfirmedReservation(reservation);
     setPaymentComplete(true);
-    
+
     toast.success('Payment successful! Your reservation is confirmed.');
   };
 
-  const handlePaymentError = (errorMessage: string) => {
-    setError(errorMessage);
-    toast.error(errorMessage);
-  };
+  // Wrapper for error handler - uses shared utility for consistent UX
+  const handlePaymentErrorCallback = useCallback((error: Error | unknown) => {
+    handlePaymentError(error, {
+      onRetry: () => {
+        // Scroll to payment form and focus - user can click Pay again
+        const paymentSection = document.querySelector('[data-payment-form]');
+        if (paymentSection) {
+          paymentSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        // Toast already dismissed, just focus the form
+        setProcessingPayment(false);
+      },
+      setIsLoading: setProcessingPayment,
+      customerEmail: bookingData?.email,
+      paymentType: 'vip_reservation',
+      eventId: eventId || undefined,
+    });
+  }, [bookingData?.email, eventId]);
 
   const formatTier = (tier: string) => {
     return tier?.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Standard';
@@ -766,18 +790,7 @@ export default function VipPayment() {
                   <span>Powered by Stripe</span>
                 </div>
               </div>
-              
-              {/* Error Message */}
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl mb-4 flex items-start gap-2">
-                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium">Payment Error</p>
-                    <p className="text-sm text-red-300/80">{error}</p>
-                  </div>
-                </div>
-              )}
-              
+
               {/* Stripe Elements */}
               {initializingPayment ? (
                 <div className="flex items-center justify-center py-12">
@@ -787,20 +800,23 @@ export default function VipPayment() {
                   </div>
                 </div>
               ) : clientSecret && paymentIntentId && reservationId ? (
-                <Elements 
-                  stripe={stripePromise} 
-                  options={{ 
+                <Elements
+                  stripe={stripePromise}
+                  options={{
                     clientSecret,
                     appearance: stripeAppearance,
                   }}
                 >
-                  <PaymentForm 
-                    bookingData={bookingData}
-                    reservationId={reservationId}
-                    paymentIntentId={paymentIntentId}
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                  />
+                  <div data-payment-form>
+                    <PaymentForm
+                      bookingData={bookingData}
+                      reservationId={reservationId}
+                      paymentIntentId={paymentIntentId}
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentErrorCallback}
+                      setProcessing={setProcessingPayment}
+                    />
+                  </div>
                 </Elements>
               ) : (
                 <div className="flex items-center justify-center py-12">
