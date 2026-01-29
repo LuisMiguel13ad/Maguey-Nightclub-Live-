@@ -36,11 +36,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Customer completes VIP table booking and receives confirmed reservation in database
   3. Webhook processes duplicate Stripe events without creating duplicate tickets or reservations
   4. Failed payments show clear, actionable error messages to customers (not technical stack traces)
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 01-01: TBD during planning
-- [ ] 01-02: TBD during planning
+- [ ] 01-01-PLAN.md — Database constraints and payment_failures table
+- [ ] 01-02-PLAN.md — Webhook idempotency and non-blocking email
+- [ ] 01-03-PLAN.md — Frontend error handling with toast/retry
+- [ ] 01-04-PLAN.md — Owner notification system for payment failures
+- [ ] 01-05-PLAN.md — Failure scenario tests (E2E + integration)
+- [ ] 01-06-PLAN.md — Load tests for 50 concurrent payments
 
 ### Phase 2: Email Reliability
 **Goal**: Confirmation emails deliver consistently with correct content
@@ -219,7 +223,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Payment Flow Hardening | 0/TBD | Not started | - |
+| 1. Payment Flow Hardening | 0/6 | Planned | - |
 | 2. Email Reliability | 0/TBD | Not started | - |
 | 3. Scanner System Hardening | 0/TBD | Not started | - |
 | 4. VIP System Reliability | 0/TBD | Not started | - |
