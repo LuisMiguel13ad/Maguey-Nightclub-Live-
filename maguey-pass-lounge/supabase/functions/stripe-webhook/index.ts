@@ -799,7 +799,9 @@ serve(async (req) => {
                   })
                 );
 
-                await sendVipConfirmationEmail({
+                // Send VIP confirmation email (non-blocking - fire and forget)
+                // Webhook must respond to Stripe within 5 seconds
+                sendVipConfirmationEmail({
                   reservationId: reservation.id,
                   eventId,
                   reservationNumber: reservation.id.substring(0, 8).toUpperCase(),
@@ -816,6 +818,13 @@ serve(async (req) => {
                   bottlesIncluded,
                   totalAmount: ticket.unitPrice,
                   guestPasses: emailGuestPasses,
+                }).catch(err => {
+                  console.error('VIP email sending failed, will be retried:', {
+                    error: err.message,
+                    reservationId: reservation.id,
+                    email: customerEmail
+                  });
+                  // TODO: In Phase 2 (Email Reliability), add to email retry queue
                 });
               }
             } else {
@@ -934,10 +943,19 @@ serve(async (req) => {
             }
           }
 
-          // Send ticket confirmation email
+          // Send ticket confirmation email (non-blocking - fire and forget)
+          // Webhook must respond to Stripe within 5 seconds
           if (createdTickets.length > 0 && customerEmail) {
             console.log("Sending ticket email to:", customerEmail);
-            await sendTicketEmail(customerEmail, customerName, orderId, createdTickets);
+            sendTicketEmail(customerEmail, customerName, orderId, createdTickets).catch(err => {
+              console.error('Ticket email sending failed, will be retried:', {
+                error: err.message,
+                orderId,
+                email: customerEmail,
+                ticketCount: createdTickets.length
+              });
+              // TODO: In Phase 2 (Email Reliability), add to email retry queue
+            });
           }
         } catch (parseError) {
           console.error("Error parsing tickets:", parseError);
@@ -1169,7 +1187,9 @@ serve(async (req) => {
           const tableInfo = fullReservation.event_vip_tables;
           const totalAmount = (fullReservation.amount_paid_cents || 0) / 100;
 
-          await sendVipConfirmationEmail({
+          // Send VIP confirmation email (non-blocking - fire and forget)
+          // Webhook must respond to Stripe within 5 seconds
+          sendVipConfirmationEmail({
             reservationId,
             eventId,
             reservationNumber: reservationId.substring(0, 8).toUpperCase(),
@@ -1187,9 +1207,16 @@ serve(async (req) => {
             totalAmount,
             inviteCode,
             guestPasses: emailGuestPasses,
+          }).catch(err => {
+            console.error('VIP email sending failed, will be retried:', {
+              error: err.message,
+              reservationId,
+              email: customerEmail
+            });
+            // TODO: In Phase 2 (Email Reliability), add to email retry queue
           });
 
-          console.log("VIP confirmation email sent to:", customerEmail);
+          console.log("VIP confirmation email queued for:", customerEmail);
         } else {
           console.warn("Could not send VIP email - missing reservation or guest passes data");
         }
