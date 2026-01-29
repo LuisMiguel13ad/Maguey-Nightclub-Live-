@@ -1,15 +1,15 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import {
   Loader2, AlertCircle, Calendar, MapPin, CheckCircle2,
 } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { getEventWithTickets, type EventWithTickets } from "@/lib/events-service";
 import { createCheckoutSession, forceStripeCircuitClose } from "@/lib/stripe";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { CustomCursor } from "@/components/CustomCursor";
+import { handlePaymentError } from "@/lib/payment-errors";
 
 // Helper function to format ticket display names
 const getTicketDisplayName = (ticketName: string) => {
@@ -79,6 +79,10 @@ const Payment = () => {
         setPromoCode(promoParam);
       }
 
+      // Check for VIP invite code (for linking GA tickets to VIP reservation)
+      const vipParam = searchParams.get("vipInviteCode");
+      // We'll use this when creating the checkout session
+
       // Parse tickets from URL first
       const ticketsParam = searchParams.get("tickets");
       if (ticketsParam) {
@@ -119,6 +123,66 @@ const Payment = () => {
     }
   }, [searchParams, navigate]);
 
+  // Checkout handler - extracted for retry capability
+  const handleCheckout = useCallback(async () => {
+    setIsLoading(true);
+    const toastId = toast.loading("Redirecting to Stripe Checkout...");
+    try {
+      const eventId = searchParams.get("event");
+      if (!eventId || tickets.length === 0) {
+        throw new Error("Missing event or tickets");
+      }
+
+      const customerEmail = user?.email || "guest@example.com";
+      const customerName =
+        (user?.user_metadata?.first_name && user?.user_metadata?.last_name)
+          ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+          : "Guest User";
+
+      const stripeTickets = tickets.map((ticket) => ({
+        ticketTypeId: ticket.id,
+        quantity: ticket.quantity,
+        unitPrice: Number(ticket.price),
+        unitFee: Number(ticket.fee || 0),
+        displayName: getTicketDisplayName(ticket.name),
+      }));
+
+      const successUrl = `${window.location.origin}/checkout/success`;
+      const cancelUrl = `${window.location.origin}/payment?event=${eventId}&canceled=true`;
+
+      // Get VIP invite code if present
+      const vipInviteCode = searchParams.get("vipInviteCode") || undefined;
+
+      const session = await createCheckoutSession({
+        eventId,
+        tickets: stripeTickets,
+        customerEmail,
+        customerName,
+        totalAmount: fees.total,
+        feesAmount: fees.xsFees + fees.processingFees + fees.entertainmentTax,
+        successUrl,
+        cancelUrl,
+        vipInviteCode,
+      });
+
+      toast.success("Redirecting to Stripe...", { id: toastId });
+      if (session.url) {
+        window.location.href = session.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      handlePaymentError(err, {
+        onRetry: handleCheckout,
+        setIsLoading,
+        customerEmail: user?.email,
+        paymentType: 'ga_ticket',
+        eventId: searchParams.get("event") || undefined,
+      });
+      setIsLoading(false);
+    }
+  }, [searchParams, tickets, user, fees]);
 
   if (eventLoading) {
     return (
@@ -257,70 +321,12 @@ const Payment = () => {
               
               <p className="text-stone-500 text-sm mb-4">Complete your purchase with our secure payment processing system.</p>
 
-              {error && (
-                <Alert variant="destructive" className="mb-4 bg-red-500/10 border-red-500/30 text-red-400">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              
               <Button
                 type="button"
                 disabled={isLoading}
                 className="w-full px-4 py-3 bg-copper-400 hover:bg-copper-500 text-forest-950 rounded-sm transition flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={async () => {
-                setIsLoading(true);
-                setError(null);
-                const toastId = toast.loading("Redirecting to Stripe Checkout...");
-                try {
-                  const eventId = searchParams.get("event");
-                  if (!eventId || tickets.length === 0) {
-                    throw new Error("Missing event or tickets");
-                  }
-
-                  const customerEmail = user?.email || "guest@example.com";
-                  const customerName =
-                    (user?.user_metadata?.first_name && user?.user_metadata?.last_name)
-                      ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
-                      : "Guest User";
-
-                  const stripeTickets = tickets.map((ticket) => ({
-                    ticketTypeId: ticket.id,
-                    quantity: ticket.quantity,
-                    unitPrice: Number(ticket.price),
-                    unitFee: Number(ticket.fee || 0),
-                    displayName: getTicketDisplayName(ticket.name),
-                  }));
-
-                  const successUrl = `${window.location.origin}/checkout/success`;
-                  const cancelUrl = `${window.location.origin}/payment?event=${eventId}&canceled=true`;
-
-                  const session = await createCheckoutSession({
-                    eventId,
-                    tickets: stripeTickets,
-                    customerEmail,
-                    customerName,
-                    totalAmount: fees.total,
-                    feesAmount: fees.xsFees + fees.processingFees + fees.entertainmentTax,
-                    successUrl,
-                    cancelUrl,
-                  });
-
-                  toast.success("Redirecting to Stripe...", { id: toastId });
-                  if (session.url) {
-                    window.location.href = session.url;
-                  } else {
-                    throw new Error("No checkout URL returned");
-                  }
-                } catch (err) {
-                  const msg = err instanceof Error ? err.message : "Failed to start checkout";
-                  setError(msg);
-                  toast.error(msg, { id: toastId });
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-            >
+                onClick={handleCheckout}
+              >
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
