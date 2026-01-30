@@ -9,9 +9,6 @@ import {
   Keyboard,
   Camera,
   Radio,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
   RefreshCw,
   WifiOff,
   Cloud,
@@ -20,10 +17,10 @@ import {
   LogOut,
   ListChecks,
   Settings,
-  User,
-  Zap,
-  Ticket
+  Ticket,
 } from "lucide-react";
+import { SuccessOverlay } from "@/components/scanner/SuccessOverlay";
+import { RejectionOverlay, RejectionReason } from "@/components/scanner/RejectionOverlay";
 import { QrScanner } from "@/components/QrScanner";
 import { NFCScanner } from "@/components/NFCScanner";
 import {
@@ -59,7 +56,30 @@ interface ScanState {
   status: "idle" | "scanning" | "success" | "error" | "already_scanned";
   ticket: TicketType | null;
   message: string;
+  rejectionReason?: RejectionReason;
+  rejectionDetails?: {
+    previousScan?: { staff: string; gate: string; time: string };
+    wrongEventDate?: string;
+  };
 }
+
+interface VipLinkInfo {
+  isVipGuest: boolean;
+  tableNumber: number | null;
+  purchaserName: string | null;
+}
+
+/**
+ * Determine ticket type for overlay display
+ */
+const determineTicketType = (
+  ticket: TicketType | null,
+  vipInfo: VipLinkInfo
+): 'ga' | 'vip_reservation' | 'vip_guest' => {
+  if (vipInfo.isVipGuest) return 'vip_guest';
+  if (ticket?.ticket_type?.toLowerCase().includes('vip')) return 'vip_reservation';
+  return 'ga';
+};
 
 // Cooldown period after a scan (ms)
 const SCAN_COOLDOWN = 2500;
@@ -80,9 +100,19 @@ const Scanner = () => {
     message: "",
   });
 
+  // VIP Guest link info
+  const [vipLinkInfo, setVipLinkInfo] = useState<VipLinkInfo>({
+    isVipGuest: false,
+    tableNumber: null,
+    purchaserName: null,
+  });
+
   // Prevent duplicate scans
   const lastScannedRef = useRef<string>("");
   const lastScanTimeRef = useRef<number>(0);
+
+  // Track component mount state to prevent setState after unmount
+  const mountedRef = useRef(true);
 
   // Event filter
   const [selectedEvent, setSelectedEvent] = useState<string>("all");
@@ -98,10 +128,21 @@ const Scanner = () => {
   useEffect(() => {
     const loadEvents = async () => {
       const names = await getEventNamesFromTickets();
-      setEventNames(names);
+      // Guard: Only update state if component is still mounted
+      if (mountedRef.current) {
+        setEventNames(names);
+      }
       await debugGetSampleTickets();
     };
     loadEvents();
+  }, []);
+
+  // Track mount state to prevent setState calls after unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   // Monitor online status
@@ -122,7 +163,10 @@ const Scanner = () => {
   useEffect(() => {
     const updatePendingCount = async () => {
       const status = await getSyncStatus();
-      setPendingScans(status.pending + status.failed);
+      // Guard: Only update state if component is still mounted
+      if (mountedRef.current) {
+        setPendingScans(status.pending + status.failed);
+      }
     };
 
     updatePendingCount();
@@ -130,10 +174,40 @@ const Scanner = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Check if a ticket is linked to a VIP reservation
+  const checkVipLink = async (ticketId: string): Promise<VipLinkInfo> => {
+    try {
+      const { data, error } = await supabase
+        .from("vip_linked_tickets")
+        .select("*, vip_reservations(table_number, purchaser_name)")
+        .eq("ticket_id", ticketId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error checking VIP link:", error);
+        return { isVipGuest: false, tableNumber: null, purchaserName: null };
+      }
+
+      if (data && data.vip_reservations) {
+        return {
+          isVipGuest: true,
+          tableNumber: data.vip_reservations.table_number,
+          purchaserName: data.vip_reservations.purchaser_name,
+        };
+      }
+
+      return { isVipGuest: false, tableNumber: null, purchaserName: null };
+    } catch (err) {
+      console.error("Error in checkVipLink:", err);
+      return { isVipGuest: false, tableNumber: null, purchaserName: null };
+    }
+  };
+
   // Handle Mode Switching with Cleanup
   const handleModeChange = (mode: ScanMode) => {
     setScanMode(mode);
     setScanState({ status: "idle", ticket: null, message: "" });
+    setVipLinkInfo({ isVipGuest: false, tableNumber: null, purchaserName: null });
     setManualInput("");
     setIsProcessing(false);
   };
@@ -151,6 +225,9 @@ const Scanner = () => {
         await queueScan(input.trim(), user?.id, {
           ticketIdString: input.trim(),
         });
+
+        // Guard: Don't update state if component unmounted
+        if (!mountedRef.current) return;
 
         setScanState({
           status: "success",
@@ -171,12 +248,19 @@ const Scanner = () => {
       // Online: perform the scan
       const result = await scanTicket(input.trim(), user?.id, method);
 
+      // Guard: Don't update state if component unmounted
+      if (!mountedRef.current) return;
+
       // Check event filter
       if (selectedEvent !== "all" && result.ticket && result.ticket.event_name !== selectedEvent) {
         setScanState({
           status: "error",
           ticket: result.ticket,
           message: `This ticket is for "${result.ticket.event_name}", not the selected event`,
+          rejectionReason: 'wrong_event',
+          rejectionDetails: {
+            wrongEventDate: result.ticket.event_name,
+          },
         });
         setManualInput("");
         setIsProcessing(false);
@@ -189,27 +273,62 @@ const Scanner = () => {
           ticket: result.ticket,
           message: result.message,
         });
+
+        // Check if this ticket is linked to a VIP reservation
+        if (result.ticket?.id) {
+          const vipInfo = await checkVipLink(result.ticket.id);
+          if (mountedRef.current) {
+            setVipLinkInfo(vipInfo);
+          }
+        }
       } else if (result.alreadyScanned) {
         setScanState({
           status: "already_scanned",
           ticket: result.ticket,
           message: result.message,
+          rejectionReason: 'already_used',
+          rejectionDetails: {
+            // Previous scan details will be enhanced in plan 04
+            previousScan: {
+              staff: 'Staff',
+              gate: 'Gate',
+              time: 'Earlier',
+            },
+          },
         });
       } else {
+        // Determine reason based on message content
+        let rejectionReason: RejectionReason = 'invalid';
+        if (result.message?.toLowerCase().includes('not found') ||
+            result.message?.toLowerCase().includes('does not exist')) {
+          rejectionReason = 'not_found';
+        } else if (result.message?.toLowerCase().includes('expired')) {
+          rejectionReason = 'expired';
+        }
+
         setScanState({
           status: "error",
           ticket: null,
           message: result.message,
+          rejectionReason,
         });
       }
     } catch (error) {
       console.error("Scan error:", error);
+
+      // Guard: Don't update state if component unmounted
+      if (!mountedRef.current) return;
+
       setScanState({
         status: "error",
         ticket: null,
         message: "An error occurred while scanning",
+        rejectionReason: 'invalid',
       });
     }
+
+    // Guard: Don't update state if component unmounted
+    if (!mountedRef.current) return;
 
     setManualInput("");
     setIsProcessing(false);
@@ -249,33 +368,55 @@ const Scanner = () => {
     setIsSyncing(true);
     try {
       const result = await syncPendingScans();
+
+      // Guard: Don't update state if component unmounted
+      if (!mountedRef.current) return;
+
       toast({
         title: "Sync Complete",
         description: `Synced ${result.success} of ${result.total} scans`,
       });
       const status = await getSyncStatus();
+
+      // Guard: Don't update state if component unmounted
+      if (!mountedRef.current) return;
+
       setPendingScans(status.pending + status.failed);
     } catch (error) {
+      // Guard: Don't update state if component unmounted
+      if (!mountedRef.current) return;
+
       toast({
         title: "Sync Failed",
         description: "Could not sync pending scans",
         variant: "destructive",
       });
     }
+
+    // Guard: Don't update state if component unmounted
+    if (!mountedRef.current) return;
+
     setIsSyncing(false);
   };
 
   // Reset to scan another
   const handleScanAnother = () => {
-    setScanState({ status: "idle", ticket: null, message: "" });
+    setScanState({ status: "idle", ticket: null, message: "", rejectionReason: undefined, rejectionDetails: undefined });
+    setVipLinkInfo({ isVipGuest: false, tableNumber: null, purchaserName: null });
     setManualInput("");
     lastScannedRef.current = "";
     lastScanTimeRef.current = 0;
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Continue to login page even if signOut fails
+    } finally {
+      navigate("/auth");
+    }
   };
 
   // Nav Links for Sidebar
@@ -409,28 +550,6 @@ const Scanner = () => {
               />
             </div>
 
-            {/* Viewfinder Overlay */}
-            <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-12">
-              <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px]">
-                {/* Corners */}
-                <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-purple-500 rounded-tl-2xl shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
-                <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-purple-500 rounded-tr-2xl shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
-                <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-purple-500 rounded-bl-2xl shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
-                <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-purple-500 rounded-br-2xl shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
-
-                {/* Scanning Animation */}
-                <div className="absolute inset-x-4 top-0 h-1 bg-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.8)] animate-[scan_2.5s_ease-in-out_infinite]" />
-
-                {/* Center Icon hint */}
-                <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                  <Camera className="h-16 w-16 text-white" />
-                </div>
-              </div>
-
-              <p className="mt-8 text-white/80 bg-black/60 backdrop-blur px-4 py-2 rounded-full text-sm font-medium border border-white/10">
-                Align QR code within frame
-              </p>
-            </div>
           </div>
         )}
 
@@ -501,113 +620,72 @@ const Scanner = () => {
       </div>
 
       {/* Bottom Navigation Bar */}
-      <div className="pt-2 pb-6 px-6 bg-black/90 backdrop-blur-xl border-t border-white/5 z-50 flex items-end justify-between gap-2">
+      <div className="pt-2 pb-8 px-8 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-50 flex items-end justify-between gap-6 fixed bottom-0 left-0 right-0">
         <button
           onClick={() => handleModeChange("manual")}
           className={cn(
-            "flex-1 flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all duration-300",
-            scanMode === "manual" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60 active:scale-95"
+            "flex-1 flex flex-col items-center gap-2 p-4 rounded-3xl transition-all duration-300",
+            scanMode === "manual"
+              ? "bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+              : "text-white/40 hover:text-white/80 hover:bg-white/5"
           )}
         >
           <Keyboard className="h-6 w-6" />
-          <span className="text-xs font-medium">Manual</span>
+          <span className="text-[10px] uppercase font-bold tracking-wider">Manual</span>
         </button>
 
         <button
           onClick={() => handleModeChange("qr")}
           className={cn(
-            "mx-2 -mt-10 h-16 w-16 rounded-full flex items-center justify-center border-4 border-black shadow-lg shadow-purple-500/20 transition-all duration-300 transform",
-            scanMode === "qr" ? "bg-purple-600 text-white scale-110 rotate-0" : "bg-zinc-800 text-white/50 hover:bg-zinc-700 hover:text-white"
+            "mx-2 -mt-12 h-20 w-20 rounded-full flex items-center justify-center border-[6px] border-black shadow-2xl transition-all duration-300 transform relative z-10",
+            scanMode === "qr"
+              ? "bg-purple-600 text-white shadow-[0_0_30px_rgba(168,85,247,0.4)] scale-110"
+              : "bg-zinc-800 text-white/50 hover:bg-zinc-700 hover:text-white"
           )}
         >
-          <Camera className="h-6 w-6" />
+          <Camera className={cn("h-8 w-8 transition-transform", scanMode === "qr" ? "scale-110" : "")} />
         </button>
 
         <button
           onClick={() => handleModeChange("nfc")}
           className={cn(
-            "flex-1 flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all duration-300",
-            scanMode === "nfc" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/60 active:scale-95"
+            "flex-1 flex flex-col items-center gap-2 p-4 rounded-3xl transition-all duration-300",
+            scanMode === "nfc"
+              ? "bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+              : "text-white/40 hover:text-white/80 hover:bg-white/5"
           )}
         >
           <Radio className="h-6 w-6" />
-          <span className="text-xs font-medium">NFC</span>
+          <span className="text-[10px] uppercase font-bold tracking-wider">NFC</span>
         </button>
       </div>
 
-      {/* Result Overlay */}
-      {(scanState.status === "success" || scanState.status === "error" || scanState.status === "already_scanned") && (
-        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/95 backdrop-blur-xl animate-in fade-in zoom-in duration-300 p-6">
-          <div className="w-full max-w-sm text-center space-y-8">
+      {/* Success Overlay - Full screen green */}
+      {scanState.status === "success" && (
+        <SuccessOverlay
+          ticketType={determineTicketType(scanState.ticket, vipLinkInfo)}
+          guestName={scanState.ticket?.guest_name || undefined}
+          vipDetails={vipLinkInfo.isVipGuest ? {
+            tableName: `Table ${vipLinkInfo.tableNumber}`,
+            tier: 'VIP',
+            guestCount: 1,
+            holderName: vipLinkInfo.purchaserName || 'VIP Host'
+          } : undefined}
+          onDismiss={handleScanAnother}
+        />
+      )}
 
-            {/* Status Icon */}
-            <div className="flex justify-center">
-              {scanState.status === "success" && (
-                <div className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center ring-4 ring-green-500/30 animate-[bounce_1s_ease-in-out]">
-                  <CheckCircle2 className="h-12 w-12 text-green-500" />
-                </div>
-              )}
-              {scanState.status === "already_scanned" && (
-                <div className="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center ring-4 ring-yellow-500/30">
-                  <AlertCircle className="h-12 w-12 text-yellow-500" />
-                </div>
-              )}
-              {scanState.status === "error" && (
-                <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center ring-4 ring-red-500/30 shake">
-                  <XCircle className="h-12 w-12 text-red-500" />
-                </div>
-              )}
-            </div>
-
-            {/* Status Text */}
-            <div className="space-y-2">
-              <h2 className={cn(
-                "text-3xl font-black uppercase tracking-tight",
-                scanState.status === "success" && "text-green-500",
-                scanState.status === "already_scanned" && "text-yellow-500",
-                scanState.status === "error" && "text-red-500",
-              )}>
-                {scanState.status === "success" ? "ACCESS GRANTED" :
-                  scanState.status === "already_scanned" ? "ALREADY USED" :
-                    "ACCESS DENIED"}
-              </h2>
-              <p className="text-white/60 text-lg leading-relaxed">{scanState.message}</p>
-            </div>
-
-            {/* Ticket Details */}
-            {scanState.ticket && (
-              <div className="bg-zinc-900 border border-white/5 rounded-2xl p-6 text-left space-y-4 shadow-xl">
-                <div>
-                  <p className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-1">Guest Name</p>
-                  <p className="text-xl font-bold text-white truncate">{scanState.ticket.guest_name || "Unknown Guest"}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-1">Type</p>
-                    <p className="text-sm font-medium text-white">{scanState.ticket.ticket_type || "Standard"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-white/40 uppercase tracking-widest font-semibold mb-1">Event</p>
-                    <p className="text-sm font-medium text-white truncate">{scanState.ticket.event_name}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Action Button */}
-            <Button
-              onClick={handleScanAnother}
-              className={cn(
-                "w-full h-14 text-lg font-bold rounded-2xl shadow-lg transition-all hover:scale-[1.02]",
-                scanState.status === "success" ? "bg-green-600 hover:bg-green-500 text-white" :
-                  scanState.status === "already_scanned" ? "bg-yellow-600 hover:bg-yellow-500 text-white" :
-                    "bg-red-600 hover:bg-red-500 text-white"
-              )}
-            >
-              Scan Next Ticket
-            </Button>
-          </div>
-        </div>
+      {/* Rejection Overlay - Full screen red */}
+      {(scanState.status === "error" || scanState.status === "already_scanned") && (
+        <RejectionOverlay
+          reason={scanState.rejectionReason || (scanState.status === "already_scanned" ? 'already_used' : 'invalid')}
+          details={{
+            previousScan: scanState.rejectionDetails?.previousScan,
+            wrongEventDate: scanState.rejectionDetails?.wrongEventDate,
+            message: scanState.message
+          }}
+          onDismiss={handleScanAnother}
+        />
       )}
 
       {/* Global CSS for animations */}
@@ -628,7 +706,7 @@ const Scanner = () => {
           40%, 60% { transform: translate3d(4px, 0, 0); }
         }
       `}</style>
-    </div>
+    </div >
   );
 };
 
