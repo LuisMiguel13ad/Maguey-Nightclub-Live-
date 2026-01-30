@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 2 of 12 (Email Reliability)
-Plan: 3 of 6 complete
+Plan: 4 of 6 complete
 Status: In progress
-Last activity: 2026-01-30 — Completed 02-02-PLAN.md (Queue processor edge function)
+Last activity: 2026-01-30 — Completed 02-04-PLAN.md (Webhook email queueing)
 
-Progress: [█████████░] 12.5% (9/72 plans)
+Progress: [██████████░] 13.9% (10/72 plans)
 
 ### Phase 2 Plans
 
@@ -23,7 +23,7 @@ Progress: [█████████░] 12.5% (9/72 plans)
 | 02-01 | Email queue schema (email_queue, email_delivery_status) | Complete |
 | 02-02 | Queue processor edge function | Complete |
 | 02-03 | Resend webhook handler | Complete |
-| 02-04 | Email templates (GA ticket, VIP confirmation) | Pending |
+| 02-04 | Webhook email queueing (stripe-webhook integration) | Complete |
 | 02-05 | Integration with existing checkout flows | Pending |
 | 02-06 | Email delivery tests | Pending |
 
@@ -41,19 +41,19 @@ Progress: [█████████░] 12.5% (9/72 plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: 3.3 min
-- Total execution time: 0.5 hours
+- Total execution time: 0.55 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 6 | 21 min | 3.5 min |
-| 02 | 3 | 9 min | 3 min |
+| 02 | 4 | 13 min | 3.25 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (2 min), 02-03 (1 min), 02-01 (6 min), 01-06 (2 min), 01-05 (est)
+- Last 5 plans: 02-04 (4 min), 02-02 (2 min), 02-03 (1 min), 02-01 (6 min), 01-06 (2 min)
 - Trend: Fast (clear patterns from research, focused plans)
 
 *Updated after each plan completion*
@@ -92,6 +92,9 @@ Recent decisions affecting current work:
 | 2026-01-30 | 02-02 | Batch size of 10 emails per minute | Prevents hitting Resend rate limits |
 | 2026-01-30 | 02-02 | Optimistic locking for queue processing | Prevents double-processing by concurrent invocations |
 | 2026-01-30 | 02-02 | pg_cron setup via Dashboard | Secrets cannot be stored in migrations |
+| 2026-01-30 | 02-04 | queueEmail doesn't throw | Webhook must return 200 to Stripe for successful payments |
+| 2026-01-30 | 02-04 | Email HTML generated before queueing | Synchronous HTML generation avoids lazy rendering issues |
+| 2026-01-30 | 02-04 | supabase client passed to email functions | Required for queue insertion access |
 
 ### Pending Todos
 
@@ -117,6 +120,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 
 ## Session Continuity
 
-Last session: 2026-01-30T02:29:06Z
-Stopped at: Completed 02-02-PLAN.md (Queue processor edge function)
+Last session: 2026-01-30T02:35:00Z
+Stopped at: Completed 02-04-PLAN.md (Webhook email queueing)
 Resume file: None
