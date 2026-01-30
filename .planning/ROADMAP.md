@@ -12,8 +12,8 @@ This roadmap focuses on hardening the existing platform for production launch. A
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Payment Flow Hardening** - Ensure GA and VIP payments complete reliably end-to-end
-- [ ] **Phase 2: Email Reliability** - Guarantee ticket and VIP confirmation emails deliver consistently
+- [x] **Phase 1: Payment Flow Hardening** - Ensure GA and VIP payments complete reliably end-to-end
+- [x] **Phase 2: Email Reliability** - Guarantee ticket and VIP confirmation emails deliver consistently
 - [ ] **Phase 3: Scanner System Hardening** - Validate scanner correctly accepts/rejects QR codes and handles offline mode
 - [ ] **Phase 4: VIP System Reliability** - Fix race conditions and ensure correct status transitions
 - [ ] **Phase 5: Dashboard Accuracy** - Verify all analytics match source of truth
@@ -58,12 +58,12 @@ Plans:
 **Plans**: 6 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Database schema for email queue and delivery tracking
-- [ ] 02-02-PLAN.md — Queue processor edge function with retry logic
-- [ ] 02-03-PLAN.md — Resend webhook handler for delivery status
-- [ ] 02-04-PLAN.md — Wire stripe-webhook to queue emails
-- [ ] 02-05-PLAN.md — Dashboard email status and retry UI
-- [ ] 02-06-PLAN.md — Email reliability tests
+- [x] 02-01-PLAN.md — Database schema for email queue and delivery tracking
+- [x] 02-02-PLAN.md — Queue processor edge function with retry logic
+- [x] 02-03-PLAN.md — Resend webhook handler for delivery status
+- [x] 02-04-PLAN.md — Wire stripe-webhook to queue emails
+- [x] 02-05-PLAN.md — Dashboard email status and retry UI
+- [x] 02-06-PLAN.md — Email reliability tests
 
 ### Phase 3: Scanner System Hardening
 **Goal**: Scanner reliably validates tickets with correct accept/reject behavior
@@ -228,7 +228,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Payment Flow Hardening | 6/6 | Complete | 2026-01-29 |
-| 2. Email Reliability | 0/6 | Planned | - |
+| 2. Email Reliability | 6/6 | Complete | 2026-01-30 |
 | 3. Scanner System Hardening | 0/TBD | Not started | - |
 | 4. VIP System Reliability | 0/TBD | Not started | - |
 | 5. Dashboard Accuracy | 0/TBD | Not started | - |
