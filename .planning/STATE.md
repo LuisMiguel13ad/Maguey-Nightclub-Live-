@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 2 of 12 (Email Reliability)
-Plan: 2 of 6 complete
+Plan: 3 of 6 complete
 Status: In progress
-Last activity: 2026-01-30 — Completed 02-03-PLAN.md (Resend webhook handler)
+Last activity: 2026-01-30 — Completed 02-02-PLAN.md (Queue processor edge function)
 
-Progress: [█████████░] 11.1% (8/72 plans)
+Progress: [█████████░] 12.5% (9/72 plans)
 
 ### Phase 2 Plans
 
 | Plan | Objective | Status |
 |------|-----------|--------|
 | 02-01 | Email queue schema (email_queue, email_delivery_status) | Complete |
-| 02-02 | Queue processor edge function | Pending |
+| 02-02 | Queue processor edge function | Complete |
 | 02-03 | Resend webhook handler | Complete |
 | 02-04 | Email templates (GA ticket, VIP confirmation) | Pending |
 | 02-05 | Integration with existing checkout flows | Pending |
@@ -41,20 +41,20 @@ Progress: [█████████░] 11.1% (8/72 plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 3.5 min
-- Total execution time: 0.47 hours
+- Total plans completed: 9
+- Average duration: 3.3 min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 6 | 21 min | 3.5 min |
-| 02 | 2 | 7 min | 3.5 min |
+| 02 | 3 | 9 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (1 min), 02-01 (6 min), 01-06 (2 min), 01-05 (est), 01-04 (2 min)
-- Trend: Improving (02-03 fast due to clear plan and patterns from research)
+- Last 5 plans: 02-02 (2 min), 02-03 (1 min), 02-01 (6 min), 01-06 (2 min), 01-05 (est)
+- Trend: Fast (clear patterns from research, focused plans)
 
 *Updated after each plan completion*
 
@@ -89,6 +89,9 @@ Recent decisions affecting current work:
 | 2026-01-30 | 02-03 | svix for Resend webhook verification | Resend uses Svix infrastructure for webhook delivery |
 | 2026-01-30 | 02-03 | Raw body before parsing | Signature verification requires exact body bytes |
 | 2026-01-30 | 02-03 | email.complained treated as failure | Spam complaints should prevent future sends |
+| 2026-01-30 | 02-02 | Batch size of 10 emails per minute | Prevents hitting Resend rate limits |
+| 2026-01-30 | 02-02 | Optimistic locking for queue processing | Prevents double-processing by concurrent invocations |
+| 2026-01-30 | 02-02 | pg_cron setup via Dashboard | Secrets cannot be stored in migrations |
 
 ### Pending Todos
 
@@ -97,6 +100,7 @@ Recent decisions affecting current work:
 - Set up RESEND_API_KEY environment variable for email sending (Phase 2)
 - Set up RESEND_WEBHOOK_SECRET environment variable for webhook verification (Phase 2)
 - Configure Resend webhook endpoint in Resend Dashboard (Phase 2)
+- Configure pg_cron job for process-email-queue (Phase 2) - see migration docs
 
 ### Blockers/Concerns
 
@@ -113,6 +117,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 
 ## Session Continuity
 
-Last session: 2026-01-30T02:28:20Z
-Stopped at: Completed 02-03-PLAN.md (Resend webhook handler)
+Last session: 2026-01-30T02:29:06Z
+Stopped at: Completed 02-02-PLAN.md (Queue processor edge function)
 Resume file: None
