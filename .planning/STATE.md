@@ -120,6 +120,10 @@ Recent decisions affecting current work:
 | 2026-01-30 | 03-02 | First-scan-wins conflict resolution | Timestamp comparison for offline sync determines winner |
 | 2026-01-30 | 03-02 | 24-hour cache retention | Old event caches auto-cleaned per context decision |
 | 2026-01-30 | 03-02 | Device ID in localStorage | Persistent device identification for conflict tracking |
+| 2026-01-30 | 03-03 | Scan history limited to 10, displays 5 | Balance between visibility and screen real estate |
+| 2026-01-30 | 03-03 | History only shown when idle | Hidden during success/rejection overlays |
+| 2026-01-30 | 03-03 | Z-index hierarchy: offline(70), counter(65), nav(50), history(40) | Clear layering for proper overlay behavior |
+| 2026-01-30 | 03-03 | CheckInCounter falls back to cache when offline | Uses getCheckedInCount from offline-ticket-cache |
 | 2026-01-30 | 03-04 | Accept unknown tickets offline with warning | Tickets not in cache accepted, queued for verification when online |
 | 2026-01-30 | 03-04 | Cache auto-refreshes on event selection | ensureCacheIsFresh called via useEffect when selectedEventId changes |
 | 2026-01-30 | 03-04 | Rejection details flow through to overlays | ScanResult rejectionDetails passed directly to RejectionOverlay |
