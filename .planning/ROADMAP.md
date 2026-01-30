@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Payment Flow Hardening** - Ensure GA and VIP payments complete reliably end-to-end
 - [x] **Phase 2: Email Reliability** - Guarantee ticket and VIP confirmation emails deliver consistently
-- [ ] **Phase 3: Scanner System Hardening** - Validate scanner correctly accepts/rejects QR codes and handles offline mode
+- [x] **Phase 3: Scanner System Hardening** - Validate scanner correctly accepts/rejects QR codes and handles offline mode
 - [ ] **Phase 4: VIP System Reliability** - Fix race conditions and ensure correct status transitions
 - [ ] **Phase 5: Dashboard Accuracy** - Verify all analytics match source of truth
 - [ ] **Phase 6: Infrastructure & Monitoring** - Add health checks, rate limiting, error tracking, and logging
@@ -78,27 +78,32 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Full-screen feedback overlays (success/rejection)
-- [ ] 03-02-PLAN.md — Offline ticket cache service
-- [ ] 03-03-PLAN.md — Scan history, check-in counter, offline banner
-- [ ] 03-04-PLAN.md — Enhanced error details and offline validation
-- [ ] 03-05-PLAN.md — Dashboard scanner status and verification
+- [x] 03-01-PLAN.md — Full-screen feedback overlays (success/rejection)
+- [x] 03-02-PLAN.md — Offline ticket cache service
+- [x] 03-03-PLAN.md — Scan history, check-in counter, offline banner
+- [x] 03-04-PLAN.md — Enhanced error details and offline validation
+- [x] 03-05-PLAN.md — Dashboard scanner status and verification
 
 ### Phase 4: VIP System Reliability
-**Goal**: VIP reservations maintain correct state through entire lifecycle
+**Goal**: VIP reservations maintain correct state through entire lifecycle with re-entry support
 **Depends on**: Phase 1 (needs payment flow working)
 **Requirements**: VIP-01, VIP-02, VIP-03, VIP-04
 **Success Criteria** (what must be TRUE):
-  1. VIP reservation status transitions correctly: pending → confirmed → checked-in
-  2. Multiple concurrent checkins for same reservation don't cause duplicate state or data corruption
-  3. VIP guest passes link correctly to parent reservation and scan independently
-  4. VIP floor plan shows real-time table availability matching database state
-  5. VIP reservation cancellations update floor plan availability immediately
-**Plans**: TBD
+  1. VIP reservation status transitions correctly: pending -> confirmed -> checked_in -> completed
+  2. Invalid state transitions (e.g., checked_in -> confirmed) are rejected at database level
+  3. VIP host and linked guests can re-enter venue (multiple scans allowed)
+  4. VIP floor plan shows real-time table availability via Supabase Realtime
+  5. Owner can cancel event with automatic refunds for all VIP reservations
+  6. Linked GA tickets get VIP treatment (re-entry allowed, shown as "Guest of Table X")
+**Plans**: 6 plans
 
 Plans:
-- [ ] 04-01: TBD during planning
-- [ ] 04-02: TBD during planning
+- [ ] 04-01-PLAN.md — State transition enforcement (database trigger for forward-only)
+- [ ] 04-02-PLAN.md — Re-entry detection (VIP scan with re-entry support)
+- [ ] 04-03-PLAN.md — Realtime floor plan updates (Supabase subscriptions)
+- [ ] 04-04-PLAN.md — Owner event cancellation (bulk refund flow)
+- [ ] 04-05-PLAN.md — VIP scanner re-entry UI (enhanced display for re-entry/linked guests)
+- [ ] 04-06-PLAN.md — GA scanner VIP link detection (linked tickets get VIP re-entry)
 
 ### Phase 5: Dashboard Accuracy
 **Goal**: Owner dashboard displays accurate real-time data across all metrics
@@ -153,7 +158,7 @@ Plans:
 **Depends on**: Phases 1, 2, 3, 7 (all GA components hardened)
 **Requirements**: Cross-cut validation of PAY-01, EMAIL-01, SCAN-01, SCAN-02, SCAN-03, UX-01, UX-04
 **Success Criteria** (what must be TRUE):
-  1. Test purchase completes: payment → webhook → ticket creation → email delivery → QR code received
+  1. Test purchase completes: payment -> webhook -> ticket creation -> email delivery -> QR code received
   2. Test QR code scans successfully at gate and marks ticket as used
   3. Second scan attempt correctly shows "already used" error
   4. Invalid QR codes are rejected with clear feedback
@@ -168,7 +173,7 @@ Plans:
 **Depends on**: Phases 1, 2, 3, 4, 7 (all VIP components hardened)
 **Requirements**: Cross-cut validation of PAY-02, EMAIL-02, VIP-01, VIP-02, VIP-03, VIP-04, SCAN-01
 **Success Criteria** (what must be TRUE):
-  1. Test VIP booking completes: payment → webhook → reservation confirmed → email with table details
+  1. Test VIP booking completes: payment -> webhook -> reservation confirmed -> email with table details
   2. VIP floor plan shows table as booked immediately after confirmation
   3. VIP QR code scans successfully and marks reservation as checked-in
   4. Guest passes link correctly and scan independently at gate
@@ -226,14 +231,14 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10 → 11 → 12
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Payment Flow Hardening | 6/6 | Complete | 2026-01-29 |
 | 2. Email Reliability | 6/6 | Complete | 2026-01-30 |
-| 3. Scanner System Hardening | 0/5 | Not started | - |
-| 4. VIP System Reliability | 0/TBD | Not started | - |
+| 3. Scanner System Hardening | 5/5 | Complete | 2026-01-30 |
+| 4. VIP System Reliability | 0/6 | Not started | - |
 | 5. Dashboard Accuracy | 0/TBD | Not started | - |
 | 6. Infrastructure & Monitoring | 0/TBD | Not started | - |
 | 7. UX Polish | 0/TBD | Not started | - |
