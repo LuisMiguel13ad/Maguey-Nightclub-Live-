@@ -66,7 +66,7 @@ Plans:
 - [x] 02-06-PLAN.md — Email reliability tests
 
 ### Phase 3: Scanner System Hardening
-**Goal**: Scanner reliably validates tickets with correct accept/reject behavior
+**Goal**: Scanner reliably validates tickets with correct accept/reject behavior and works offline
 **Depends on**: Phase 2 (needs valid tickets with QR codes to test)
 **Requirements**: SCAN-01, SCAN-02, SCAN-03, SCAN-04
 **Success Criteria** (what must be TRUE):
@@ -75,11 +75,14 @@ Plans:
   3. Already-scanned tickets show "already used" status and block re-entry
   4. Scanner continues to work without network connection and syncs checkins when reconnected
   5. Scanner handles concurrent scan attempts without race conditions
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 03-01: TBD during planning
-- [ ] 03-02: TBD during planning
+- [ ] 03-01-PLAN.md — Full-screen feedback overlays (success/rejection)
+- [ ] 03-02-PLAN.md — Offline ticket cache service
+- [ ] 03-03-PLAN.md — Scan history, check-in counter, offline banner
+- [ ] 03-04-PLAN.md — Enhanced error details and offline validation
+- [ ] 03-05-PLAN.md — Dashboard scanner status and verification
 
 ### Phase 4: VIP System Reliability
 **Goal**: VIP reservations maintain correct state through entire lifecycle
@@ -229,7 +232,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 |-------|----------------|--------|-----------|
 | 1. Payment Flow Hardening | 6/6 | Complete | 2026-01-29 |
 | 2. Email Reliability | 6/6 | Complete | 2026-01-30 |
-| 3. Scanner System Hardening | 0/TBD | Not started | - |
+| 3. Scanner System Hardening | 0/5 | Not started | - |
 | 4. VIP System Reliability | 0/TBD | Not started | - |
 | 5. Dashboard Accuracy | 0/TBD | Not started | - |
 | 6. Infrastructure & Monitoring | 0/TBD | Not started | - |
