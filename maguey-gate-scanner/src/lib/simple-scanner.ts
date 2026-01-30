@@ -1,4 +1,5 @@
 import { supabase, Ticket } from './supabase';
+import { validateOffline, markAsScannedOffline, CachedTicket } from './offline-ticket-cache';
 
 export interface ScanResult {
   success: boolean;
@@ -425,4 +426,134 @@ export async function debugGetSampleTickets(): Promise<void> {
   } else {
     console.log('[DEBUG] No tickets found in database!');
   }
+}
+
+// ============================================================================
+// Offline Scanning
+// ============================================================================
+
+/**
+ * Scan a ticket while offline - validates against local cache
+ * Per context decision: Accept unknown tickets with warning, first-scan-wins for conflicts
+ */
+export async function scanTicketOffline(
+  input: string,
+  userId?: string,
+  eventId?: string
+): Promise<ScanResult> {
+  // Parse input for QR signature verification
+  const parsed = await parseQrInput(input);
+
+  if (parsed.error) {
+    const isTampered = parsed.error.toLowerCase().includes('forged') ||
+                       parsed.error.toLowerCase().includes('signature');
+    return {
+      success: false,
+      ticket: null,
+      message: parsed.error,
+      rejectionReason: isTampered ? 'tampered' : 'invalid',
+      offlineValidated: true,
+    };
+  }
+
+  if (!parsed.token) {
+    return {
+      success: false,
+      ticket: null,
+      message: 'Invalid input - no ticket ID found',
+      rejectionReason: 'invalid',
+      offlineValidated: true,
+    };
+  }
+
+  console.log('[simple-scanner] Offline scan for token:', parsed.token);
+
+  // Validate against offline cache
+  const cacheResult = await validateOffline(parsed.token, eventId);
+
+  if (cacheResult.status === 'not_in_cache') {
+    // Per context decision: Accept unknown tickets with warning
+    // They'll be verified when sync happens
+    console.log('[simple-scanner] Offline: Ticket not in cache, accepting with warning');
+
+    return {
+      success: true,
+      ticket: null, // No ticket data available offline
+      message: 'Accepted (verify when online)',
+      offlineValidated: true,
+      offlineWarning: 'Ticket not in local cache. Will verify when connection restored.',
+    };
+  }
+
+  if (cacheResult.status === 'wrong_event') {
+    return {
+      success: false,
+      ticket: cacheResult.ticket ? convertCachedToTicket(cacheResult.ticket) : null,
+      message: 'This ticket is for a different event',
+      rejectionReason: 'wrong_event',
+      offlineValidated: true,
+    };
+  }
+
+  if (cacheResult.status === 'scanned') {
+    // Already scanned - show cached scan info
+    const cachedTicket = cacheResult.ticket!;
+    const scannedTime = cachedTicket.scannedAt
+      ? new Date(cachedTicket.scannedAt).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
+      : 'earlier';
+
+    return {
+      success: false,
+      ticket: convertCachedToTicket(cachedTicket),
+      message: `Already scanned at ${scannedTime}`,
+      alreadyScanned: true,
+      rejectionReason: 'already_used',
+      rejectionDetails: {
+        previousScan: {
+          staff: cachedTicket.scannedByName || 'Staff',
+          gate: 'This device',
+          time: scannedTime,
+        },
+      },
+      offlineValidated: true,
+    };
+  }
+
+  // Valid ticket - mark as scanned in cache
+  const cachedTicket = cacheResult.ticket!;
+  await markAsScannedOffline(cachedTicket.ticketId, userId);
+
+  return {
+    success: true,
+    ticket: convertCachedToTicket(cachedTicket),
+    message: 'Valid ticket - Entry granted (offline)',
+    offlineValidated: true,
+  };
+}
+
+/**
+ * Convert CachedTicket to Ticket interface for consistency
+ */
+function convertCachedToTicket(cached: CachedTicket): Ticket {
+  return {
+    id: cached.ticketId,
+    ticket_id: cached.ticketId,
+    guest_name: cached.guestName || null,
+    ticket_type: cached.ticketType,
+    event_name: null, // Not stored in cache
+    event_id: cached.eventId,
+    is_used: cached.status === 'scanned',
+    status: cached.status,
+    scanned_at: cached.scannedAt || null,
+    // Other fields from Ticket interface set to null/defaults
+    qr_code_data: cached.qrToken,
+    price: null,
+    purchase_date: null,
+    created_at: null,
+    updated_at: null,
+  } as Ticket;
 }
