@@ -6,6 +6,13 @@ import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { localStorageService } from "@/lib/localStorage";
 import { useAuth, useRole } from "@/contexts/AuthContext";
+import {
+  getRecentEmailStatuses,
+  retryFailedEmail,
+  getEmailStatusColor,
+  getEmailStatusLabel,
+  EmailQueueStatus
+} from "@/lib/email-status-service";
 import { RecentPurchases } from "@/components/dashboard/RecentPurchases";
 import OwnerPortalLayout from "@/components/layout/OwnerPortalLayout";
 import { Button } from "@/components/ui/button";
@@ -25,6 +32,8 @@ import {
   DoorOpen,
   FileText,
   Globe,
+  Mail,
+  RefreshCw,
   Shield,
   Smartphone,
   Sparkles,
@@ -133,6 +142,9 @@ const OwnerDashboard = () => {
   const [weekOverWeek, setWeekOverWeek] = useState(0);
   const [ticketTypeDistribution, setTicketTypeDistribution] = useState<Array<{ name: string; value: number; color: string }>>([]);
   const [peakBuyingTimes, setPeakBuyingTimes] = useState<Array<{ hour: string; orders: number }>>([]);
+  const [emailStatuses, setEmailStatuses] = useState<Map<string, EmailQueueStatus>>(new Map());
+  const [emailStatusList, setEmailStatusList] = useState<EmailQueueStatus[]>([]);
+  const [isRetrying, setIsRetrying] = useState<string | null>(null);
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
@@ -198,6 +210,50 @@ const OwnerDashboard = () => {
     checkAuth();
   }, [authLoading, navigate, role, user]);
 
+  const fetchEmailStatuses = async () => {
+    try {
+      const statuses = await getRecentEmailStatuses(100);
+      const statusMap = new Map<string, EmailQueueStatus>();
+      for (const status of statuses) {
+        if (status.related_id) {
+          statusMap.set(status.related_id, status);
+        }
+      }
+      setEmailStatuses(statusMap);
+      setEmailStatusList(statuses);
+    } catch (error) {
+      console.error('Error fetching email statuses:', error);
+    }
+  };
+
+  const handleRetryEmail = async (emailId: string) => {
+    setIsRetrying(emailId);
+    try {
+      const result = await retryFailedEmail(emailId);
+      if (result.success) {
+        toast({
+          title: "Email requeued",
+          description: "The email has been queued for retry.",
+        });
+        await fetchEmailStatuses();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Retry failed",
+          description: result.error || "Could not requeue email.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Retry failed",
+        description: error.message,
+      });
+    } finally {
+      setIsRetrying(null);
+    }
+  };
+
   const loadData = async () => {
     setIsLoading(true);
 
@@ -207,6 +263,8 @@ const OwnerDashboard = () => {
     }
 
     try {
+      // Fetch email statuses in parallel with other data
+      fetchEmailStatuses();
       const now = new Date();
       const todayStart = startOfDay(now);
       const weekStart = startOfDay(subDays(now, 6));
@@ -223,8 +281,7 @@ const OwnerDashboard = () => {
           event_name,
           ticket_type_id,
           ticket_types (
-            name,
-            category
+            name
           )
         `);
       if (ticketsError) throw ticketsError;
@@ -513,6 +570,18 @@ const OwnerDashboard = () => {
           loadData();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'email_queue',
+        },
+        () => {
+          // Refresh email statuses when queue changes
+          fetchEmailStatuses();
+        }
+      )
       .subscribe();
 
     realtimeChannelRef.current = channel;
@@ -789,6 +858,62 @@ const OwnerDashboard = () => {
             </div>
 
             {vipStatsCard}
+
+            {/* Email Status Section */}
+            <div className="rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="rounded-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 p-3 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium leading-none text-white">Email Delivery</p>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="text-emerald-400 font-semibold">
+                      {emailStatusList.filter(e => e.status === 'delivered').length} delivered
+                    </span>
+                    <span className="text-slate-600">|</span>
+                    <span className="text-yellow-400">
+                      {emailStatusList.filter(e => e.status === 'pending' || e.status === 'processing').length} pending
+                    </span>
+                    <span className="text-slate-600">|</span>
+                    <span className="text-red-400">
+                      {emailStatusList.filter(e => e.status === 'failed').length} failed
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {/* Recent email statuses */}
+              {emailStatusList.length > 0 && (
+                <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                  {emailStatusList.slice(0, 5).map((emailStatus) => (
+                    <div key={emailStatus.id} className="flex items-center justify-between text-xs bg-white/5 rounded-lg px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-slate-300 truncate">{emailStatus.recipient_email || 'No email'}</p>
+                        <p className="text-slate-500 truncate">{emailStatus.subject || emailStatus.email_type}</p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${getEmailStatusColor(emailStatus.status)}`}>
+                          {getEmailStatusLabel(emailStatus.status)}
+                        </span>
+                        {emailStatus.status === 'failed' && (
+                          <button
+                            onClick={() => handleRetryEmail(emailStatus.id)}
+                            disabled={isRetrying === emailStatus.id}
+                            className="text-blue-400 hover:text-blue-300 disabled:opacity-50"
+                            title="Retry email"
+                          >
+                            <RefreshCw className={`h-3 w-3 ${isRetrying === emailStatus.id ? 'animate-spin' : ''}`} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {emailStatusList.length === 0 && (
+                <p className="text-xs text-slate-500 mt-2">No recent emails</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </section>
