@@ -111,6 +111,10 @@ Recent decisions affecting current work:
 | 2026-01-30 | 02-05 | Real-time subscription for email_queue | Instant updates when emails change status |
 | 2026-01-30 | 02-06 | Behavior specification tests for edge functions | Deno runtime required; tests document expected behavior with assertions |
 | 2026-01-30 | 02-06 | 36 tests covering queue and webhook behavior | 18 tests each for queue processor and webhook handler |
+| 2026-01-30 | 03-01 | GA minimal display, VIP full details | GA throughput prioritized; VIP needs table info for seating staff |
+| 2026-01-30 | 03-01 | 1.5s auto-dismiss for success | Per context decision - quick return to scanning |
+| 2026-01-30 | 03-01 | Manual dismiss required for rejection | Staff must acknowledge rejection before next scan |
+| 2026-01-30 | 03-01 | Full red screen for all rejection types | No color-coding by reason per context decision |
 | 2026-01-30 | 03-02 | Partial unique index for race condition prevention | Only successful scans constrained (WHERE scan_success = true) |
 | 2026-01-30 | 03-02 | Row-level locking with NOWAIT | Immediate rejection of concurrent scans via FOR UPDATE NOWAIT |
 | 2026-01-30 | 03-02 | First-scan-wins conflict resolution | Timestamp comparison for offline sync determines winner |
