@@ -271,15 +271,11 @@ interface VipEmailData {
   }>;
 }
 
-async function sendVipConfirmationEmail(data: VipEmailData): Promise<void> {
-  const resendApiKey = Deno.env.get("RESEND_API_KEY") || Deno.env.get("VITE_EMAIL_API_KEY");
-  const fromEmail = Deno.env.get("EMAIL_FROM_ADDRESS") || Deno.env.get("VITE_EMAIL_FROM_ADDRESS") || "vip@magueynightclub.com";
+async function sendVipConfirmationEmail(
+  supabase: ReturnType<typeof createClient>,
+  data: VipEmailData
+): Promise<void> {
   const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://tickets.magueynightclub.com";
-
-  if (!resendApiKey) {
-    console.warn("No Resend API key configured, skipping VIP email");
-    return;
-  }
 
   const formattedDate = new Date(data.eventDate).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -458,30 +454,14 @@ async function sendVipConfirmationEmail(data: VipEmailData): Promise<void> {
 </html>
   `.trim();
 
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [data.customerEmail],
-        subject: `👑 VIP Table Confirmed - ${data.eventName}`,
-        html,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Failed to send VIP email:", response.status, errorText);
-    } else {
-      console.log("VIP confirmation email sent successfully to:", data.customerEmail);
-    }
-  } catch (error) {
-    console.error("Error sending VIP email:", error);
-  }
+  // Queue email instead of sending directly
+  await queueEmail(supabase, {
+    emailType: 'vip_confirmation',
+    recipientEmail: data.customerEmail,
+    subject: `VIP Table Confirmed - ${data.eventName}`,
+    htmlBody: html,
+    relatedId: data.reservationId,
+  });
 }
 
 async function sendTicketEmail(
@@ -914,9 +894,9 @@ serve(async (req) => {
                   })
                 );
 
-                // Send VIP confirmation email (non-blocking - fire and forget)
-                // Webhook must respond to Stripe within 5 seconds
-                sendVipConfirmationEmail({
+                // Queue VIP confirmation email (non-blocking)
+                // Email is queued for processing by the email queue processor
+                sendVipConfirmationEmail(supabase, {
                   reservationId: reservation.id,
                   eventId,
                   reservationNumber: reservation.id.substring(0, 8).toUpperCase(),
@@ -934,12 +914,11 @@ serve(async (req) => {
                   totalAmount: ticket.unitPrice,
                   guestPasses: emailGuestPasses,
                 }).catch(err => {
-                  console.error('VIP email sending failed, will be retried:', {
+                  console.error('Failed to queue VIP email:', {
                     error: err.message,
                     reservationId: reservation.id,
                     email: customerEmail
                   });
-                  // TODO: In Phase 2 (Email Reliability), add to email retry queue
                 });
               }
               } catch (vipCreateError) {
@@ -1415,9 +1394,9 @@ serve(async (req) => {
           const tableInfo = fullReservation.event_vip_tables;
           const totalAmount = (fullReservation.amount_paid_cents || 0) / 100;
 
-          // Send VIP confirmation email (non-blocking - fire and forget)
-          // Webhook must respond to Stripe within 5 seconds
-          sendVipConfirmationEmail({
+          // Queue VIP confirmation email (non-blocking)
+          // Email is queued for processing by the email queue processor
+          sendVipConfirmationEmail(supabase, {
             reservationId,
             eventId,
             reservationNumber: reservationId.substring(0, 8).toUpperCase(),
@@ -1436,12 +1415,11 @@ serve(async (req) => {
             inviteCode,
             guestPasses: emailGuestPasses,
           }).catch(err => {
-            console.error('VIP email sending failed, will be retried:', {
+            console.error('Failed to queue VIP email:', {
               error: err.message,
               reservationId,
               email: customerEmail
             });
-            // TODO: In Phase 2 (Email Reliability), add to email retry queue
           });
 
           console.log("VIP confirmation email queued for:", customerEmail);
