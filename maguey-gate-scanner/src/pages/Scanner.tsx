@@ -379,6 +379,17 @@ const Scanner = () => {
             wrongEventDate: result.ticket.event_name,
           },
         });
+
+        // Add to history (wrong event)
+        addToHistory({
+          timestamp: new Date(),
+          status: 'failure',
+          ticketType: result.ticket.ticket_type?.toLowerCase().includes('vip') ? 'VIP' : 'GA',
+          guestName: result.ticket.guest_name,
+          eventName: result.ticket.event_name,
+          errorReason: `Wrong event: ${result.ticket.event_name}`,
+        });
+
         setManualInput("");
         setIsProcessing(false);
         return;
@@ -392,12 +403,22 @@ const Scanner = () => {
         });
 
         // Check if this ticket is linked to a VIP reservation
+        let ticketVipInfo: VipLinkInfo = { isVipGuest: false, tableNumber: null, purchaserName: null };
         if (result.ticket?.id) {
-          const vipInfo = await checkVipLink(result.ticket.id);
+          ticketVipInfo = await checkVipLink(result.ticket.id);
           if (mountedRef.current) {
-            setVipLinkInfo(vipInfo);
+            setVipLinkInfo(ticketVipInfo);
           }
         }
+
+        // Add to history (online success)
+        addToHistory({
+          timestamp: new Date(),
+          status: 'success',
+          ticketType: determineTicketTypeLabel(result.ticket, ticketVipInfo),
+          guestName: result.ticket?.guest_name,
+          eventName: result.ticket?.event_name,
+        });
       } else if (result.alreadyScanned) {
         setScanState({
           status: "already_scanned",
@@ -411,6 +432,16 @@ const Scanner = () => {
               time: 'Earlier',
             },
           },
+        });
+
+        // Add to history (already scanned)
+        addToHistory({
+          timestamp: new Date(),
+          status: 'failure',
+          ticketType: result.ticket?.ticket_type?.toLowerCase().includes('vip') ? 'VIP' : 'GA',
+          guestName: result.ticket?.guest_name,
+          eventName: result.ticket?.event_name,
+          errorReason: 'Already scanned',
         });
       } else {
         // Determine reason based on message content
@@ -428,6 +459,14 @@ const Scanner = () => {
           message: result.message,
           rejectionReason,
         });
+
+        // Add to history (other failure)
+        addToHistory({
+          timestamp: new Date(),
+          status: 'failure',
+          ticketType: 'GA',
+          errorReason: result.message,
+        });
       }
     } catch (error) {
       console.error("Scan error:", error);
@@ -440,6 +479,14 @@ const Scanner = () => {
         ticket: null,
         message: "An error occurred while scanning",
         rejectionReason: 'invalid',
+      });
+
+      // Add to history (exception)
+      addToHistory({
+        timestamp: new Date(),
+        status: 'failure',
+        ticketType: 'GA',
+        errorReason: 'System error',
       });
     }
 
@@ -544,6 +591,17 @@ const Scanner = () => {
 
   return (
     <div className="min-h-[100dvh] w-full bg-black text-white relative overflow-hidden flex flex-col font-sans">
+
+      {/* Offline Banner - very top, above everything */}
+      <OfflineBanner className="fixed top-0 left-0 right-0 z-[70]" />
+
+      {/* Check-in Counter - below offline banner (when shown) */}
+      <div className={cn(
+        "fixed left-0 right-0 z-[65]",
+        !isOnline ? "top-[52px]" : "top-0"
+      )}>
+        <CheckInCounter eventId={selectedEventId} />
+      </div>
 
       {/* Top Navigation Bar */}
       <div className="absolute top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent">
@@ -734,6 +792,17 @@ const Scanner = () => {
         )}
 
       </div>
+
+      {/* Scan History - above bottom nav, below scanner */}
+      {scanHistory.length > 0 && scanState.status === 'idle' && (
+        <div className="fixed bottom-24 left-0 right-0 z-[40] px-4 pb-2">
+          <ScanHistory
+            entries={scanHistory}
+            maxVisible={5}
+            onToggleExpand={toggleHistoryExpand}
+          />
+        </div>
+      )}
 
       {/* Bottom Navigation Bar */}
       <div className="pt-2 pb-8 px-8 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-50 flex items-end justify-between gap-6 fixed bottom-0 left-0 right-0">
