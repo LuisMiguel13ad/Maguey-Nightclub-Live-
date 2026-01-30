@@ -10,11 +10,22 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 2 of 12 (Email Reliability)
-Plans: TBD
-Status: Ready to plan
-Last activity: 2026-01-29 — Phase 1 verified complete
+Plan: 1 of 6 complete
+Status: In progress
+Last activity: 2026-01-30 — Completed 02-01-PLAN.md (email queue schema)
 
-Progress: [████████░░] 8.3% (6/72 plans)
+Progress: [█████████░] 9.7% (7/72 plans)
+
+### Phase 2 Plans
+
+| Plan | Objective | Status |
+|------|-----------|--------|
+| 02-01 | Email queue schema (email_queue, email_delivery_status) | Complete |
+| 02-02 | Queue processor edge function | Pending |
+| 02-03 | Resend webhook handler | Pending |
+| 02-04 | Email templates (GA ticket, VIP confirmation) | Pending |
+| 02-05 | Integration with existing checkout flows | Pending |
+| 02-06 | Email delivery tests | Pending |
 
 ### Phase 1 Plans
 
@@ -30,19 +41,20 @@ Progress: [████████░░] 8.3% (6/72 plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 3.5 min
-- Total execution time: 0.35 hours
+- Total plans completed: 7
+- Average duration: 3.9 min
+- Total execution time: 0.45 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 6 | 21 min | 3.5 min |
+| 02 | 1 | 6 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-06 (2 min), 01-05 (est), 01-04 (2 min), 01-03 (5 min), 01-02 (8 min)
-- Trend: Stable
+- Last 5 plans: 02-01 (6 min), 01-06 (2 min), 01-05 (est), 01-04 (2 min), 01-03 (5 min)
+- Trend: Stable (02-01 longer due to migration sync issues)
 
 *Updated after each plan completion*
 
@@ -71,12 +83,15 @@ Recent decisions affecting current work:
 | 2026-01-29 | 01-05 | Webhook tests are documentation-focused | Without valid Stripe signatures, tests document expected behavior |
 | 2026-01-29 | 01-06 | 50 VUs target for load tests | Per user decision: typical busy night capacity |
 | 2026-01-29 | 01-06 | p95 < 5s checkout, p95 < 3s webhooks | Performance thresholds for acceptable UX |
+| 2026-01-30 | 02-01 | Email-based RLS using recipient_email | Ticket system uses anonymous purchases, ownership via email match |
+| 2026-01-30 | 02-01 | 5 max retries with exponential backoff | 30s base, max 30 min wait between retries |
+| 2026-01-30 | 02-01 | SECURITY DEFINER for queue functions | Queue operations need to bypass RLS for service-level operations |
 
 ### Pending Todos
 
-- Phase 2 (Email Reliability): Add email retry queue for failed sends
 - Configure OWNER_EMAIL environment variable in Supabase Dashboard
 - Install k6 for load testing: `brew install k6`
+- Set up RESEND_API_KEY environment variable for email sending (Phase 2)
 
 ### Blockers/Concerns
 
@@ -88,8 +103,11 @@ This is brownfield work — all features are built. Roadmap focuses on reliabili
 - Phase 10 (load testing) requires E2E flows validated first
 - Phase 12 (launch review) is gate for production deployment
 
+**Migration Naming:**
+Several pre-existing migrations had non-standard naming. Repaired during 02-01 execution.
+
 ## Session Continuity
 
-Last session: 2026-01-29T21:11:04Z
-Stopped at: Completed 01-06-PLAN.md (Phase 1 complete)
+Last session: 2026-01-30T02:24:53Z
+Stopped at: Completed 02-01-PLAN.md (email queue schema)
 Resume file: None
