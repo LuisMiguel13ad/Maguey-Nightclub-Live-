@@ -485,21 +485,21 @@ async function sendVipConfirmationEmail(data: VipEmailData): Promise<void> {
 }
 
 async function sendTicketEmail(
+  supabase: ReturnType<typeof createClient>,
   to: string,
   customerName: string,
   orderId: string,
   tickets: TicketEmailData[]
 ): Promise<void> {
-  const resendApiKey = Deno.env.get("RESEND_API_KEY") || Deno.env.get("VITE_EMAIL_API_KEY");
-  const fromEmail = Deno.env.get("EMAIL_FROM_ADDRESS") || Deno.env.get("VITE_EMAIL_FROM_ADDRESS") || "tickets@magueynightclub.com";
-
-  if (!resendApiKey) {
-    console.warn("No Resend API key configured, skipping email");
+  // Skip if no tickets
+  if (!tickets.length) {
+    console.warn("sendTicketEmail called with no tickets");
     return;
   }
 
   const eventName = tickets[0]?.eventName || "Event";
 
+  // Generate email HTML (same as before)
   const ticketHtml = tickets.map((ticket, index) => `
     <div style="border: 2px solid #6366f1; border-radius: 8px; padding: 20px; margin: 15px 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
       <h3 style="color: white; margin: 0 0 15px 0;">Ticket ${index + 1}: ${ticket.ticketType}</h3>
@@ -526,11 +526,11 @@ async function sendTicketEmail(
     <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f5f5f5;">
       <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #e0e0e0; padding-bottom: 20px;">
-          <h1 style="color: #6366f1; margin: 0;">🎫 MAGUEY</h1>
+          <h1 style="color: #6366f1; margin: 0;">MAGUEY</h1>
         </div>
 
         <div style="background: #10b981; color: white; padding: 15px; border-radius: 6px; text-align: center; margin-bottom: 30px;">
-          ✅ Payment Successful! Your tickets are confirmed.
+          Payment Successful! Your tickets are confirmed.
         </div>
 
         <p>Hi ${customerName},</p>
@@ -539,7 +539,7 @@ async function sendTicketEmail(
         ${ticketHtml}
 
         <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <h3 style="margin-top: 0; color: #856404;">⚠️ Important Information</h3>
+          <h3 style="margin-top: 0; color: #856404;">Important Information</h3>
           <ul style="margin: 10px 0; padding-left: 20px; color: #856404;">
             <li>Valid government-issued ID required at entrance</li>
             <li>Arrive 30 minutes before event time</li>
@@ -563,30 +563,14 @@ async function sendTicketEmail(
     </html>
   `;
 
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [to],
-        subject: `Your Maguey Tickets - Order Confirmed`,
-        html,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Failed to send email:", response.status, errorText);
-    } else {
-      console.log("Ticket email sent successfully to:", to);
-    }
-  } catch (error) {
-    console.error("Error sending email:", error);
-  }
+  // Queue email instead of sending directly
+  await queueEmail(supabase, {
+    emailType: 'ga_ticket',
+    recipientEmail: to,
+    subject: `Your Maguey Tickets - Order Confirmed`,
+    htmlBody: html,
+    relatedId: orderId,
+  });
 }
 
 async function verifyStripeSignature(
@@ -1133,18 +1117,17 @@ serve(async (req) => {
             }
           }
 
-          // Send ticket confirmation email (non-blocking - fire and forget)
-          // Webhook must respond to Stripe within 5 seconds
+          // Queue ticket confirmation email (non-blocking)
+          // Email is queued for processing by the email queue processor
           if (createdTickets.length > 0 && customerEmail) {
-            console.log("Sending ticket email to:", customerEmail);
-            sendTicketEmail(customerEmail, customerName, orderId, createdTickets).catch(err => {
-              console.error('Ticket email sending failed, will be retried:', {
+            console.log("Queueing ticket email to:", customerEmail);
+            sendTicketEmail(supabase, customerEmail, customerName, orderId, createdTickets).catch(err => {
+              console.error('Failed to queue ticket email:', {
                 error: err.message,
                 orderId,
                 email: customerEmail,
                 ticketCount: createdTickets.length
               });
-              // TODO: In Phase 2 (Email Reliability), add to email retry queue
             });
           }
         } catch (parseError) {
