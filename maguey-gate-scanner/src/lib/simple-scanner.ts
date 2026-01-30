@@ -5,6 +5,22 @@ export interface ScanResult {
   ticket: Ticket | null;
   message: string;
   alreadyScanned?: boolean;
+
+  // Detailed rejection info
+  rejectionReason?: 'already_used' | 'wrong_event' | 'invalid' | 'expired' | 'tampered' | 'not_found' | 'offline_unknown';
+  rejectionDetails?: {
+    previousScan?: {
+      staff: string;      // Display name or "Unknown Staff"
+      gate: string;       // Device ID or "Unknown Gate"
+      time: string;       // Formatted time "2:30 PM"
+    };
+    wrongEventDate?: string;  // "Saturday Feb 1st"
+    wrongEventName?: string;  // Event name for context
+  };
+
+  // Offline mode fields
+  offlineValidated?: boolean;  // True if validated against cache (not server)
+  offlineWarning?: string;     // Warning message for unknown tickets in offline mode
 }
 
 // UUID regex pattern
@@ -198,10 +214,14 @@ export async function scanTicket(
   const parsed = await parseQrInput(input);
 
   if (parsed.error) {
+    // Determine if it's a tampered/invalid signature or general invalid
+    const isTampered = parsed.error.toLowerCase().includes('forged') ||
+                       parsed.error.toLowerCase().includes('signature');
     return {
       success: false,
       ticket: null,
       message: parsed.error,
+      rejectionReason: isTampered ? 'tampered' : 'invalid',
     };
   }
 
@@ -210,6 +230,7 @@ export async function scanTicket(
       success: false,
       ticket: null,
       message: 'Invalid input - no ticket ID found',
+      rejectionReason: 'invalid',
     };
   }
 
@@ -223,20 +244,46 @@ export async function scanTicket(
       success: false,
       ticket: null,
       message: 'Ticket not found',
+      rejectionReason: 'not_found',
     };
   }
 
-  // Check if already scanned
-  if (ticket.is_used) {
+  // Check if already scanned - check both is_used and status for robustness
+  const isAlreadyScanned = ticket.is_used === true || ticket.status === 'scanned';
+  if (isAlreadyScanned) {
+    // Format the previous scan time
+    const scannedTime = ticket.scanned_at
+      ? new Date(ticket.scanned_at).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
+      : 'unknown time';
+
+    // Get staff name from scan - will show "Staff" as default
+    // In production, could be enhanced with a profiles lookup
+    const staffName = 'Staff';
+
+    // Get gate/device info - could use device_id from scanner context
+    const gateName = 'Gate';
+
     return {
       success: false,
       ticket,
-      message: `Already scanned at ${ticket.scanned_at ? new Date(ticket.scanned_at).toLocaleString() : 'unknown time'}`,
+      message: `Already scanned at ${scannedTime}`,
       alreadyScanned: true,
+      rejectionReason: 'already_used',
+      rejectionDetails: {
+        previousScan: {
+          staff: staffName,
+          gate: gateName,
+          time: scannedTime,
+        },
+      },
     };
   }
 
-  // Mark as scanned (scanned_by column doesn't exist, so we don't include it)
+  // Mark as scanned - update both is_used and status for schema consistency
   const now = new Date().toISOString();
   console.log('[simple-scanner] Marking ticket as scanned:', ticket.id);
 
@@ -244,6 +291,7 @@ export async function scanTicket(
     .from('tickets')
     .update({
       is_used: true,
+      status: 'scanned',
       scanned_at: now,
     })
     .eq('id', ticket.id)
@@ -281,6 +329,7 @@ export async function scanTicket(
     ticket: {
       ...ticket,
       is_used: true,
+      status: 'scanned',
       scanned_at: now,
     },
     message: 'Valid ticket - Entry granted',
