@@ -97,27 +97,16 @@ CREATE POLICY "Service role full access to email_queue"
   USING (true)
   WITH CHECK (true);
 
--- Authenticated users can view emails related to their tickets/reservations
--- Note: This requires a join to tickets or vip_reservations tables in application code
--- For now, allow read access to own emails (checked via related_id in application)
+-- Authenticated users can view emails sent to their email address
+-- Note: This system primarily uses anonymous purchases with email verification
+-- Users see their ticket/VIP pass directly, but can also view email queue status
 CREATE POLICY "Users can view their email status"
   ON email_queue
   FOR SELECT
   TO authenticated
   USING (
-    -- Check if user owns the related ticket
-    EXISTS (
-      SELECT 1 FROM tickets t
-      WHERE t.id = email_queue.related_id
-      AND t.user_id = auth.uid()
-    )
-    OR
-    -- Check if user owns the related VIP reservation
-    EXISTS (
-      SELECT 1 FROM vip_reservations vr
-      WHERE vr.id = email_queue.related_id
-      AND vr.customer_email = (SELECT email FROM auth.users WHERE id = auth.uid())
-    )
+    -- Match recipient email to authenticated user's email
+    email_queue.recipient_email = (SELECT email FROM auth.users WHERE id = auth.uid())
   );
 
 -- Enable RLS on email_delivery_status
@@ -131,7 +120,7 @@ CREATE POLICY "Service role full access to email_delivery_status"
   USING (true)
   WITH CHECK (true);
 
--- Users can view delivery status for their emails
+-- Users can view delivery status for emails sent to their address
 CREATE POLICY "Users can view their email delivery status"
   ON email_delivery_status
   FOR SELECT
@@ -140,26 +129,22 @@ CREATE POLICY "Users can view their email delivery status"
     EXISTS (
       SELECT 1 FROM email_queue eq
       WHERE eq.resend_email_id = email_delivery_status.resend_email_id
-      AND (
-        EXISTS (
-          SELECT 1 FROM tickets t
-          WHERE t.id = eq.related_id
-          AND t.user_id = auth.uid()
-        )
-        OR
-        EXISTS (
-          SELECT 1 FROM vip_reservations vr
-          WHERE vr.id = eq.related_id
-          AND vr.customer_email = (SELECT email FROM auth.users WHERE id = auth.uid())
-        )
-      )
+      AND eq.recipient_email = (SELECT email FROM auth.users WHERE id = auth.uid())
     )
   );
 
 -- ==========================================
 -- 5. UPDATED_AT TRIGGER
 -- ==========================================
--- Use existing update_updated_at_column function from prior migrations
+-- Create function if it doesn't exist (may already exist from earlier migrations)
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE 'plpgsql';
 
 CREATE TRIGGER update_email_queue_updated_at
   BEFORE UPDATE ON email_queue
