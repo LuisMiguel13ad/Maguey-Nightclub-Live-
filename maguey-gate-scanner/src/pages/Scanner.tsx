@@ -38,6 +38,7 @@ import {
   syncPendingScans,
   getSyncStatus,
 } from "@/lib/offline-queue-service";
+import { sendHeartbeat } from "@/lib/scanner-status-service";
 import { Ticket as TicketType } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import {
@@ -135,6 +136,15 @@ const Scanner = () => {
 
   // Selected event ID for counter (separate from name for API queries)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
+  // Scans today counter (for heartbeat reporting)
+  const [scansToday, setScansToday] = useState(() => {
+    const saved = localStorage.getItem('scans_today');
+    const savedDate = localStorage.getItem('scans_today_date');
+    const today = new Date().toDateString();
+    if (savedDate === today && saved) return parseInt(saved, 10);
+    return 0;
+  });
 
   // Load event names on mount and debug tickets
   useEffect(() => {
@@ -250,6 +260,27 @@ const Scanner = () => {
     }
   }, [selectedEventId]);
 
+  // Send heartbeat every 30 seconds
+  useEffect(() => {
+    const sendStatus = async () => {
+      if (!mountedRef.current) return;
+      const syncStatus = await getSyncStatus();
+      await sendHeartbeat({
+        eventId: selectedEventId || undefined,
+        eventName: selectedEvent !== 'all' ? selectedEvent : undefined,
+        pendingScans: syncStatus.pending + syncStatus.failed,
+        scansToday,
+      });
+    };
+
+    // Send immediately
+    sendStatus();
+
+    // Then every 30 seconds
+    const interval = setInterval(sendStatus, 30000);
+    return () => clearInterval(interval);
+  }, [selectedEventId, selectedEvent, scansToday]);
+
   // Check if a ticket is linked to a VIP reservation
   const checkVipLink = async (ticketId: string): Promise<VipLinkInfo> => {
     try {
@@ -328,6 +359,14 @@ const Scanner = () => {
             ticketType: determineTicketTypeLabel(result.ticket, { isVipGuest: false, tableNumber: null, purchaserName: null }),
             guestName: result.ticket?.guest_name,
             eventName: result.ticket?.event_name,
+          });
+
+          // Increment scans today counter
+          setScansToday(prev => {
+            const newCount = prev + 1;
+            localStorage.setItem('scans_today', String(newCount));
+            localStorage.setItem('scans_today_date', new Date().toDateString());
+            return newCount;
           });
 
           // Show toast if there's an offline warning
@@ -418,6 +457,14 @@ const Scanner = () => {
           ticketType: determineTicketTypeLabel(result.ticket, ticketVipInfo),
           guestName: result.ticket?.guest_name,
           eventName: result.ticket?.event_name,
+        });
+
+        // Increment scans today counter
+        setScansToday(prev => {
+          const newCount = prev + 1;
+          localStorage.setItem('scans_today', String(newCount));
+          localStorage.setItem('scans_today_date', new Date().toDateString());
+          return newCount;
         });
       } else if (result.alreadyScanned) {
         setScanState({

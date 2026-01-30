@@ -13,6 +13,7 @@ import {
   getEmailStatusLabel,
   EmailQueueStatus
 } from "@/lib/email-status-service";
+import { getScannerStatuses, ScannerStatus } from "@/lib/scanner-status-service";
 import { RecentPurchases } from "@/components/dashboard/RecentPurchases";
 import OwnerPortalLayout from "@/components/layout/OwnerPortalLayout";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,8 @@ import {
   UsersRound,
   Zap,
   Wine,
+  Wifi,
+  WifiOff,
 } from "lucide-react";
 
 interface DailyPerformancePoint {
@@ -145,6 +148,7 @@ const OwnerDashboard = () => {
   const [emailStatuses, setEmailStatuses] = useState<Map<string, EmailQueueStatus>>(new Map());
   const [emailStatusList, setEmailStatusList] = useState<EmailQueueStatus[]>([]);
   const [isRetrying, setIsRetrying] = useState<string | null>(null);
+  const [scannerStatuses, setScannerStatuses] = useState<ScannerStatus[]>([]);
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
@@ -226,6 +230,15 @@ const OwnerDashboard = () => {
     }
   };
 
+  const fetchScannerStatuses = async () => {
+    try {
+      const statuses = await getScannerStatuses();
+      setScannerStatuses(statuses);
+    } catch (error) {
+      console.error('Error fetching scanner statuses:', error);
+    }
+  };
+
   const handleRetryEmail = async (emailId: string) => {
     setIsRetrying(emailId);
     try {
@@ -263,8 +276,9 @@ const OwnerDashboard = () => {
     }
 
     try {
-      // Fetch email statuses in parallel with other data
+      // Fetch email and scanner statuses in parallel with other data
       fetchEmailStatuses();
+      fetchScannerStatuses();
       const now = new Date();
       const todayStart = startOfDay(now);
       const weekStart = startOfDay(subDays(now, 6));
@@ -580,6 +594,18 @@ const OwnerDashboard = () => {
         () => {
           // Refresh email statuses when queue changes
           fetchEmailStatuses();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scanner_heartbeats',
+        },
+        () => {
+          // Refresh scanner statuses when heartbeats change
+          fetchScannerStatuses();
         }
       )
       .subscribe();
@@ -912,6 +938,67 @@ const OwnerDashboard = () => {
               )}
               {emailStatusList.length === 0 && (
                 <p className="text-xs text-slate-500 mt-2">No recent emails</p>
+              )}
+            </div>
+
+            {/* Scanner Status Section */}
+            <div className="rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 p-3 text-green-300 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                  <Smartphone className="h-4 w-4" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <p className="text-sm font-medium leading-none text-white">Scanner Status</p>
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="text-emerald-400 font-semibold">
+                      {scannerStatuses.filter(s => s.isOnline).length} online
+                    </span>
+                    <span className="text-slate-600">|</span>
+                    <span className="text-red-400">
+                      {scannerStatuses.filter(s => !s.isOnline).length} offline
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scanner list */}
+              {scannerStatuses.length > 0 ? (
+                <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
+                  {scannerStatuses.map((scanner) => (
+                    <div
+                      key={scanner.deviceId}
+                      className="flex items-center justify-between text-xs bg-white/5 rounded-lg px-3 py-2"
+                    >
+                      <div className="flex items-center gap-2">
+                        {scanner.isOnline ? (
+                          <Wifi className="h-3 w-3 text-emerald-400" />
+                        ) : (
+                          <WifiOff className="h-3 w-3 text-red-400" />
+                        )}
+                        <span className="text-slate-300">
+                          {scanner.deviceName || scanner.deviceId.slice(0, 12)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {scanner.currentEventName && (
+                          <span className="text-slate-500 truncate max-w-[100px]">
+                            {scanner.currentEventName}
+                          </span>
+                        )}
+                        <span className="text-slate-400">
+                          {scanner.scansToday} scans
+                        </span>
+                        {scanner.pendingScans > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-yellow-500/20 text-yellow-400">
+                            {scanner.pendingScans} pending
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 mt-2">No active scanners</p>
               )}
             </div>
           </CardContent>
