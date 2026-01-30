@@ -21,13 +21,18 @@ import {
 } from "lucide-react";
 import { SuccessOverlay } from "@/components/scanner/SuccessOverlay";
 import { RejectionOverlay, RejectionReason } from "@/components/scanner/RejectionOverlay";
+import { ScanHistory, ScanHistoryEntry } from "@/components/scanner/ScanHistory";
+import { CheckInCounter } from "@/components/scanner/CheckInCounter";
+import { OfflineBanner } from "@/components/scanner/OfflineBanner";
 import { QrScanner } from "@/components/QrScanner";
 import { NFCScanner } from "@/components/NFCScanner";
 import {
   scanTicket,
+  scanTicketOffline,
   getEventNamesFromTickets,
   debugGetSampleTickets,
 } from "@/lib/simple-scanner";
+import { ensureCacheIsFresh } from "@/lib/offline-ticket-cache";
 import {
   queueScan,
   syncPendingScans,
@@ -124,6 +129,13 @@ const Scanner = () => {
   const [pendingScans, setPendingScans] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Scan history state
+  const [scanHistory, setScanHistory] = useState<ScanHistoryEntry[]>([]);
+  const MAX_HISTORY_ENTRIES = 10;
+
+  // Selected event ID for counter (separate from name for API queries)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+
   // Load event names on mount and debug tickets
   useEffect(() => {
     const loadEvents = async () => {
@@ -144,6 +156,57 @@ const Scanner = () => {
       mountedRef.current = false;
     };
   }, []);
+
+  // Load scan history from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('scan_history');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Convert timestamp strings back to Date objects
+        setScanHistory(parsed.map((e: ScanHistoryEntry & { timestamp: string }) => ({
+          ...e,
+          timestamp: new Date(e.timestamp),
+        })));
+      } catch (error) {
+        console.error('Failed to load scan history:', error);
+      }
+    }
+  }, []);
+
+  /**
+   * Add a scan entry to history
+   */
+  const addToHistory = (entry: Omit<ScanHistoryEntry, 'id'>) => {
+    setScanHistory(prev => {
+      const newEntry = { ...entry, id: crypto.randomUUID() };
+      const updated = [newEntry, ...prev].slice(0, MAX_HISTORY_ENTRIES);
+      // Persist to localStorage for reload recovery
+      localStorage.setItem('scan_history', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  /**
+   * Toggle expansion of a history entry
+   */
+  const toggleHistoryExpand = (id: string) => {
+    setScanHistory(prev => prev.map(entry =>
+      entry.id === id ? { ...entry, expanded: !entry.expanded } : entry
+    ));
+  };
+
+  /**
+   * Determine ticket type label for history
+   */
+  const determineTicketTypeLabel = (
+    ticket: TicketType | null,
+    vipInfo: VipLinkInfo
+  ): 'GA' | 'VIP' | 'VIP Guest' => {
+    if (vipInfo.isVipGuest) return 'VIP Guest';
+    if (ticket?.ticket_type?.toLowerCase().includes('vip')) return 'VIP';
+    return 'GA';
+  };
 
   // Monitor online status
   useEffect(() => {
@@ -173,6 +236,19 @@ const Scanner = () => {
     const interval = setInterval(updatePendingCount, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Refresh ticket cache when event is selected (for offline scanning)
+  useEffect(() => {
+    if (selectedEventId && navigator.onLine) {
+      ensureCacheIsFresh(selectedEventId).then(result => {
+        if (result.status === 'refreshed') {
+          console.log('[Scanner] Refreshed ticket cache:', result.ticketCount, 'tickets');
+        }
+      }).catch(err => {
+        console.error('[Scanner] Failed to refresh ticket cache:', err);
+      });
+    }
+  }, [selectedEventId]);
 
   // Check if a ticket is linked to a VIP reservation
   const checkVipLink = async (ticketId: string): Promise<VipLinkInfo> => {
@@ -220,25 +296,66 @@ const Scanner = () => {
     setScanState({ status: "scanning", ticket: null, message: "Looking up ticket..." });
 
     try {
-      // If offline, queue the scan
+      // If offline, use local cache validation
       if (!isOnline) {
-        await queueScan(input.trim(), user?.id, {
-          ticketIdString: input.trim(),
-        });
+        // Validate against cache instead of just queueing
+        const result = await scanTicketOffline(input.trim(), user?.id, selectedEventId || undefined);
 
         // Guard: Don't update state if component unmounted
         if (!mountedRef.current) return;
 
-        setScanState({
-          status: "success",
-          ticket: null,
-          message: "Scan queued for sync when online",
-        });
+        if (result.success) {
+          // Queue for sync when back online
+          await queueScan(input.trim(), user?.id, {
+            ticketIdString: input.trim(),
+            scanMetadata: {
+              eventId: selectedEventId || undefined,
+              ticketType: result.ticket?.ticket_type,
+              attendeeName: result.ticket?.guest_name || undefined,
+            },
+          });
 
-        toast({
-          title: "Queued Offline",
-          description: "Scan will sync when connection is restored",
-        });
+          setScanState({
+            status: "success",
+            ticket: result.ticket,
+            message: result.message,
+          });
+
+          // Add to history (offline success)
+          addToHistory({
+            timestamp: new Date(),
+            status: 'success',
+            ticketType: determineTicketTypeLabel(result.ticket, { isVipGuest: false, tableNumber: null, purchaserName: null }),
+            guestName: result.ticket?.guest_name,
+            eventName: result.ticket?.event_name,
+          });
+
+          // Show toast if there's an offline warning
+          if (result.offlineWarning) {
+            toast({
+              title: "Offline Scan",
+              description: result.offlineWarning,
+            });
+          }
+        } else {
+          setScanState({
+            status: result.alreadyScanned ? "already_scanned" : "error",
+            ticket: result.ticket,
+            message: result.message,
+            rejectionReason: result.rejectionReason,
+            rejectionDetails: result.rejectionDetails,
+          });
+
+          // Add to history (offline failure)
+          addToHistory({
+            timestamp: new Date(),
+            status: 'failure',
+            ticketType: result.ticket?.ticket_type?.toLowerCase().includes('vip') ? 'VIP' : 'GA',
+            guestName: result.ticket?.guest_name,
+            eventName: result.ticket?.event_name,
+            errorReason: result.message,
+          });
+        }
 
         setManualInput("");
         setIsProcessing(false);
@@ -286,9 +403,8 @@ const Scanner = () => {
           status: "already_scanned",
           ticket: result.ticket,
           message: result.message,
-          rejectionReason: 'already_used',
-          rejectionDetails: {
-            // Previous scan details will be enhanced in plan 04
+          rejectionReason: result.rejectionReason || 'already_used',
+          rejectionDetails: result.rejectionDetails || {
             previousScan: {
               staff: 'Staff',
               gate: 'Gate',
