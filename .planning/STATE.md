@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 2 of 12 (Email Reliability)
-Plan: 4 of 6 complete
+Plan: 5 of 6 complete
 Status: In progress
-Last activity: 2026-01-30 — Completed 02-04-PLAN.md (Webhook email queueing)
+Last activity: 2026-01-30 — Completed 02-05-PLAN.md (Owner dashboard email status)
 
-Progress: [██████████░] 13.9% (10/72 plans)
+Progress: [███████████░] 15.3% (11/72 plans)
 
 ### Phase 2 Plans
 
@@ -24,7 +24,7 @@ Progress: [██████████░] 13.9% (10/72 plans)
 | 02-02 | Queue processor edge function | Complete |
 | 02-03 | Resend webhook handler | Complete |
 | 02-04 | Webhook email queueing (stripe-webhook integration) | Complete |
-| 02-05 | Integration with existing checkout flows | Pending |
+| 02-05 | Owner dashboard email status | Complete |
 | 02-06 | Email delivery tests | Pending |
 
 ### Phase 1 Plans
@@ -41,19 +41,19 @@ Progress: [██████████░] 13.9% (10/72 plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 3.3 min
-- Total execution time: 0.55 hours
+- Total plans completed: 11
+- Average duration: 3.2 min
+- Total execution time: 0.58 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 6 | 21 min | 3.5 min |
-| 02 | 4 | 13 min | 3.25 min |
+| 02 | 5 | 15 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-04 (4 min), 02-02 (2 min), 02-03 (1 min), 02-01 (6 min), 01-06 (2 min)
+- Last 5 plans: 02-05 (2 min), 02-04 (4 min), 02-02 (2 min), 02-03 (1 min), 02-01 (6 min)
 - Trend: Fast (clear patterns from research, focused plans)
 
 *Updated after each plan completion*
@@ -95,6 +95,9 @@ Recent decisions affecting current work:
 | 2026-01-30 | 02-04 | queueEmail doesn't throw | Webhook must return 200 to Stripe for successful payments |
 | 2026-01-30 | 02-04 | Email HTML generated before queueing | Synchronous HTML generation avoids lazy rendering issues |
 | 2026-01-30 | 02-04 | supabase client passed to email functions | Required for queue insertion access |
+| 2026-01-30 | 02-05 | Show last 5 emails in dashboard | Quick visibility without overwhelming UI |
+| 2026-01-30 | 02-05 | Map for O(1) status lookup | Efficient matching by related_id |
+| 2026-01-30 | 02-05 | Real-time subscription for email_queue | Instant updates when emails change status |
 
 ### Pending Todos
 
@@ -120,6 +123,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 
 ## Session Continuity
 
-Last session: 2026-01-30T02:35:00Z
-Stopped at: Completed 02-04-PLAN.md (Webhook email queueing)
+Last session: 2026-01-30T02:38:06Z
+Stopped at: Completed 02-05-PLAN.md (Owner dashboard email status)
 Resume file: None
