@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 3 of 12 (Scanner System Hardening) - IN PROGRESS
-Plan: 2 of 5 complete
-Status: Executing Wave 1
-Last activity: 2026-01-30 — Completed 03-02-PLAN.md (Offline ticket cache with race condition handling)
+Plan: 4 of 5 complete
+Status: Executing Wave 2
+Last activity: 2026-01-30 — Completed 03-04-PLAN.md (Enhanced error details and offline validation)
 
-Progress: [██████████████░] 19.4% (14/72 plans)
+Progress: [██████████████████░░░░] 22.2% (16/72 plans)
 
 ### Phase 3 Plans
 
@@ -22,8 +22,8 @@ Progress: [██████████████░] 19.4% (14/72 plans)
 |------|-----------|------|--------|
 | 03-01 | Full-screen feedback overlays (success/rejection) | 1 | Complete |
 | 03-02 | Offline ticket cache service with race condition handling | 1 | Complete |
-| 03-03 | Scan history, check-in counter, offline banner | 2 | Pending |
-| 03-04 | Enhanced error details and offline validation | 2 | Pending |
+| 03-03 | Scan history, check-in counter, offline banner | 2 | Complete |
+| 03-04 | Enhanced error details and offline validation | 2 | Complete |
 | 03-05 | Dashboard scanner status and human verification | 3 | Pending |
 
 ### Phase 2 Plans
@@ -51,9 +51,9 @@ Progress: [██████████████░] 19.4% (14/72 plans)
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 16
 - Average duration: 3.1 min
-- Total execution time: 0.72 hours
+- Total execution time: 0.83 hours
 
 **By Phase:**
 
@@ -61,10 +61,10 @@ Progress: [██████████████░] 19.4% (14/72 plans)
 |-------|-------|-------|----------|
 | 01 | 6 | 21 min | 3.5 min |
 | 02 | 6 | 18 min | 3.0 min |
-| 03 | 2 | 8 min | 4.0 min |
+| 03 | 4 | 16 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (4 min), 03-01 (4 min), 02-06 (3 min), 02-05 (2 min), 02-04 (4 min)
+- Last 5 plans: 03-04 (4 min), 03-03 (4 min), 03-02 (4 min), 03-01 (4 min), 02-06 (3 min)
 - Trend: Fast (clear patterns from research, focused plans)
 
 *Updated after each plan completion*
@@ -120,6 +120,9 @@ Recent decisions affecting current work:
 | 2026-01-30 | 03-02 | First-scan-wins conflict resolution | Timestamp comparison for offline sync determines winner |
 | 2026-01-30 | 03-02 | 24-hour cache retention | Old event caches auto-cleaned per context decision |
 | 2026-01-30 | 03-02 | Device ID in localStorage | Persistent device identification for conflict tracking |
+| 2026-01-30 | 03-04 | Accept unknown tickets offline with warning | Tickets not in cache accepted, queued for verification when online |
+| 2026-01-30 | 03-04 | Cache auto-refreshes on event selection | ensureCacheIsFresh called via useEffect when selectedEventId changes |
+| 2026-01-30 | 03-04 | Rejection details flow through to overlays | ScanResult rejectionDetails passed directly to RejectionOverlay |
 
 ### Pending Todos
 
@@ -147,5 +150,5 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 03-02-PLAN.md - Offline ticket cache with race condition handling
+Stopped at: Completed 03-04-PLAN.md - Enhanced error details and offline validation
 Resume file: None
