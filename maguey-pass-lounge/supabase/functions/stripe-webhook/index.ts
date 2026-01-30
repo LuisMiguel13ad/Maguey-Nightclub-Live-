@@ -178,7 +178,55 @@ async function generateQrCodeDataUrl(
 }
 
 // ============================================
-// Email Service (Resend)
+// Email Queue Helper
+// ============================================
+
+interface QueueEmailParams {
+  emailType: 'ga_ticket' | 'vip_confirmation';
+  recipientEmail: string;
+  subject: string;
+  htmlBody: string;
+  relatedId?: string;
+}
+
+async function queueEmail(
+  supabase: ReturnType<typeof createClient>,
+  params: QueueEmailParams
+): Promise<void> {
+  const { error } = await supabase
+    .from('email_queue')
+    .insert({
+      email_type: params.emailType,
+      recipient_email: params.recipientEmail,
+      subject: params.subject,
+      html_body: params.htmlBody,
+      related_id: params.relatedId,
+      status: 'pending',
+      attempt_count: 0,
+      max_attempts: 5,
+      next_retry_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('Failed to queue email:', {
+      error: error.message,
+      emailType: params.emailType,
+      recipient: params.recipientEmail,
+      relatedId: params.relatedId,
+    });
+    // Don't throw - webhook must return 200 to Stripe
+    // Email will need manual intervention if queue insert fails
+  } else {
+    console.log('Email queued successfully:', {
+      emailType: params.emailType,
+      recipient: params.recipientEmail,
+      relatedId: params.relatedId,
+    });
+  }
+}
+
+// ============================================
+// Email Service (HTML Generation)
 // ============================================
 
 interface TicketEmailData {
