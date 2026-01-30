@@ -39,12 +39,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 6 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Database constraints and payment_failures table
-- [ ] 01-02-PLAN.md — Webhook idempotency and non-blocking email
-- [ ] 01-03-PLAN.md — Frontend error handling with toast/retry
-- [ ] 01-04-PLAN.md — Owner notification system for payment failures
-- [ ] 01-05-PLAN.md — Failure scenario tests (E2E + integration)
-- [ ] 01-06-PLAN.md — Load tests for 50 concurrent payments
+- [x] 01-01-PLAN.md — Database constraints and payment_failures table
+- [x] 01-02-PLAN.md — Webhook idempotency and non-blocking email
+- [x] 01-03-PLAN.md — Frontend error handling with toast/retry
+- [x] 01-04-PLAN.md — Owner notification system for payment failures
+- [x] 01-05-PLAN.md — Failure scenario tests (E2E + integration)
+- [x] 01-06-PLAN.md — Load tests for 50 concurrent payments
 
 ### Phase 2: Email Reliability
 **Goal**: Confirmation emails deliver consistently with correct content
@@ -55,11 +55,15 @@ Plans:
   2. VIP reservation confirmation emails include correct QR code and table assignment details
   3. Failed email sends are logged in database with retry capability
   4. Resend API failures trigger fallback retry logic
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 02-01: TBD during planning
-- [ ] 02-02: TBD during planning
+- [ ] 02-01-PLAN.md — Database schema for email queue and delivery tracking
+- [ ] 02-02-PLAN.md — Queue processor edge function with retry logic
+- [ ] 02-03-PLAN.md — Resend webhook handler for delivery status
+- [ ] 02-04-PLAN.md — Wire stripe-webhook to queue emails
+- [ ] 02-05-PLAN.md — Dashboard email status and retry UI
+- [ ] 02-06-PLAN.md — Email reliability tests
 
 ### Phase 3: Scanner System Hardening
 **Goal**: Scanner reliably validates tickets with correct accept/reject behavior
@@ -224,7 +228,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 →
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Payment Flow Hardening | 6/6 | Complete | 2026-01-29 |
-| 2. Email Reliability | 0/TBD | Not started | - |
+| 2. Email Reliability | 0/6 | Planned | - |
 | 3. Scanner System Hardening | 0/TBD | Not started | - |
 | 4. VIP System Reliability | 0/TBD | Not started | - |
 | 5. Dashboard Accuracy | 0/TBD | Not started | - |
