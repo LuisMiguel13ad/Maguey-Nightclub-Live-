@@ -40,14 +40,18 @@ serve(async (req) => {
       specialRequests,
       bottlePreferences,
       estimatedArrival,
+      // GA ticket integration (REQUIRED for unified checkout)
+      ticketTierId,
+      ticketTierName,
+      ticketPriceCents,
     } = body;
 
-    console.log("Creating VIP payment intent for:", { eventId, tableId, customerEmail, tablePrice });
+    console.log("Creating unified VIP payment intent for:", { eventId, tableId, customerEmail, tablePrice, ticketTierId });
 
-    // Validate required fields
-    if (!eventId || !tableId || !customerEmail || !customerName || !tablePrice) {
+    // Validate required fields (including GA ticket for unified checkout)
+    if (!eventId || !tableId || !customerEmail || !customerName || !tablePrice || !ticketTierId || !ticketPriceCents) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
+        JSON.stringify({ error: "Missing required fields. VIP checkout requires GA ticket selection." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
       );
     }
@@ -89,9 +93,10 @@ serve(async (req) => {
       );
     }
 
-    // Generate QR code token
-    const qrCodeToken = crypto.randomUUID();
-    
+    // Calculate VIP table price and total amount
+    const vipTablePriceCents = Math.round(parseFloat(tablePrice) * 100);
+    const totalAmountCents = vipTablePriceCents + ticketPriceCents;
+
     // Build package snapshot with booking details
     const packageSnapshot = {
       tier: tableTier,
@@ -102,77 +107,98 @@ serve(async (req) => {
       celebrantName: celebrantName || null,
       bottlePreferences: bottlePreferences || null,
       estimatedArrival: estimatedArrival || null,
-      priceAtBooking: parseFloat(tablePrice),
+      priceAtBooking: vipTablePriceCents / 100,
+      // GA ticket info (purchaser's ticket)
+      ticketTierId: ticketTierId,
+      ticketTierName: ticketTierName || "General Admission",
+      ticketPrice: ticketPriceCents / 100,
+      totalAmount: totalAmountCents / 100,
     };
 
-    // Create VIP reservation with pending status
-    // Using correct column names from the database schema
-    const { data: reservation, error: reservationError } = await supabase
-      .from("vip_reservations")
-      .insert({
-        event_id: eventId,
-        event_vip_table_id: tableId,
-        table_number: parseInt(tableNumber),
-        purchaser_name: customerName,
-        purchaser_email: customerEmail,
-        purchaser_phone: customerPhone || null,
-        amount_paid_cents: Math.round(parseFloat(tablePrice) * 100),
-        status: "pending",
-        qr_code_token: qrCodeToken,
-        package_snapshot: packageSnapshot,
-        special_requests: specialRequests || null,
-        disclaimer_accepted_at: new Date().toISOString(),
-        refund_policy_accepted_at: new Date().toISOString(),
+    // Create unified VIP checkout (GA ticket + VIP reservation) atomically via RPC
+    // This creates both the GA ticket and VIP reservation in a single transaction
+    const { data: checkoutResult, error: checkoutError } = await supabase
+      .rpc("create_unified_vip_checkout", {
+        p_event_id: eventId,
+        p_table_id: tableId,
+        p_table_number: parseInt(tableNumber),
+        p_tier_id: ticketTierId,
+        p_tier_name: ticketTierName || "General Admission",
+        p_tier_price_cents: ticketPriceCents,
+        p_vip_price_cents: vipTablePriceCents,
+        p_total_amount_cents: totalAmountCents,
+        p_purchaser_name: customerName,
+        p_purchaser_email: customerEmail,
+        p_purchaser_phone: customerPhone || null,
+        p_stripe_payment_intent_id: "", // Will be updated after payment intent creation
+        p_package_snapshot: packageSnapshot,
+        p_special_requests: specialRequests || null,
       })
-      .select()
       .single();
 
-    if (reservationError || !reservation) {
-      console.error("Reservation creation error:", reservationError);
+    if (checkoutError || !checkoutResult) {
+      console.error("Unified checkout creation error:", checkoutError);
       return new Response(
-        JSON.stringify({ error: `Failed to create reservation: ${reservationError?.message || "Unknown error"}` }),
+        JSON.stringify({ error: `Failed to create unified checkout: ${checkoutError?.message || "Unknown error"}` }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 },
       );
     }
 
-    console.log("Reservation created:", reservation.id);
+    const { ticket_id, reservation_id, unified_qr_token, ticket_token } = checkoutResult;
+    console.log("Unified checkout created:", { ticket_id, reservation_id, unified_qr_token });
 
-    // Temporarily mark table as unavailable
-    await supabase
-      .from("event_vip_tables")
-      .update({ is_available: false })
-      .eq("id", tableId);
+    // Create Stripe Payment Intent for combined amount (VIP table + GA ticket)
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: totalAmountCents,
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          type: "vip_unified",
+          reservationId: reservation_id,
+          ticketId: ticket_id,
+          eventId,
+          tableId,
+          tableNumber,
+          tableTier: tableTier || "standard",
+          ticketTierId,
+          ticketTierName: ticketTierName || "General Admission",
+          customerEmail,
+          customerName,
+          vipPriceCents: String(vipTablePriceCents),
+          ticketPriceCents: String(ticketPriceCents),
+          totalAmountCents: String(totalAmountCents),
+        },
+        receipt_email: customerEmail,
+        description: `VIP Table ${tableNumber} (${(tableTier || "standard").replace('_', ' ')}) + GA Ticket for ${event.name}`,
+      });
+    } catch (stripeError) {
+      console.error("Stripe payment intent creation failed:", stripeError);
+      // Rollback: Cancel the reservation and ticket since payment intent failed
+      await supabase.from("vip_reservations").delete().eq("id", reservation_id);
+      await supabase.from("tickets").delete().eq("id", ticket_id);
+      await supabase.from("event_vip_tables").update({ is_available: true }).eq("id", tableId);
 
-    // Create Stripe Payment Intent
-    const amountInCents = Math.round(parseFloat(tablePrice) * 100);
-    
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountInCents,
-      currency: "usd",
-      automatic_payment_methods: {
-        enabled: true,
-      },
-      metadata: {
-        reservationId: reservation.id,
-        eventId,
-        tableId,
-        tableNumber,
-        tableTier: tableTier || "standard",
-        customerEmail,
-        customerName,
-        type: "vip_table_reservation",
-      },
-      receipt_email: customerEmail,
-      description: `VIP Table ${tableNumber} - ${(tableTier || "standard").replace('_', ' ')} for ${event.name}`,
-    });
+      return new Response(
+        JSON.stringify({ error: "Failed to create payment intent. Please try again." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 },
+      );
+    }
 
-    // Update reservation with payment intent ID
-    await supabase
-      .from("vip_reservations")
-      .update({
-        stripe_payment_intent_id: paymentIntent.id,
-      })
-      .eq("id", reservation.id);
+    // Update reservation and ticket with payment intent ID
+    await Promise.all([
+      supabase
+        .from("vip_reservations")
+        .update({ stripe_payment_intent_id: paymentIntent.id })
+        .eq("id", reservation_id),
+      supabase
+        .from("tickets")
+        .update({ stripe_payment_intent_id: paymentIntent.id })
+        .eq("id", ticket_id),
+    ]);
 
     console.log("Payment Intent created:", paymentIntent.id);
 
@@ -180,8 +206,12 @@ serve(async (req) => {
       JSON.stringify({
         clientSecret: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
-        reservationId: reservation.id,
-        amount: parseFloat(tablePrice),
+        reservationId: reservation_id,
+        ticketId: ticket_id,
+        unifiedQrToken: unified_qr_token,
+        amount: totalAmountCents / 100,
+        vipAmount: vipTablePriceCents / 100,
+        ticketAmount: ticketPriceCents / 100,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
     );
