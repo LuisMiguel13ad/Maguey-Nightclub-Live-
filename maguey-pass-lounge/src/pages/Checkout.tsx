@@ -9,6 +9,10 @@ import {
   Clock, Info, Twitter, Facebook, Instagram,
   ShoppingCart, Wine, Crown, Ticket, ArrowRight
 } from "lucide-react";
+import { CheckoutStepper, CHECKOUT_STEPS } from "@/components/checkout/CheckoutStepper";
+import { FadeTransition, AnimatedStep } from "@/components/checkout/FadeTransition";
+import { usePersistedForm } from "@/hooks/use-persisted-form";
+import { showError, showNetworkError } from "@/lib/error-messages";
 import { CustomCursor } from "@/components/CustomCursor";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
@@ -89,6 +93,12 @@ const Checkout = () => {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
 
+  // Checkout step management: 1=Tickets, 2=Details, 3=Payment
+  const [checkoutStep, setCheckoutStep] = useState(1);
+
+  // Form persistence for returning visitors
+  const { formData: persistedData, setFormField, hasPersistedData } = usePersistedForm();
+
   // Real-time events for recommended events section
   // Events created in dashboard appear within seconds (< 30 second requirement)
   const { events: realtimeEvents, isLive: eventsIsLive } = useEventsRealtime({
@@ -119,14 +129,29 @@ const Checkout = () => {
     },
   });
 
-  // Pre-fill form if user is logged in
+  // Pre-fill form with persisted data or user data
+  // Priority: logged-in user > persisted data > empty
   useEffect(() => {
-    if (user) {
-      setValue('firstName', userFirstName);
-      setValue('lastName', userLastName);
-      setValue('email', userEmail);
+    const firstName = userFirstName || persistedData.firstName || '';
+    const lastName = userLastName || persistedData.lastName || '';
+    const email = userEmail || persistedData.email || '';
+
+    if (firstName) setValue('firstName', firstName);
+    if (lastName) setValue('lastName', lastName);
+    if (email) setValue('email', email);
+  }, [user, persistedData, hasPersistedData, setValue, userFirstName, userLastName, userEmail]);
+
+  // Auto-advance checkout steps based on ticket selection
+  useEffect(() => {
+    const hasSelectedTickets = Object.values(selectedTickets).some(t => t.quantity > 0);
+
+    if (!hasSelectedTickets) {
+      setCheckoutStep(1);
+    } else if (checkoutStep === 1) {
+      // Auto-advance to details when tickets selected
+      setCheckoutStep(2);
     }
-  }, [user, userFirstName, userLastName, userEmail, setValue]);
+  }, [selectedTickets, checkoutStep]);
 
   // Detect VIP invite code from URL
   useEffect(() => {
@@ -424,19 +449,21 @@ const Checkout = () => {
 
   const handleCheckout = async () => {
     const ticketsWithQuantity = Object.entries(selectedTickets).filter(([_, ticket]) => ticket.quantity > 0);
-    
+
     if (ticketsWithQuantity.length === 0 || !event) {
       setError("Please select at least one ticket");
-      toast.error("Please select at least one ticket");
+      showError('validation_error', { onRetry: handleCheckout });
       return;
     }
 
+    // Advance to payment step
+    setCheckoutStep(3);
     setIsLoading(true);
     setError(null);
 
     try {
       const eventId = searchParams.get("event") || "";
-      
+
       const ticketsData = ticketsWithQuantity.map(([ticketId, ticket]) => ({
         id: ticketId,
         name: ticket.name,
@@ -448,11 +475,11 @@ const Checkout = () => {
       // Check availability before proceeding to payment (non-blocking)
       const scannerApiUrl = import.meta.env.VITE_SCANNER_API_URL || import.meta.env.VITE_SUPABASE_URL;
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
+
       if (scannerApiUrl && supabaseAnonKey) {
         try {
           const checkAvailabilityUrl = `${scannerApiUrl}/functions/v1/check-availability`;
-          
+
           const availabilityResponse = await fetch(checkAvailabilityUrl, {
             method: 'POST',
             headers: {
@@ -471,7 +498,7 @@ const Checkout = () => {
 
           if (availabilityResponse.ok) {
             const availabilityResult = await availabilityResponse.json();
-            
+
             if (!availabilityResult.available) {
               const errorMsg = availabilityResult.errors?.join(', ') || 'Tickets are no longer available';
               console.warn('Availability check indicates tickets unavailable:', errorMsg);
@@ -491,7 +518,7 @@ const Checkout = () => {
 
       // Encode tickets data for URL
       const ticketsParam = encodeURIComponent(JSON.stringify(ticketsData));
-      
+
       // Redirect to payment page
       const params = new URLSearchParams({
         event: eventId,
@@ -511,14 +538,20 @@ const Checkout = () => {
 
       // Reset loading state before navigation
       setIsLoading(false);
-      
+
       // Navigate to payment page
       navigate(paymentUrl);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to process checkout";
       setError(errorMessage);
-      toast.error(errorMessage);
+      // Use showError for network errors with retry
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        showNetworkError(handleCheckout);
+      } else {
+        showError('generic', { onRetry: handleCheckout });
+      }
       setIsLoading(false);
+      setCheckoutStep(2); // Revert to details step on error
       console.error('Checkout error:', err);
     }
   };
@@ -634,9 +667,31 @@ const Checkout = () => {
         </div>
       )}
 
+      {/* Checkout Stepper - Progress Indicator */}
+      <div className="relative z-20 bg-forest-950/80 border-b border-white/5">
+        <div className="container mx-auto px-4 lg:px-8 max-w-7xl py-4">
+          <CheckoutStepper
+            currentStep={checkoutStep}
+            onStepClick={(step) => {
+              // Only allow going back to completed steps
+              if (step < checkoutStep) {
+                setCheckoutStep(step);
+              }
+            }}
+          />
+          {/* Welcome back indicator for returning visitors */}
+          {hasPersistedData && !user && (
+            <div className="text-sm text-stone-500 mt-2">
+              Welcome back! Your details have been remembered.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Event Hero Section */}
       <section className="relative z-10 py-12 lg:py-20">
         <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
+          <AnimatedStep key={checkoutStep}>
           <div className="grid lg:grid-cols-[42%_58%] gap-8 lg:gap-12 items-start">
             {/* Event Poster - Left Side (~42% width) */}
             <div className="relative">
@@ -875,6 +930,7 @@ const Checkout = () => {
               
             </div>
           </div>
+          </AnimatedStep>
         </div>
       </section>
 
