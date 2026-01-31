@@ -3,6 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 import QRCode from "https://esm.sh/qrcode@1.5.3";
+import { createLogger, getRequestId } from "../_shared/logger.ts";
+import { initSentry, captureError, setRequestContext } from "../_shared/sentry.ts";
+
+// Initialize Sentry at module level (before serve)
+initSentry();
 
 // ============================================
 // Retry with Exponential Backoff
@@ -30,7 +35,8 @@ async function retryWithBackoff<T>(
         (baseDelayMs * Math.pow(2, attempt)) + (Math.random() * 500),
         10000
       );
-      console.log(`Attempt ${attempt + 1}/${maxRetries} failed: ${lastError.message}. Retrying in ${Math.round(delay)}ms`);
+      // Note: Using console.log here since logger is not available in this utility function
+      console.log(JSON.stringify({ level: 'warn', message: `Retry attempt ${attempt + 1}/${maxRetries}`, context: { error: lastError.message, delayMs: Math.round(delay) } }));
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -70,12 +76,12 @@ async function notifyPaymentFailure(data: PaymentFailureData): Promise<void> {
     );
 
     if (!response.ok) {
-      console.error('Failed to notify payment failure:', await response.text());
+      console.log(JSON.stringify({ level: 'error', message: 'Failed to notify payment failure', context: { response: await response.text() } }));
     } else {
-      console.log('Payment failure notification sent successfully');
+      console.log(JSON.stringify({ level: 'info', message: 'Payment failure notification sent successfully' }));
     }
   } catch (error) {
-    console.error('Error calling notify-payment-failure:', error);
+    console.log(JSON.stringify({ level: 'error', message: 'Error calling notify-payment-failure', context: { error: error.message } }));
     // Don't throw - notification failure should not affect webhook response
   }
 }
@@ -171,7 +177,7 @@ async function generateQrCodeDataUrl(
 
     return dataUrl;
   } catch (error) {
-    console.error("Error generating QR code:", error);
+    console.log(JSON.stringify({ level: 'error', message: 'Error generating QR code', context: { error: error.message } }));
     // Return empty string if QR generation fails - template will fall back to text
     return "";
   }
@@ -208,20 +214,28 @@ async function queueEmail(
     });
 
   if (error) {
-    console.error('Failed to queue email:', {
-      error: error.message,
-      emailType: params.emailType,
-      recipient: params.recipientEmail,
-      relatedId: params.relatedId,
-    });
+    console.log(JSON.stringify({
+      level: 'error',
+      message: 'Failed to queue email',
+      context: {
+        error: error.message,
+        emailType: params.emailType,
+        recipient: params.recipientEmail,
+        relatedId: params.relatedId,
+      }
+    }));
     // Don't throw - webhook must return 200 to Stripe
     // Email will need manual intervention if queue insert fails
   } else {
-    console.log('Email queued successfully:', {
-      emailType: params.emailType,
-      recipient: params.recipientEmail,
-      relatedId: params.relatedId,
-    });
+    console.log(JSON.stringify({
+      level: 'info',
+      message: 'Email queued successfully',
+      context: {
+        emailType: params.emailType,
+        recipient: params.recipientEmail,
+        relatedId: params.relatedId,
+      }
+    }));
   }
 }
 
@@ -473,7 +487,7 @@ async function sendTicketEmail(
 ): Promise<void> {
   // Skip if no tickets
   if (!tickets.length) {
-    console.warn("sendTicketEmail called with no tickets");
+    console.log(JSON.stringify({ level: 'warn', message: 'sendTicketEmail called with no tickets' }));
     return;
   }
 
@@ -564,7 +578,7 @@ async function verifyStripeSignature(
     const v1Signature = parts.find((p) => p.startsWith("v1="))?.split("=")[1];
   
     if (!timestamp || !v1Signature) {
-      console.error("Missing timestamp or signature");
+      console.log(JSON.stringify({ level: 'error', message: 'Missing timestamp or signature in Stripe webhook' }));
       return false;
   }
 
@@ -590,7 +604,7 @@ async function verifyStripeSignature(
 
     return expectedSignature === v1Signature;
   } catch (error) {
-    console.error("Signature verification error:", error);
+    console.log(JSON.stringify({ level: 'error', message: 'Signature verification error', context: { error: error.message } }));
     return false;
   }
 }
@@ -631,6 +645,13 @@ serve(async (req) => {
     return new Response("ok", { headers: dynamicCorsHeaders });
   }
 
+  // Create request-bound logger for correlation
+  const requestId = getRequestId(req);
+  const logger = createLogger(requestId);
+
+  // Set Sentry request context for error correlation
+  setRequestContext(req, requestId);
+
   // Variable to track idempotency record for later update
   let idempotencyRecordId: string | null = null;
 
@@ -658,10 +679,10 @@ serve(async (req) => {
       .single();
 
     if (idempotencyError) {
-      console.error('Idempotency check failed:', idempotencyError);
+      logger.error('Idempotency check failed', { error: idempotencyError.message });
       // Continue processing if idempotency check fails (fail-open for availability)
     } else if (idempotencyCheck?.is_duplicate) {
-      console.log(`Duplicate webhook event ${stripeEventId}, returning cached response`);
+      logger.info('Duplicate webhook event, returning cached response', { stripeEventId });
       return new Response(
         JSON.stringify(idempotencyCheck.cached_response || { received: true }),
         {
@@ -678,27 +699,27 @@ serve(async (req) => {
     if (webhookSecret && signature) {
       const isValid = await verifyStripeSignature(body, signature, webhookSecret);
       if (!isValid) {
-        console.error("Invalid Stripe webhook signature");
+        logger.error("Invalid Stripe webhook signature", { stripeEventId });
         // Update idempotency record with error if we have one
         if (idempotencyRecordId) {
           supabase.rpc('update_webhook_idempotency', {
             p_record_id: idempotencyRecordId,
-            p_response_data: { error: 'Invalid signature' },
+            p_response_data: { error: 'Invalid signature', requestId },
             p_response_status: 401
           }).catch(() => {}); // Silent fail
         }
-        return new Response("Invalid signature", { status: 401 });
+        return new Response(JSON.stringify({ error: "Invalid signature", requestId }), { status: 401, headers: dynamicCorsHeaders });
       }
-      console.log("Webhook signature verified successfully");
+      logger.info("Webhook signature verified", { stripeEventId });
     } else {
-      console.warn("Webhook signature verification skipped (no secret or signature)");
+      logger.warn("Webhook signature verification skipped", { reason: "no secret or signature" });
     }
 
-    console.log("Webhook event received:", event.type);
+    logger.info("Webhook event received", { eventType: event.type, stripeEventId });
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
-      console.log("Checkout session completed:", session.id);
+      logger.info("Checkout session completed", { sessionId: session.id });
 
       const orderId = session.metadata?.orderId;
       const eventId = session.metadata?.eventId;
@@ -708,8 +729,8 @@ serve(async (req) => {
       const vipInviteCode = session.metadata?.vipInviteCode; // For linking GA tickets to VIP reservations
 
       if (!orderId) {
-        console.error("No orderId in session metadata");
-        return new Response("Missing orderId", { status: 400 });
+        logger.error("No orderId in session metadata", { sessionId: session.id });
+        return new Response(JSON.stringify({ error: "Missing orderId", requestId }), { status: 400, headers: dynamicCorsHeaders });
       }
 
       // Update order status to paid
@@ -719,16 +740,16 @@ serve(async (req) => {
         .eq("id", orderId);
 
       if (orderError) {
-        console.error("Error updating order:", orderError);
+        logger.error("Error updating order", { orderId, error: orderError.message });
       } else {
-        console.log("Order updated to paid:", orderId);
+        logger.info("Order updated to paid", { orderId });
       }
 
       // Process tickets/VIP tables
       if (ticketsData && eventId) {
         try {
           const tickets = JSON.parse(ticketsData);
-          console.log("Processing tickets:", tickets);
+          logger.info("Processing tickets", { ticketCount: tickets.length, eventId });
 
           // Fetch event details for email
           const { data: eventData } = await supabase
@@ -746,7 +767,7 @@ serve(async (req) => {
 
             if (vipInfo) {
               // This is a VIP table reservation
-              console.log("Processing VIP table reservation:", vipInfo);
+              logger.info("Processing VIP table reservation", { tier: vipInfo.tier, tableId: vipInfo.tableId });
 
               const tableNumber = extractTableNumber(ticket.displayName);
               const nameParts = customerName.split(" ");
@@ -766,7 +787,7 @@ serve(async (req) => {
                 .single();
 
               if (tableError) {
-                console.error("Error finding event_vip_table:", tableError);
+                logger.warn("Error finding event_vip_table", { eventId, tableNumber, error: tableError.message });
                 // Continue anyway - we'll create the reservation without the foreign key
               }
 
@@ -802,7 +823,7 @@ serve(async (req) => {
                 checked_in_guests: 0,
               };
 
-              console.log("Creating VIP reservation:", reservationData);
+              logger.info("Creating VIP reservation", { tableNumber, tier: vipInfo.tier, guestCount });
 
               let reservation: { id: string } | null = null;
               try {
@@ -820,7 +841,7 @@ serve(async (req) => {
                   return data;
                 }, 5, 500);
 
-                console.log("VIP reservation created:", reservation.id);
+                logger.info("VIP reservation created", { reservationId: reservation.id });
 
                 // Generate guest passes for VIP reservation
                 const guestPasses = [];
@@ -852,9 +873,9 @@ serve(async (req) => {
                     .insert(guestPasses);
 
                   if (passesError) {
-                    console.error("Error creating guest passes:", passesError);
+                    logger.error("Error creating guest passes", { reservationId: reservation.id, error: passesError.message });
                   } else {
-                    console.log(`Created ${guestPasses.length} guest passes for VIP reservation`);
+                    logger.info("Guest passes created", { reservationId: reservation.id, passCount: guestPasses.length });
                   }
                 }
 
@@ -866,9 +887,9 @@ serve(async (req) => {
                     .eq("id", eventVipTable.id);
 
                   if (updateTableError) {
-                    console.error("Error updating table availability:", updateTableError);
+                    logger.error("Error updating table availability", { tableNumber, error: updateTableError.message });
                   } else {
-                    console.log("Table marked as unavailable:", tableNumber);
+                    logger.info("Table marked as unavailable", { tableNumber });
                   }
                 }
 
@@ -914,7 +935,7 @@ serve(async (req) => {
                   totalAmount: ticket.unitPrice,
                   guestPasses: emailGuestPasses,
                 }).catch(err => {
-                  console.error('Failed to queue VIP email:', {
+                  logger.error('Failed to queue VIP email', {
                     error: err.message,
                     reservationId: reservation.id,
                     email: customerEmail
@@ -923,7 +944,7 @@ serve(async (req) => {
               }
               } catch (vipCreateError) {
                 // All retries failed - notify owner
-                console.error("All VIP reservation creation retries failed:", vipCreateError);
+                logger.error("All VIP reservation creation retries failed", { error: vipCreateError.message, tableNumber });
 
                 // Fire-and-forget notification (don't block webhook response)
                 notifyPaymentFailure({
@@ -942,7 +963,7 @@ serve(async (req) => {
                     tableNumber,
                   }
                 }).catch(err => {
-                  console.error('Failed to send payment failure notification:', err);
+                  logger.error('Failed to send payment failure notification', { error: err.message });
                 });
 
                 // Continue processing - payment succeeded, we've logged the failure for manual resolution
@@ -986,7 +1007,7 @@ serve(async (req) => {
                     }
                   }, 5, 500);
 
-                  console.log("Ticket created with signature:", ticketId);
+                  logger.info("Ticket created", { ticketId, eventId, email: customerEmail });
 
                   // Add to email list
                   createdTickets.push({
@@ -1001,7 +1022,7 @@ serve(async (req) => {
                   });
                 } catch (ticketCreateError) {
                   // All retries failed - notify owner
-                  console.error("All ticket creation retries failed:", ticketCreateError);
+                  logger.error("All ticket creation retries failed", { error: ticketCreateError.message, ticketId });
 
                   // Fire-and-forget notification (don't block webhook response)
                   notifyPaymentFailure({
@@ -1020,7 +1041,7 @@ serve(async (req) => {
                       ticketId,
                     }
                   }).catch(err => {
-                    console.error('Failed to send payment failure notification:', err);
+                    logger.error('Failed to send payment failure notification', { error: err.message });
                   });
 
                   // Continue processing other tickets - don't fail entire webhook
@@ -1032,7 +1053,7 @@ serve(async (req) => {
 
           // Link tickets to VIP reservation if vipInviteCode is present
           if (vipInviteCode && createdTickets.length > 0) {
-            console.log("Linking GA tickets to VIP reservation with invite code:", vipInviteCode);
+            logger.info("Linking GA tickets to VIP reservation", { vipInviteCode, ticketCount: createdTickets.length });
 
             // Look up VIP reservation by invite code
             const { data: vipReservation, error: vipLookupError } = await supabase
@@ -1043,9 +1064,9 @@ serve(async (req) => {
               .single();
 
             if (vipLookupError) {
-              console.error("Error looking up VIP reservation by invite code:", vipLookupError);
+              logger.error("Error looking up VIP reservation by invite code", { vipInviteCode, error: vipLookupError.message });
             } else if (vipReservation) {
-              console.log("Found VIP reservation:", vipReservation.id);
+              logger.info("Found VIP reservation", { reservationId: vipReservation.id });
 
               // Check current linked ticket count vs capacity
               const { count: linkedCount } = await supabase
@@ -1079,20 +1100,22 @@ serve(async (req) => {
                     });
 
                   if (linkError) {
-                    console.error("Error linking ticket to VIP reservation:", linkError);
+                    logger.error("Error linking ticket to VIP reservation", { ticketId: ticket.id, error: linkError.message });
                   } else {
-                    console.log("Linked ticket to VIP reservation:", ticket.id);
+                    logger.info("Linked ticket to VIP reservation", { ticketId: ticket.id, reservationId: vipReservation.id });
                   }
                 }
 
                 if (ticketsToLink.length < justCreatedTickets.length) {
-                  console.warn(
-                    `VIP table capacity reached. Linked ${ticketsToLink.length} of ${justCreatedTickets.length} tickets.`
-                  );
+                  logger.warn("VIP table capacity reached", {
+                    linked: ticketsToLink.length,
+                    total: justCreatedTickets.length,
+                    reservationId: vipReservation.id
+                  });
                 }
               }
             } else {
-              console.warn("VIP reservation not found for invite code:", vipInviteCode);
+              logger.warn("VIP reservation not found for invite code", { vipInviteCode });
             }
           }
 
@@ -1452,6 +1475,12 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Webhook error:", error);
+
+    // Report error to Sentry with context
+    await captureError(error instanceof Error ? error : new Error(String(error)), {
+      webhook_type: "stripe",
+      requestId,
+    });
 
     // Update idempotency record with error response (non-blocking)
     if (idempotencyRecordId) {
