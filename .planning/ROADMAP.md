@@ -175,10 +175,13 @@ Plans:
   3. Second scan attempt correctly shows "already used" error
   4. Invalid QR codes are rejected with clear feedback
   5. Complete flow completes in under 2 minutes from payment to email delivery
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 08-01: TBD during planning
+- [ ] 08-01-PLAN.md — Cypress setup and custom commands
+- [ ] 08-02-PLAN.md — Health checks and CI workflow
+- [ ] 08-03-PLAN.md — Happy path tests (purchase, email, scan)
+- [ ] 08-04-PLAN.md — Edge case and offline tests
 
 ### Phase 9: VIP End-to-End Testing
 **Goal**: Complete VIP reservation flow validated including guest passes
@@ -254,7 +257,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 5. Dashboard Accuracy | 5/5 | Complete | 2026-01-31 |
 | 6. Infrastructure & Monitoring | 5/5 | Complete | 2026-01-31 |
 | 7. UX Polish | 0/7 | Planned | - |
-| 8. GA End-to-End Testing | 0/TBD | Not started | - |
+| 8. GA End-to-End Testing | 0/4 | Planned | - |
 | 9. VIP End-to-End Testing | 0/TBD | Not started | - |
 | 10. Load Testing & Performance | 0/TBD | Not started | - |
 | 11. Error Handling & Recovery | 0/TBD | Not started | - |
