@@ -6,6 +6,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import Stripe from 'https://esm.sh/stripe@12.0.0?target=deno';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkRateLimit } from "../../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,6 +29,12 @@ serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+
+  // Rate limiting
+  const { allowed, response: rateLimitResponse } = await checkRateLimit(req, 'payment');
+  if (!allowed) {
+    return rateLimitResponse!;
   }
 
   try {
@@ -77,30 +84,30 @@ serve(async (req) => {
       );
     }
 
-    // Verify reservation exists
+    // Verify reservation exists (using vip_reservations - the current schema)
     const { data: reservation, error: reservationError } = await supabase
-      .from('table_reservations')
-      .select('id, reservation_number, total_amount, payment_status')
+      .from('vip_reservations')
+      .select('id, qr_code_token, amount_paid_cents, status')
       .eq('id', reservationId)
       .single();
 
     if (reservationError || !reservation) {
       return new Response(
         JSON.stringify({ error: 'Reservation not found' }),
-        { 
-          status: 404, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
 
-    // Check if already paid
-    if (reservation.payment_status === 'paid') {
+    // Check if already paid (confirmed status means payment complete)
+    if (reservation.status === 'confirmed' || reservation.status === 'checked_in') {
       return new Response(
         JSON.stringify({ error: 'Reservation already paid' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
@@ -112,17 +119,17 @@ serve(async (req) => {
       customer_email: customer.email,
       metadata: {
         reservationId,
-        reservationNumber: reservation.reservation_number,
+        qrCodeToken: reservation.qr_code_token || '',
         customerName: `${customer.firstName} ${customer.lastName}`,
         type: 'vip_table',
         ...metadata,
       },
-      description: `VIP Table Reservation - ${reservation.reservation_number}`,
+      description: `VIP Table Reservation - ${reservationId.substring(0, 8)}`,
     });
 
-    // Update reservation with payment intent ID
+    // Update reservation with payment intent ID (using vip_reservations)
     await supabase
-      .from('table_reservations')
+      .from('vip_reservations')
       .update({
         stripe_payment_intent_id: paymentIntent.id,
       })

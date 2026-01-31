@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno";
+import { checkRateLimit } from "../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,12 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  // Rate limiting
+  const { allowed, response: rateLimitResponse } = await checkRateLimit(req, 'payment');
+  if (!allowed) {
+    return rateLimitResponse!;
   }
 
   try {
@@ -31,6 +38,7 @@ serve(async (req) => {
       feesAmount,
       successUrl,
       cancelUrl,
+      vipInviteCode,
     } = await req.json();
 
     console.log("Creating checkout for:", { eventId, tickets, customerEmail, totalAmount });
@@ -119,6 +127,8 @@ serve(async (req) => {
         customerEmail,
         customerName,
         tickets: JSON.stringify(tickets),
+        // VIP invite code for linking GA tickets to VIP reservations
+        ...(vipInviteCode && { vipInviteCode }),
       },
     });
 
