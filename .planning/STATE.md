@@ -63,9 +63,9 @@ Progress: [████████████████████░░] 2
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
-- Average duration: 3.1 min
-- Total execution time: 0.83 hours
+- Total plans completed: 20
+- Average duration: 3.7 min
+- Total execution time: 1.23 hours
 
 **By Phase:**
 
@@ -73,11 +73,12 @@ Progress: [████████████████████░░] 2
 |-------|-------|-------|----------|
 | 01 | 6 | 21 min | 3.5 min |
 | 02 | 6 | 18 min | 3.0 min |
-| 03 | 4 | 16 min | 4.0 min |
+| 03 | 5 | 41 min | 8.2 min |
+| 04 | 3 | 8 min | 2.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-04 (4 min), 03-03 (4 min), 03-02 (4 min), 03-01 (4 min), 02-06 (3 min)
-- Trend: Fast (clear patterns from research, focused plans)
+- Last 5 plans: 04-03 (3 min), 04-02 (3 min), 04-01 (2 min), 03-05 (25 min), 03-04 (4 min)
+- Trend: Phase 4 Wave 1 very fast (focused database and realtime changes)
 
 *Updated after each plan completion*
 
@@ -139,6 +140,13 @@ Recent decisions affecting current work:
 | 2026-01-30 | 03-04 | Accept unknown tickets offline with warning | Tickets not in cache accepted, queued for verification when online |
 | 2026-01-30 | 03-04 | Cache auto-refreshes on event selection | ensureCacheIsFresh called via useEffect when selectedEventId changes |
 | 2026-01-30 | 03-04 | Rejection details flow through to overlays | ScanResult rejectionDetails passed directly to RejectionOverlay |
+| 2026-01-30 | 04-01 | Array-based transition validation | Simple state machine doesn't need separate transition table |
+| 2026-01-30 | 04-01 | confirmed→cancelled requires pre-event check | Business rule prevents cancellations during active events |
+| 2026-01-30 | 04-01 | RAISE NOTICE for audit logging | Visible in Supabase logs, doesn't block transitions, simpler than table |
+| 2026-01-30 | 04-01 | SECURITY DEFINER on trigger function | Ensures consistent execution context for database integrity rules |
+| 2026-01-30 | 04-03 | Floor plan component self-contained | VIPTableFloorPlan fetches own data via useRealtimeFloorPlan hook |
+| 2026-01-30 | 04-03 | Dual subscription approach | Subscribe to both vip_reservations (*) and event_vip_tables (UPDATE) |
+| 2026-01-30 | 04-03 | Visual "Live" indicator | Pulsing green dot shows realtime subscriptions are active |
 
 ### Pending Todos
 
@@ -166,6 +174,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 04-02-PLAN.md - VIP re-entry support
+Stopped at: Completed 04-03-PLAN.md - Realtime floor plan updates
 Resume file: None
-Next action: Execute Phase 4 plan 03 (`/gsd:execute-plan 04 03`)
+Next action: Execute Phase 4 plan 04 (`/gsd:execute-plan 04 04`)
