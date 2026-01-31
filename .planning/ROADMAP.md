@@ -95,15 +95,16 @@ Plans:
   4. VIP floor plan shows real-time table availability via Supabase Realtime
   5. Owner can cancel event with automatic refunds for all VIP reservations
   6. Linked GA tickets get VIP treatment (re-entry allowed, shown as "Guest of Table X")
-**Plans**: 6 plans
+**Plans**: 7 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — State transition enforcement (database trigger for forward-only)
-- [ ] 04-02-PLAN.md — Re-entry detection (VIP scan with re-entry support)
-- [ ] 04-03-PLAN.md — Realtime floor plan updates (Supabase subscriptions)
-- [ ] 04-04-PLAN.md — Owner event cancellation (bulk refund flow)
-- [ ] 04-05-PLAN.md — VIP scanner re-entry UI (enhanced display for re-entry/linked guests)
-- [ ] 04-06-PLAN.md — GA scanner VIP link detection (linked tickets get VIP re-entry)
+- [x] 04-01-PLAN.md — State transition enforcement (database trigger for forward-only)
+- [x] 04-02-PLAN.md — Re-entry detection (VIP scan with re-entry support)
+- [x] 04-03-PLAN.md — Realtime floor plan updates (Supabase subscriptions)
+- [x] 04-04-PLAN.md — Owner event cancellation (bulk refund flow)
+- [x] 04-05-PLAN.md — VIP scanner re-entry UI (enhanced display for re-entry/linked guests)
+- [x] 04-06-PLAN.md — GA scanner VIP link detection (linked tickets get VIP re-entry)
+- [x] 04-07-PLAN.md — Unified VIP checkout (GA ticket + VIP table in single purchase)
 
 ### Phase 5: Dashboard Accuracy
 **Goal**: Owner dashboard displays accurate real-time data across all metrics
@@ -238,7 +239,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 1. Payment Flow Hardening | 6/6 | Complete | 2026-01-29 |
 | 2. Email Reliability | 6/6 | Complete | 2026-01-30 |
 | 3. Scanner System Hardening | 5/5 | Complete | 2026-01-30 |
-| 4. VIP System Reliability | 0/6 | Not started | - |
+| 4. VIP System Reliability | 7/7 | Complete | 2026-01-30 |
 | 5. Dashboard Accuracy | 0/TBD | Not started | - |
 | 6. Infrastructure & Monitoring | 0/TBD | Not started | - |
 | 7. UX Polish | 0/TBD | Not started | - |
