@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 4 of 12 (VIP System Reliability) - IN PROGRESS
-Plan: 4 of 7 complete
-Status: Wave 1 complete, executing Wave 2
-Last activity: 2026-01-31 — Completed 04-04-PLAN.md (Owner event cancellation with bulk refunds)
+Plan: 5 of 7 complete
+Status: Wave 2 in progress
+Last activity: 2026-01-31 — Completed 04-05-PLAN.md (VIP scanner re-entry UI)
 
-Progress: [████████████████████░░] 28.8% (21/73 plans)
+Progress: [████████████████████░░] 30.1% (22/73 plans)
 
 ### Phase 4 Plans
 
@@ -24,7 +24,7 @@ Progress: [████████████████████░░] 2
 | 04-02 | Re-entry detection (VIP scan with re-entry support) | 1 | Complete |
 | 04-03 | Realtime floor plan updates (Supabase subscriptions) | 1 | Complete |
 | 04-04 | Owner event cancellation (bulk refund flow) | 2 | Complete |
-| 04-05 | VIP scanner re-entry UI | 2 | Pending |
+| 04-05 | VIP scanner re-entry UI | 2 | Complete |
 | 04-06 | GA scanner VIP link detection | 3 | Pending |
 | 04-07 | Unified VIP checkout (GA + VIP in single purchase) | 2 | Pending |
 
@@ -63,9 +63,9 @@ Progress: [████████████████████░░] 2
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21
-- Average duration: 3.6 min
-- Total execution time: 1.28 hours
+- Total plans completed: 22
+- Average duration: 3.5 min
+- Total execution time: 1.33 hours
 
 **By Phase:**
 
@@ -74,11 +74,11 @@ Progress: [████████████████████░░] 2
 | 01 | 6 | 21 min | 3.5 min |
 | 02 | 6 | 18 min | 3.0 min |
 | 03 | 5 | 41 min | 8.2 min |
-| 04 | 4 | 11 min | 2.8 min |
+| 04 | 5 | 14 min | 2.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-04 (3 min), 04-03 (3 min), 04-02 (3 min), 04-01 (2 min), 03-05 (25 min)
-- Trend: Phase 4 extremely fast (focused infrastructure changes)
+- Last 5 plans: 04-05 (3 min), 04-04 (3 min), 04-03 (3 min), 04-02 (3 min), 04-01 (2 min)
+- Trend: Phase 4 extremely fast (focused UI and infrastructure changes)
 
 *Updated after each plan completion*
 
@@ -153,6 +153,9 @@ Recent decisions affecting current work:
 | 2026-01-31 | 04-04 | All tables reset to available after cancellation | Allows table reuse if event rescheduled |
 | 2026-01-31 | 04-04 | Event cancellation_status column added | Tracks active vs cancelled events separately from other statuses |
 | 2026-01-31 | 04-04 | Individual refund failures don't block others | Graceful degradation allows partial success scenarios |
+| 2026-01-31 | 04-05 | Re-entry shown with gold 'RE-ENTRY GRANTED' banner and green success overlay | Re-entry preserves positive UX while being visually distinct |
+| 2026-01-31 | 04-05 | Linked guests detected by guest_number === 0 | Differentiates GA tickets linked to VIP tables |
+| 2026-01-31 | 04-05 | Last entry time formatted as HH:MM | Quick scanning readability for VIP staff |
 
 ### Pending Todos
 
@@ -180,6 +183,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 04-04-PLAN.md - Owner event cancellation with bulk refunds
+Stopped at: Completed 04-05-PLAN.md - VIP scanner re-entry UI
 Resume file: None
-Next action: Execute Phase 4 plan 05 (`/gsd:execute-plan 04 05`)
+Next action: Execute Phase 4 plan 06 (`/gsd:execute-plan 04 06`)
