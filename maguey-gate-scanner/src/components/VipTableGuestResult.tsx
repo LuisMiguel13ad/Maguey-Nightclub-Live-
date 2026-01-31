@@ -39,6 +39,9 @@ export const VipTableGuestResult = ({ result, onReset }: VipTableGuestResultProp
   const isReentry = result.reentry === true;
   const { pass, reservation } = result;
 
+  // Linked guests have guest_number === 0
+  const isLinkedGuest = pass?.guest_number === 0;
+
   const tierColor = {
     premium: '#EAB308',
     standard: '#3B82F6',
@@ -82,12 +85,12 @@ export const VipTableGuestResult = ({ result, onReset }: VipTableGuestResultProp
       >
         <div className="flex items-center justify-center gap-3">
           <Crown className="h-6 w-6 sm:h-8 sm:w-8" />
-          <span>VIP TABLE GUEST</span>
+          <span>{isLinkedGuest ? 'VIP LINKED GUEST' : 'VIP TABLE GUEST'}</span>
           <Crown className="h-6 w-6 sm:h-8 sm:w-8" />
         </div>
         {reservation?.vip_table && (
           <div className="text-lg mt-2" style={{ color: tierColor }}>
-            {tierLabel} - {reservation.vip_table.table_name}
+            {tierLabel} - {isLinkedGuest ? `Guest of ${reservation.vip_table.table_name}` : reservation.vip_table.table_name}
           </div>
         )}
       </div>
@@ -198,8 +201,13 @@ export const VipTableGuestResult = ({ result, onReset }: VipTableGuestResultProp
             <div>
               <p className="text-muted-foreground mb-1">Guest</p>
               <p className="font-semibold">
-                {pass?.guest_number} of {reservation.guest_count}
+                {isLinkedGuest
+                  ? `Guest of ${reservation.vip_table?.table_name || 'VIP Table'}`
+                  : `${pass?.guest_number} of ${reservation.guest_count}`}
               </p>
+              {isLinkedGuest && pass?.guest_name && (
+                <p className="text-xs text-muted-foreground mt-0.5">{pass.guest_name}</p>
+              )}
             </div>
             <div>
               <p className="text-muted-foreground mb-1">Reserved By</p>
