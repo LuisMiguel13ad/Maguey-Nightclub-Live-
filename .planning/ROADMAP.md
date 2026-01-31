@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Payment Flow Hardening** - Ensure GA and VIP payments complete reliably end-to-end
 - [x] **Phase 2: Email Reliability** - Guarantee ticket and VIP confirmation emails deliver consistently
 - [x] **Phase 3: Scanner System Hardening** - Validate scanner correctly accepts/rejects QR codes and handles offline mode
-- [ ] **Phase 4: VIP System Reliability** - Fix race conditions and ensure correct status transitions
+- [x] **Phase 4: VIP System Reliability** - Fix race conditions and ensure correct status transitions
 - [ ] **Phase 5: Dashboard Accuracy** - Verify all analytics match source of truth
 - [ ] **Phase 6: Infrastructure & Monitoring** - Add health checks, rate limiting, error tracking, and logging
 - [ ] **Phase 7: UX Polish** - Improve loading states, error messages, and mobile experience
@@ -116,11 +116,14 @@ Plans:
   3. Events created in owner dashboard appear on purchase site within 30 seconds
   4. VIP reservations show in dashboard immediately after confirmation
   5. Analytics charts update in real-time as transactions occur
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 05-01: TBD during planning
-- [ ] 05-02: TBD during planning
+- [ ] 05-01-PLAN.md — Revenue reconciliation infrastructure (DB schema + Edge Function)
+- [ ] 05-02-PLAN.md — Live indicator and real-time subscription enhancements
+- [ ] 05-03-PLAN.md — Revenue discrepancy display and dashboard integration
+- [ ] 05-04-PLAN.md — Event sync verification and check-in progress visualization
+- [ ] 05-05-PLAN.md — Dashboard accuracy validation and verification
 
 ### Phase 6: Infrastructure & Monitoring
 **Goal**: Production monitoring and protection systems are operational
@@ -240,7 +243,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. Email Reliability | 6/6 | Complete | 2026-01-30 |
 | 3. Scanner System Hardening | 5/5 | Complete | 2026-01-30 |
 | 4. VIP System Reliability | 7/7 | Complete | 2026-01-30 |
-| 5. Dashboard Accuracy | 0/TBD | Not started | - |
+| 5. Dashboard Accuracy | 0/5 | Planned | - |
 | 6. Infrastructure & Monitoring | 0/TBD | Not started | - |
 | 7. UX Polish | 0/TBD | Not started | - |
 | 8. GA End-to-End Testing | 0/TBD | Not started | - |
