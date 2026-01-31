@@ -343,6 +343,24 @@ export function VIPScanner({ eventId, onScanComplete }: VIPScannerProps) {
     }
   }, [scanResult]);
 
+  // Test-only: Accept QR token via URL parameter
+  useEffect(() => {
+    if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+      const params = new URLSearchParams(window.location.search);
+      const qrParam = params.get('qr');
+
+      if (qrParam) {
+        console.log('[TEST MODE] Processing QR from URL parameter:', qrParam);
+        handleQRCode(qrParam);
+
+        // Clear parameter from URL to avoid re-processing
+        const url = new URL(window.location.href);
+        url.searchParams.delete('qr');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, []); // Empty deps - run once on mount
+
   return (
     <div className="space-y-4">
       {/* Offline Status Banner */}
