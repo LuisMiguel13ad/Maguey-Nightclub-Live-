@@ -110,10 +110,7 @@ const Scanner = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Keep screen awake while scanner is active
-  const { isSupported: wakeLockSupported, isLocked } = useWakeLock(
-    scanMode === "qr" || scanMode === "nfc" // Active when in scanning mode
-  );
+
 
   // State
   const [scanMode, setScanMode] = useState<ScanMode>("qr");
@@ -131,6 +128,11 @@ const Scanner = () => {
     tableNumber: null,
     purchaserName: null,
   });
+
+  // Keep screen awake while scanner is active
+  const { isSupported: wakeLockSupported, isLocked } = useWakeLock(
+    scanMode === "qr" || scanMode === "nfc" // Active when in scanning mode
+  );
 
   // Prevent duplicate scans
   const lastScannedRef = useRef<string>("");
@@ -178,6 +180,31 @@ const Scanner = () => {
     };
     loadEvents();
   }, []);
+
+  // Test-only: Accept QR token via URL parameter for E2E testing
+  useEffect(() => {
+    if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+      const params = new URLSearchParams(window.location.search);
+      const qrParam = params.get('qr');
+
+      if (qrParam) {
+        console.log('[TEST MODE] Processing QR from URL parameter:', qrParam);
+        // Use a small timeout to ensure component is fully mounted
+        const timer = setTimeout(() => {
+          if (mountedRef.current) {
+            processScan(qrParam, 'qr');
+          }
+        }, 100);
+
+        // Clear parameter from URL to prevent re-processing
+        const url = new URL(window.location.href);
+        url.searchParams.delete('qr');
+        window.history.replaceState({}, '', url.toString());
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track mount state to prevent setState calls after unmount
   useEffect(() => {
