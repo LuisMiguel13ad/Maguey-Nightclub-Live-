@@ -50,10 +50,10 @@ Requirements for launch readiness. Each maps to roadmap phases.
 
 ### UX Polish
 
-- [ ] **UX-01**: Loading states show during async operations
-- [ ] **UX-02**: Error messages are user-friendly (not technical)
-- [ ] **UX-03**: Mobile experience works for gate scanning
-- [ ] **UX-04**: Checkout flow completes in under 60 seconds
+- [x] **UX-01**: Loading states show during async operations
+- [x] **UX-02**: Error messages are user-friendly (not technical)
+- [x] **UX-03**: Mobile experience works for gate scanning
+- [x] **UX-04**: Checkout flow completes in under 60 seconds
 
 ## v2 Requirements
 
@@ -123,10 +123,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-02 | Phase 6 | Complete |
 | INFRA-03 | Phase 6 | Complete |
 | INFRA-04 | Phase 6 | Complete |
-| UX-01 | Phase 7 | Pending |
-| UX-02 | Phase 7 | Pending |
-| UX-03 | Phase 7 | Pending |
-| UX-04 | Phase 7 | Pending |
+| UX-01 | Phase 7 | Complete |
+| UX-02 | Phase 7 | Complete |
+| UX-03 | Phase 7 | Complete |
+| UX-04 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 28 total
@@ -137,4 +137,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-31 after Phase 6 completion*
+*Last updated: 2026-01-31 after Phase 7 completion*
