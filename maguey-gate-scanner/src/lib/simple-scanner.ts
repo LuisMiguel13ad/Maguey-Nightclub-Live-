@@ -1,4 +1,5 @@
-import { supabase, Ticket } from './supabase';
+import { supabase as defaultClient, Ticket } from './supabase';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { validateOffline, markAsScannedOffline, CachedTicket } from './offline-ticket-cache';
 
 export interface ScanResult {
@@ -8,7 +9,7 @@ export interface ScanResult {
   alreadyScanned?: boolean;
 
   // Detailed rejection info
-  rejectionReason?: 'already_used' | 'wrong_event' | 'invalid' | 'expired' | 'tampered' | 'not_found' | 'offline_unknown';
+  rejectionReason?: 'already_used' | 'wrong_event' | 'invalid' | 'expired' | 'tampered' | 'not_found' | 'offline_unknown' | 'reentry';
   rejectionDetails?: {
     previousScan?: {
       staff: string;      // Display name or "Unknown Staff"
@@ -19,6 +20,13 @@ export interface ScanResult {
     wrongEventName?: string;  // Event name for context
   };
 
+  // VIP-linked ticket info (for re-entry and display)
+  vipInfo?: {
+    tableName: string;
+    tableNumber: string;
+    reservationId: string;
+  };
+
   // Offline mode fields
   offlineValidated?: boolean;  // True if validated against cache (not server)
   offlineWarning?: string;     // Warning message for unknown tickets in offline mode
@@ -26,6 +34,17 @@ export interface ScanResult {
 
 // UUID regex pattern
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// VIP link check result interface
+interface VipLinkCheckResult {
+  is_vip_linked: boolean;
+  allow_reentry?: boolean;
+  vip_reservation_id?: string;
+  table_number?: string;
+  table_name?: string;
+  reservation_status?: string;
+  error?: string;
+}
 
 // QR code signature verification
 const textEncoder = new TextEncoder();
@@ -139,10 +158,31 @@ async function parseQrInput(input: string): Promise<{ token: string; isVerified:
 }
 
 /**
+ * Check if a GA ticket is linked to a VIP reservation (for re-entry privilege)
+ */
+async function checkVipLinkedTicket(ticketId: string, client: SupabaseClient = defaultClient): Promise<VipLinkCheckResult> {
+  try {
+    const { data, error } = await client.rpc('check_vip_linked_ticket_reentry', {
+      p_ticket_id: ticketId
+    });
+
+    if (error) {
+      console.error('[simple-scanner] Error checking VIP link:', error);
+      return { is_vip_linked: false };
+    }
+
+    return data as VipLinkCheckResult;
+  } catch (error) {
+    console.error('[simple-scanner] Exception checking VIP link:', error);
+    return { is_vip_linked: false };
+  }
+}
+
+/**
  * Find a ticket by ID, QR code data, or NFC tag
  * Searches multiple columns to find a match
  */
-export async function findTicket(input: string): Promise<Ticket | null> {
+export async function findTicket(input: string, client: SupabaseClient = defaultClient): Promise<Ticket | null> {
   const trimmedInput = input.trim();
 
   if (!trimmedInput) {
@@ -154,21 +194,41 @@ export async function findTicket(input: string): Promise<Ticket | null> {
 
   // Build query - search ticket_id and qr_code_data
   // Only include id search if input looks like a UUID
-  let query = supabase
+  let query = client
     .from('tickets')
     .select('*');
 
   if (UUID_REGEX.test(trimmedInput)) {
-    // Input is a UUID - search id, ticket_id, and qr_code_data
-    console.log('[simple-scanner] Input looks like UUID, searching id/ticket_id/qr_code_data');
-    query = query.or(`id.eq.${trimmedInput},ticket_id.eq.${trimmedInput},qr_code_data.eq.${trimmedInput}`);
+    // Input is a UUID - search id, ticket_id, qr_code_data AND qr_token
+
+    // Diagnostic: Check Auth State
+    // const { data: { user } } = await client.auth.getUser();
+    // console.log('[simple-scanner] Current User:', user?.id || 'ANON');
+
+    // Optimization & Workaround: Check qr_token directly first
+    // This avoids potential issues with complex OR queries in some environments
+    const { data: directMatch } = await client
+      .from('tickets')
+      .select('id')
+      .eq('qr_token', trimmedInput)
+      .maybeSingle();
+
+    if (directMatch) {
+      console.log('[simple-scanner] Direct match found by qr_token:', directMatch.id);
+      // Found it! Use ID for the main query to fetch full details
+      query = client.from('tickets').select('*').eq('id', directMatch.id);
+    } else {
+      console.log('[simple-scanner] No direct qr_token match, using OR query');
+      query = query.or(`id.eq.${trimmedInput},ticket_id.eq.${trimmedInput},qr_code_data.eq.${trimmedInput},qr_token.eq.${trimmedInput}`);
+    }
   } else {
     // Input is not a UUID - only search ticket_id and qr_code_data
     console.log('[simple-scanner] Input is not UUID, searching ticket_id/qr_code_data');
     query = query.or(`ticket_id.eq.${trimmedInput},qr_code_data.eq.${trimmedInput}`);
   }
 
-  const { data, error } = await query.limit(1).single();
+  const { data, error } = await query.maybeSingle();
+  console.log('[DEBUG-FIX-APPLIED v4] Query Result:', { data, error });
 
   if (error) {
     // PGRST116 = no rows found, which is not really an error
@@ -187,8 +247,8 @@ export async function findTicket(input: string): Promise<Ticket | null> {
 /**
  * Find a ticket and filter by event name
  */
-export async function findTicketForEvent(input: string, eventName?: string): Promise<Ticket | null> {
-  const ticket = await findTicket(input);
+export async function findTicketForEvent(input: string, eventName?: string, client: SupabaseClient = defaultClient): Promise<Ticket | null> {
+  const ticket = await findTicket(input, client);
 
   if (!ticket) {
     return null;
@@ -209,7 +269,8 @@ export async function findTicketForEvent(input: string, eventName?: string): Pro
 export async function scanTicket(
   input: string,
   userId?: string,
-  method: 'manual' | 'qr' | 'nfc' = 'manual'
+  method: 'manual' | 'qr' | 'nfc' = 'manual',
+  client: SupabaseClient = defaultClient
 ): Promise<ScanResult> {
   // Parse input - handles both QR JSON payloads and plain ticket IDs
   const parsed = await parseQrInput(input);
@@ -217,7 +278,7 @@ export async function scanTicket(
   if (parsed.error) {
     // Determine if it's a tampered/invalid signature or general invalid
     const isTampered = parsed.error.toLowerCase().includes('forged') ||
-                       parsed.error.toLowerCase().includes('signature');
+      parsed.error.toLowerCase().includes('signature');
     return {
       success: false,
       ticket: null,
@@ -238,7 +299,7 @@ export async function scanTicket(
   console.log('[simple-scanner] Searching for ticket with token:', parsed.token, 'verified:', parsed.isVerified);
 
   // Find the ticket using the token
-  const ticket = await findTicket(parsed.token);
+  const ticket = await findTicket(parsed.token, client);
 
   if (!ticket) {
     return {
@@ -249,16 +310,47 @@ export async function scanTicket(
     };
   }
 
+  // Check if ticket is linked to VIP reservation (for re-entry privilege)
+  const vipLinkCheck = await checkVipLinkedTicket(ticket.id, client);
+  const isVipLinked = vipLinkCheck.is_vip_linked && vipLinkCheck.allow_reentry;
+
   // Check if already scanned - check both is_used and status for robustness
   const isAlreadyScanned = ticket.is_used === true || ticket.status === 'scanned';
   if (isAlreadyScanned) {
-    // Format the previous scan time
-    const scannedTime = ticket.scanned_at
-      ? new Date(ticket.scanned_at).toLocaleTimeString('en-US', {
+    // If VIP-linked, allow re-entry
+    if (isVipLinked) {
+      console.log('[simple-scanner] VIP-linked ticket re-entry granted');
+
+      // Format the previous scan time
+      const scannedTime = ticket.scanned_at
+        ? new Date(ticket.scanned_at).toLocaleTimeString('en-US', {
           hour: 'numeric',
           minute: '2-digit',
           hour12: true
         })
+        : 'unknown time';
+
+      return {
+        success: true,
+        ticket,
+        message: `Re-entry granted - Last entry at ${scannedTime}`,
+        rejectionReason: 'reentry',
+        vipInfo: {
+          tableName: vipLinkCheck.table_name || `Table ${vipLinkCheck.table_number}`,
+          tableNumber: vipLinkCheck.table_number || '',
+          reservationId: vipLinkCheck.vip_reservation_id || '',
+        },
+      };
+    }
+
+    // Regular GA ticket - reject re-entry
+    // Format the previous scan time
+    const scannedTime = ticket.scanned_at
+      ? new Date(ticket.scanned_at).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
       : 'unknown time';
 
     // Get staff name from scan - will show "Staff" as default
@@ -288,7 +380,7 @@ export async function scanTicket(
   const now = new Date().toISOString();
   console.log('[simple-scanner] Marking ticket as scanned:', ticket.id);
 
-  const { data: updateData, error: updateError } = await supabase
+  const { data: updateData, error: updateError } = await client
     .from('tickets')
     .update({
       is_used: true,
@@ -321,11 +413,29 @@ export async function scanTicket(
     };
   }
 
-  // Log the scan
-  await logScan(ticket.id, 'success', method, userId);
+  // If VIP-linked, increment the reservation's checked_in_guests count
+  if (isVipLinked && vipLinkCheck.vip_reservation_id) {
+    console.log('[simple-scanner] Incrementing VIP reservation checked-in count');
+    try {
+      const { error: incrementError } = await client.rpc('increment_vip_checked_in', {
+        p_reservation_id: vipLinkCheck.vip_reservation_id
+      });
 
-  // Return updated ticket
-  return {
+      if (incrementError) {
+        console.error('[simple-scanner] Error incrementing VIP check-in count:', incrementError);
+        // Don't fail the scan - ticket already marked as scanned
+      }
+    } catch (error) {
+      console.error('[simple-scanner] Exception incrementing VIP check-in count:', error);
+      // Don't fail the scan - ticket already marked as scanned
+    }
+  }
+
+  // Log the scan
+  await logScan(ticket.id, 'success', method, userId, client); // Pass client
+
+  // Build result with VIP info if applicable
+  const result: ScanResult = {
     success: true,
     ticket: {
       ...ticket,
@@ -335,6 +445,16 @@ export async function scanTicket(
     },
     message: 'Valid ticket - Entry granted',
   };
+
+  if (isVipLinked) {
+    result.vipInfo = {
+      tableName: vipLinkCheck.table_name || `Table ${vipLinkCheck.table_number}`,
+      tableNumber: vipLinkCheck.table_number || '',
+      reservationId: vipLinkCheck.vip_reservation_id || '',
+    };
+  }
+
+  return result;
 }
 
 /**
@@ -344,11 +464,12 @@ export async function logScan(
   ticketId: string,
   result: 'success' | 'already_scanned' | 'not_found' | 'error',
   method: 'manual' | 'qr' | 'nfc' = 'manual',
-  userId?: string
+  userId?: string,
+  client: SupabaseClient = defaultClient
 ): Promise<void> {
   const traceId = crypto.randomUUID();
 
-  const { error } = await supabase.from('scan_logs').insert({
+  const { error } = await client.from('scan_logs').insert({
     ticket_id: ticketId,
     scanned_by: userId || null,
     scan_result: result,
@@ -368,8 +489,8 @@ export async function logScan(
 /**
  * Get list of available events for the scanner dropdown
  */
-export async function getActiveEvents(): Promise<{ id: string; name: string; event_date: string }[]> {
-  const { data, error } = await supabase
+export async function getActiveEvents(client: SupabaseClient = defaultClient): Promise<{ id: string; name: string; event_date: string }[]> {
+  const { data, error } = await client
     .from('events')
     .select('id, name, event_date')
     .gte('event_date', new Date().toISOString().split('T')[0])
@@ -386,8 +507,8 @@ export async function getActiveEvents(): Promise<{ id: string; name: string; eve
 /**
  * Get unique event names from tickets (fallback if no events table)
  */
-export async function getEventNamesFromTickets(): Promise<string[]> {
-  const { data, error } = await supabase
+export async function getEventNamesFromTickets(client: SupabaseClient = defaultClient): Promise<string[]> {
+  const { data, error } = await client
     .from('tickets')
     .select('event_name')
     .not('event_name', 'is', null);
@@ -403,10 +524,37 @@ export async function getEventNamesFromTickets(): Promise<string[]> {
 }
 
 /**
+ * Get unique events from tickets with both name and ID
+ * Returns array of {id, name} for scanner dropdown
+ */
+export async function getEventsFromTickets(client: SupabaseClient = defaultClient): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await client
+    .from('tickets')
+    .select('event_id, event_name')
+    .not('event_name', 'is', null)
+    .not('event_id', 'is', null);
+
+  if (error) {
+    console.error('Error fetching events from tickets:', error);
+    return [];
+  }
+
+  // Get unique events by ID
+  const eventMap = new Map<string, string>();
+  data?.forEach(t => {
+    if (t.event_id && t.event_name && !eventMap.has(t.event_id)) {
+      eventMap.set(t.event_id, t.event_name);
+    }
+  });
+
+  return Array.from(eventMap.entries()).map(([id, name]) => ({ id, name }));
+}
+
+/**
  * Debug: Get sample tickets from database
  */
-export async function debugGetSampleTickets(): Promise<void> {
-  const { data, error } = await supabase
+export async function debugGetSampleTickets(client: SupabaseClient = defaultClient): Promise<void> {
+  const { data, error } = await client
     .from('tickets')
     .select('ticket_id, guest_name, event_name, qr_code_data, is_used')
     .limit(5);
@@ -446,7 +594,7 @@ export async function scanTicketOffline(
 
   if (parsed.error) {
     const isTampered = parsed.error.toLowerCase().includes('forged') ||
-                       parsed.error.toLowerCase().includes('signature');
+      parsed.error.toLowerCase().includes('signature');
     return {
       success: false,
       ticket: null,
@@ -500,10 +648,10 @@ export async function scanTicketOffline(
     const cachedTicket = cacheResult.ticket!;
     const scannedTime = cachedTicket.scannedAt
       ? new Date(cachedTicket.scannedAt).toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        })
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
       : 'earlier';
 
     return {
