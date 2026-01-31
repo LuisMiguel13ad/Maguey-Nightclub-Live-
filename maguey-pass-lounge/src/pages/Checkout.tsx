@@ -21,17 +21,30 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { AuthButton } from "@/components/AuthButton";
 import {
-  getAllEvents,
   getEventWithTicketsAndAvailability,
   getCheckoutUrlForEvent,
   type Event,
   type EventWithTickets,
   type EventAvailability,
 } from "@/lib/events-service";
+import { useEventsRealtime } from "@/hooks/useEventsRealtime";
 import {
   fetchPromotion,
   type Promotion,
 } from "@/lib/promotions-service";
+import { supabase } from "@/lib/supabase";
+
+// VIP Reservation type for invite code linking
+interface VIPInviteReservation {
+  id: string;
+  purchaser_name: string;
+  table_number: number;
+  invite_code: string;
+  event_vip_tables: {
+    capacity: number;
+    tier: string;
+  } | null;
+}
 
 // Form validation schema
 const checkoutSchema = z.object({
@@ -74,6 +87,17 @@ const Checkout = () => {
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
 
+  // Real-time events for recommended events section
+  // Events created in dashboard appear within seconds (< 30 second requirement)
+  const { events: realtimeEvents, isLive: eventsIsLive } = useEventsRealtime({
+    filter: { upcomingOnly: true },
+  });
+
+  // VIP invite code state
+  const [vipInviteCode, setVipInviteCode] = useState<string | null>(null);
+  const [vipReservation, setVipReservation] = useState<VIPInviteReservation | null>(null);
+  const [vipLinkedCount, setVipLinkedCount] = useState(0);
+
   // Get user metadata
   const userFirstName = user?.user_metadata?.first_name || '';
   const userLastName = user?.user_metadata?.last_name || '';
@@ -101,6 +125,45 @@ const Checkout = () => {
       setValue('email', userEmail);
     }
   }, [user, userFirstName, userLastName, userEmail, setValue]);
+
+  // Detect VIP invite code from URL
+  useEffect(() => {
+    const inviteCode = searchParams.get("vip");
+    if (!inviteCode) {
+      setVipInviteCode(null);
+      setVipReservation(null);
+      return;
+    }
+
+    setVipInviteCode(inviteCode);
+
+    // Fetch VIP reservation details
+    const fetchVipReservation = async () => {
+      try {
+        const { data: reservation, error } = await supabase
+          .from('vip_reservations')
+          .select('id, purchaser_name, table_number, invite_code, event_vip_tables(capacity, tier)')
+          .eq('invite_code', inviteCode)
+          .single();
+
+        if (!error && reservation) {
+          setVipReservation(reservation);
+
+          // Get linked ticket count
+          const { count } = await supabase
+            .from('vip_linked_tickets')
+            .select('*', { count: 'exact', head: true })
+            .eq('vip_reservation_id', reservation.id);
+
+          setVipLinkedCount(count || 0);
+        }
+      } catch (err) {
+        console.error('Error fetching VIP reservation:', err);
+      }
+    };
+
+    fetchVipReservation();
+  }, [searchParams]);
 
   // Parse order data from URL params and fetch event
   useEffect(() => {
@@ -212,21 +275,16 @@ const Checkout = () => {
     setTotal(promoAdjustedTotals.total);
   }, [promoAdjustedTotals]);
 
-  // Fetch recommended events once current event is loaded
+  // Use real-time events for recommended events (updates within seconds)
   useEffect(() => {
-    if (!event) return;
+    if (!event || realtimeEvents.length === 0) return;
 
-    getAllEvents()
-      .then((allEvents) => {
-        const filtered = allEvents
-          .filter((ev) => ev.id !== event.id)
-          .slice(0, 6);
-        setRecommendedEvents(filtered);
-      })
-      .catch((err) => {
-        console.error("Failed to load recommended events", err);
-      });
-  }, [event]);
+    // Filter out current event and limit to 6
+    const filtered = realtimeEvents
+      .filter((ev) => ev.id !== event.id)
+      .slice(0, 6);
+    setRecommendedEvents(filtered);
+  }, [event, realtimeEvents]);
 
   // Format date for display
   const formatDate = (dateString: string, timeString: string) => {
@@ -442,6 +500,11 @@ const Checkout = () => {
         params.set("promoCode", promoApplied.code);
       }
 
+      // Add VIP invite code if present
+      if (vipInviteCode) {
+        params.set("vipInviteCode", vipInviteCode);
+      }
+
       const paymentUrl = `/payment?${params.toString()}`;
 
       // Reset loading state before navigation
@@ -515,6 +578,33 @@ const Checkout = () => {
           </div>
         </div>
       </header>
+
+      {/* VIP Invite Banner */}
+      {vipReservation && (
+        <div className="relative z-20 bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-purple-600/20 border-b border-purple-500/30">
+          <div className="container mx-auto px-4 lg:px-8 max-w-7xl py-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-stone-100 font-medium">
+                    You're invited to {vipReservation.purchaser_name}'s VIP Table!
+                  </p>
+                  <p className="text-sm text-stone-400">
+                    Table {vipReservation.table_number} • {vipLinkedCount}/{vipReservation.event_vip_tables?.capacity || 6} guests confirmed
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-purple-300">
+                <Wine className="w-4 h-4" />
+                <span>Purchase your ticket to join the party!</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Event Hero Section */}
       <section className="relative z-10 py-12 lg:py-20">
@@ -863,9 +953,21 @@ const Checkout = () => {
           <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="font-serif text-2xl lg:text-3xl text-stone-100">
-                  More <span className="italic text-copper-400">Events</span>
-                </h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="font-serif text-2xl lg:text-3xl text-stone-100">
+                    More <span className="italic text-copper-400">Events</span>
+                  </h2>
+                  {/* Live indicator for real-time event updates */}
+                  {eventsIsLive && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                      </span>
+                      <span className="text-xs text-stone-500">Live</span>
+                    </div>
+                  )}
+                </div>
                 <p className="text-sm text-stone-500 mt-1">Discover more experiences tailored for you</p>
               </div>
               <Link to="/" className="font-mono text-xs uppercase tracking-widest text-copper-400 hover:text-copper-300">
