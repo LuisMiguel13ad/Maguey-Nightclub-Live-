@@ -243,4 +243,106 @@ test.describe('VIP Floor Plan Realtime Updates', () => {
     // Clean up
     await supabase.from('vip_reservations').delete().eq('id', reservation.id);
   });
+
+  test('table availability transitions through full lifecycle', async ({ page, vipTestData }) => {
+    const supabase = getSupabaseClient();
+
+    // Navigate to VIP tables page
+    await page.goto(`/events/${vipTestData.eventId}/vip-tables`);
+    await page.waitForLoadState('networkidle');
+
+    // 1. Initial state: Table is available
+    const tableButton = page.locator(`button:has-text("${vipTestData.tableNumber}")`).first();
+    await expect(tableButton).toBeVisible({ timeout: 10000 });
+    await expect(tableButton).toBeEnabled();
+
+    // 2. Create pending reservation (table held but not confirmed yet)
+    // In the real flow, pending reservations still mark the table as unavailable
+    const { data: reservation, error: createError } = await supabase
+      .from('vip_reservations')
+      .insert({
+        event_id: vipTestData.eventId,
+        event_vip_table_id: vipTestData.tableId,
+        table_number: parseInt(vipTestData.tableNumber),
+        status: 'pending', // Start in pending state
+        purchaser_name: 'Lifecycle Test User',
+        purchaser_email: '[email protected]',
+        purchaser_phone: '+15555550003',
+        checked_in_guests: 0,
+        stripe_payment_intent_id: `pi_test_lifecycle_${Date.now()}`,
+        amount_paid_cents: vipTestData.tablePrice * 100,
+        qr_code_token: `VIP-LIFECYCLE-TEST-${Date.now()}`,
+        package_snapshot: {
+          guestCount: vipTestData.tableCapacity,
+          tier: vipTestData.tableTier,
+          tableName: `Table ${vipTestData.tableNumber}`,
+        },
+        disclaimer_accepted_at: new Date().toISOString(),
+        refund_policy_accepted_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (createError || !reservation) {
+      console.error('Failed to create reservation:', createError);
+      test.skip();
+      return;
+    }
+
+    // Mark table as unavailable (pending reservation holds the table)
+    await supabase.from('event_vip_tables').update({ is_available: false }).eq('id', vipTestData.tableId);
+
+    // Verify table shows as reserved (pending = held)
+    await expect(page.locator('text=RESERVED').first()).toBeVisible({ timeout: 5000 });
+
+    // 3. Confirm the reservation (status: pending -> confirmed)
+    // Note: The UI subscribes to event_vip_tables.is_available, not reservation status
+    // So this status change alone won't affect the UI, but it's part of the business flow
+    await supabase.from('vip_reservations').update({ status: 'confirmed' }).eq('id', reservation.id);
+
+    // Table should still show as reserved
+    await expect(page.locator('text=RESERVED').first()).toBeVisible();
+
+    // 4. Cancel the reservation (status: confirmed -> cancelled)
+    // In real flow, cancellation would restore table availability
+    await supabase.from('vip_reservations').update({ status: 'cancelled' }).eq('id', reservation.id);
+    await supabase.from('event_vip_tables').update({ is_available: true }).eq('id', vipTestData.tableId);
+
+    // Table should become available again
+    await expect(tableButton).toBeVisible({ timeout: 5000 });
+    await expect(tableButton).toBeEnabled();
+
+    // Clean up
+    await supabase.from('vip_reservations').delete().eq('id', reservation.id);
+  });
+
+  test('multiple rapid availability changes handled correctly', async ({ page, vipTestData }) => {
+    const supabase = getSupabaseClient();
+
+    // Navigate to VIP tables page
+    await page.goto(`/events/${vipTestData.eventId}/vip-tables`);
+    await page.waitForLoadState('networkidle');
+
+    // Wait for table to appear as available
+    const tableButton = page.locator(`button:has-text("${vipTestData.tableNumber}")`).first();
+    await expect(tableButton).toBeVisible({ timeout: 10000 });
+
+    // Perform rapid toggle of availability
+    // This tests that the realtime subscription handles rapid updates correctly
+    await supabase.from('event_vip_tables').update({ is_available: false }).eq('id', vipTestData.tableId);
+    await page.waitForTimeout(100);
+    await supabase.from('event_vip_tables').update({ is_available: true }).eq('id', vipTestData.tableId);
+    await page.waitForTimeout(100);
+    await supabase.from('event_vip_tables').update({ is_available: false }).eq('id', vipTestData.tableId);
+
+    // After the rapid changes, table should show final state (unavailable/reserved)
+    await expect(page.locator('text=RESERVED').first()).toBeVisible({ timeout: 5000 });
+
+    // Restore to available for cleanup
+    await supabase.from('event_vip_tables').update({ is_available: true }).eq('id', vipTestData.tableId);
+
+    // Verify it returns to available
+    await expect(tableButton).toBeVisible({ timeout: 5000 });
+    await expect(tableButton).toBeEnabled();
+  });
 });
