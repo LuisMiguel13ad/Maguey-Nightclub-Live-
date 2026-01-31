@@ -75,6 +75,7 @@ import { EntryExitFlowVisualization } from "@/components/EntryExitFlowVisualizat
 import { getTicketsSoldPerEvent, getDailyWeeklySales, getCheckInRates, type TicketsSoldPerEvent, type DailyWeeklySales, type CheckInRate } from "@/lib/analytics-service";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";
+import { RevenueVerification } from "@/components/dashboard/RevenueVerification";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -891,6 +892,19 @@ const Dashboard = () => {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Revenue Verification - verifies DB total against Stripe */}
+            <div className="mt-6">
+              <RevenueVerification
+                startDate={(() => {
+                  const monthStart = new Date();
+                  monthStart.setDate(1);
+                  monthStart.setHours(0, 0, 0, 0);
+                  return monthStart;
+                })()}
+                endDate={new Date()}
+              />
             </div>
           </CardContent>
         </Card>
