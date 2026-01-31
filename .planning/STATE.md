@@ -5,16 +5,26 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Customers can buy tickets/VIP tables, receive QR codes, and get scanned at the door seamlessly — a complete end-to-end flow that rivals Ticketmaster and Eventbrite.
-**Current focus:** Phase 4 Complete — Ready for Phase 5
+**Current focus:** Phase 5 - Dashboard Accuracy
 
 ## Current Position
 
-Phase: 4 of 12 (VIP System Reliability) - COMPLETE
-Plan: 7 of 7 complete
-Status: Verified (28/28 must-haves passed)
-Last activity: 2026-01-30 — Phase 4 verified, all plans executed
+Phase: 5 of 12 (Dashboard Accuracy) - IN PROGRESS
+Plan: 1 of 5 complete
+Status: Executing
+Last activity: 2026-01-31 — Completed 05-01-PLAN.md (revenue reconciliation)
 
-Progress: [████████████████████░░] 32.9% (24/73 plans)
+Progress: [█████████████████████░░] 34.2% (25/73 plans)
+
+### Phase 5 Plans
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 05-01 | Revenue discrepancies audit table + verify-revenue Edge Function | 1 | Complete |
+| 05-02 | Ticket count accuracy checks | 1 | Pending |
+| 05-03 | VIP reservation status sync | 1 | Pending |
+| 05-04 | Real-time dashboard updates | 2 | Pending |
+| 05-05 | Event sync timing validation | 2 | Pending |
 
 ### Phase 4 Plans
 
@@ -63,9 +73,9 @@ Progress: [████████████████████░░] 3
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
-- Average duration: 3.6 min
-- Total execution time: 1.52 hours
+- Total plans completed: 25
+- Average duration: 3.5 min
+- Total execution time: 1.60 hours
 
 **By Phase:**
 
@@ -75,10 +85,11 @@ Progress: [████████████████████░░] 3
 | 02 | 6 | 18 min | 3.0 min |
 | 03 | 5 | 41 min | 8.2 min |
 | 04 | 7 | 26 min | 3.7 min |
+| 05 | 1 | 4 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-06 (5 min), 04-07 (7 min), 04-05 (3 min), 04-04 (3 min), 04-03 (3 min)
-- Trend: Phase 4 consistent fast execution (database and UI changes)
+- Last 5 plans: 05-01 (4 min), 04-06 (5 min), 04-07 (7 min), 04-05 (3 min), 04-04 (3 min)
+- Trend: Consistent fast execution
 
 *Updated after each plan completion*
 
@@ -165,6 +176,9 @@ Recent decisions affecting current work:
 | 2026-01-31 | 04-06 | Regular GA tickets remain one-time entry | Non-linked GA rejected on second scan to maintain standard policy |
 | 2026-01-31 | 04-06 | Atomic guest count updates with row locking | increment_vip_checked_in uses FOR UPDATE to prevent race conditions |
 | 2026-01-31 | 04-06 | Re-entry shows gold banner with VIP table info | Consistent with 04-05 VIP scanner re-entry UI pattern |
+| 2026-01-31 | 05-01 | $1 discrepancy threshold for logging | Per RESEARCH.md - small timing discrepancies are normal |
+| 2026-01-31 | 05-01 | Service role INSERT only for revenue_discrepancies | Prevents unauthorized discrepancy injection |
+| 2026-01-31 | 05-01 | Authenticated SELECT/UPDATE for revenue_discrepancies | Owners need to view and mark resolved |
 
 ### Pending Todos
 
@@ -191,7 +205,7 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 
 ## Session Continuity
 
-Last session: 2026-01-30
-Stopped at: Phase 4 verified complete (28/28 must-haves)
+Last session: 2026-01-31
+Stopped at: Completed 05-01-PLAN.md (revenue reconciliation)
 Resume file: None
-Next action: Plan Phase 5 (`/gsd:plan-phase 5`) or discuss context (`/gsd:discuss-phase 5`)
+Next action: Execute 05-02-PLAN.md (ticket count accuracy)
