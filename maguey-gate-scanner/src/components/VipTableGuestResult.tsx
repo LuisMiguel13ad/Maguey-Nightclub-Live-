@@ -16,6 +16,7 @@ import {
   MapPin,
   Phone,
   Calendar,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TableGuestPass, TableReservation } from '@/lib/vip-tables-admin-service';
@@ -26,6 +27,8 @@ interface VipTableGuestResultProps {
     pass?: TableGuestPass;
     reservation?: TableReservation;
     message: string;
+    reentry?: boolean;
+    lastEntryTime?: string;
   };
   onReset: () => void;
 }
@@ -33,6 +36,7 @@ interface VipTableGuestResultProps {
 export const VipTableGuestResult = ({ result, onReset }: VipTableGuestResultProps) => {
   const isValid = result.status === 'valid';
   const isUsed = result.status === 'used';
+  const isReentry = result.reentry === true;
   const { pass, reservation } = result;
 
   const tierColor = {
@@ -88,6 +92,30 @@ export const VipTableGuestResult = ({ result, onReset }: VipTableGuestResultProp
         )}
       </div>
 
+      {/* Re-entry Banner */}
+      {isReentry && result.lastEntryTime && (
+        <div
+          className="w-full py-4 text-center font-bold text-lg sm:text-2xl uppercase tracking-wide"
+          style={{
+            backgroundColor: 'rgba(234, 179, 8, 0.2)',
+            borderBottom: '3px solid #EAB308',
+            color: '#EAB308',
+          }}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <RefreshCw className="h-5 w-5 sm:h-6 sm:w-6" />
+            <span>RE-ENTRY GRANTED</span>
+            <RefreshCw className="h-5 w-5 sm:h-6 sm:w-6" />
+          </div>
+          <div className="text-sm sm:text-base mt-1 text-emerald-100">
+            Last entry: {new Date(result.lastEntryTime).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </div>
+        </div>
+      )}
+
       <CardHeader
         className={cn(
           'text-center py-8 sm:py-10 border-b border-white/10 transition-all duration-300',
@@ -123,7 +151,13 @@ export const VipTableGuestResult = ({ result, onReset }: VipTableGuestResultProp
               : 'text-destructive'
           }`}
         >
-          {isValid ? 'VIP ENTRY GRANTED' : isUsed ? 'ALREADY CHECKED IN' : 'INVALID PASS'}
+          {isValid && isReentry
+            ? 'VIP RE-ENTRY GRANTED'
+            : isValid
+            ? 'VIP ENTRY GRANTED'
+            : isUsed
+            ? 'ALREADY CHECKED IN'
+            : 'INVALID PASS'}
         </h2>
         <p className="text-base sm:text-xl text-foreground/80 px-2">{result.message}</p>
       </CardHeader>
