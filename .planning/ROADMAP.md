@@ -154,11 +154,16 @@ Plans:
   3. Gate scanner interface works smoothly on mobile devices in portrait/landscape
   4. Complete checkout flow from ticket selection to confirmation takes under 60 seconds
   5. All buttons have disabled states during processing to prevent double-submission
-**Plans**: TBD
+**Plans**: 7 plans
 
 Plans:
-- [ ] 07-01: TBD during planning
-- [ ] 07-02: TBD during planning
+- [ ] 07-01-PLAN.md — Shared loading state components (LoadingButton, skeletons, useLoadingState)
+- [ ] 07-02-PLAN.md — Centralized error message utilities (persistent toasts with actions)
+- [ ] 07-03-PLAN.md — Mobile scanner enhancements (wake lock, haptics, offline modal, battery)
+- [ ] 07-04-PLAN.md — Checkout UX components (stepper, form persistence, transitions)
+- [ ] 07-05-PLAN.md — Integrate loading states into maguey-pass-lounge pages
+- [ ] 07-06-PLAN.md — Integrate scanner UX enhancements into Scanner.tsx
+- [ ] 07-07-PLAN.md — Integrate checkout UX enhancements into Checkout.tsx
 
 ### Phase 8: GA End-to-End Testing
 **Goal**: Complete general admission flow validated from purchase to gate entry
@@ -248,7 +253,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 4. VIP System Reliability | 7/7 | Complete | 2026-01-30 |
 | 5. Dashboard Accuracy | 5/5 | Complete | 2026-01-31 |
 | 6. Infrastructure & Monitoring | 5/5 | Complete | 2026-01-31 |
-| 7. UX Polish | 0/TBD | Not started | - |
+| 7. UX Polish | 0/7 | Planned | - |
 | 8. GA End-to-End Testing | 0/TBD | Not started | - |
 | 9. VIP End-to-End Testing | 0/TBD | Not started | - |
 | 10. Load Testing & Performance | 0/TBD | Not started | - |
