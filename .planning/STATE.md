@@ -10,11 +10,20 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 8 of 12 (GA End-to-End Testing)
-Plan: 0 of TBD
-Status: Ready to plan
-Last activity: 2026-01-31 — Completed Phase 7 (UX Polish)
+Plan: 1 of 4
+Status: In progress
+Last activity: 2026-01-31 — Completed 08-01-PLAN.md (Cypress E2E Infrastructure)
 
-Progress: [██████████████████████████████░░] 57.5% (42/73 plans)
+Progress: [██████████████████████████████░░] 58.9% (43/73 plans)
+
+### Phase 8 Plans (In Progress)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 08-01 | Cypress E2E infrastructure setup | 1 | Complete |
+| 08-02 | GA purchase flow E2E tests | 1 | Pending |
+| 08-03 | GA scan flow E2E tests | 1 | Pending |
+| 08-04 | Complete GA flow integration tests | 2 | Pending |
 
 ### Phase 9 Context Decisions (2026-01-31)
 
@@ -109,9 +118,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 41
+- Total plans completed: 43
 - Average duration: 3.1 min
-- Total execution time: 2.2 hours
+- Total execution time: 2.3 hours
 
 **By Phase:**
 
@@ -124,9 +133,10 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 05 | 5 | 16 min | 3.2 min |
 | 06 | 5 | 15 min | 3.0 min |
 | 07 | 7 | 16 min | 2.3 min |
+| 08 | 1 | 4 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 07-07 (3 min), 07-06 (4 min), 07-05 (3 min), 07-04 (2 min), 07-02 (2 min)
+- Last 5 plans: 08-01 (4 min), 07-07 (3 min), 07-06 (4 min), 07-05 (3 min), 07-04 (2 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -259,6 +269,11 @@ Recent decisions affecting current work:
 | 2026-01-31 | 07-07 | Form value priority: user > persisted > empty | Logged-in user data takes precedence over localStorage |
 | 2026-01-31 | 07-07 | showError with retry for checkout errors | All checkout errors include retry callback |
 | 2026-01-31 | 07-07 | Welcome back message for guests with persisted data | Shows when hasPersistedData && !user |
+| 2026-01-31 | 08-01 | Cypress at project root | Cross-app testing requires single Cypress installation at monorepo root |
+| 2026-01-31 | 08-01 | chromeWebSecurity disabled for Stripe | Required for Stripe iframe handling in E2E tests |
+| 2026-01-31 | 08-01 | cy.session for auth caching | Caches authentication across specs to reduce test time |
+| 2026-01-31 | 08-01 | cy.task for Supabase DB operations | Node-side database verification for E2E tests |
+| 2026-01-31 | 08-01 | Video auto-cleanup | Delete videos for passing specs to conserve disk space |
 
 ### Pending Todos
 
@@ -317,8 +332,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Created 09-CONTEXT.md with all implementation decisions
-Resume file: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
-Next action: Run `/gsd:plan-phase 9` to create Phase 9 plans
-
-**Note:** Phase 8 (GA End-to-End Testing) was skipped - user chose to proceed directly to Phase 9 (VIP End-to-End Testing). Phase 8 can be addressed separately if needed.
+Stopped at: Completed 08-01-PLAN.md (Cypress E2E Infrastructure)
+Resume file: `.planning/phases/08-ga-e2e-testing/08-01-SUMMARY.md`
+Next action: Execute 08-02-PLAN.md (GA purchase flow E2E tests)
