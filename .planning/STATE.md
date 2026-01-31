@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 8 of 12 (GA End-to-End Testing)
-Plan: 1 of 4
+Plan: 2 of 4
 Status: In progress
-Last activity: 2026-01-31 — Completed 08-01-PLAN.md (Cypress E2E Infrastructure)
+Last activity: 2026-01-31 — Completed 08-02-PLAN.md (Health Check and CI Pipeline)
 
-Progress: [██████████████████████████████░░] 58.9% (43/73 plans)
+Progress: [██████████████████████████████░░] 60.3% (44/73 plans)
 
 ### Phase 8 Plans (In Progress)
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
 | 08-01 | Cypress E2E infrastructure setup | 1 | Complete |
-| 08-02 | GA purchase flow E2E tests | 1 | Pending |
+| 08-02 | Health check and CI pipeline | 1 | Complete |
 | 08-03 | GA scan flow E2E tests | 1 | Pending |
 | 08-04 | Complete GA flow integration tests | 2 | Pending |
 
@@ -118,9 +118,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 43
+- Total plans completed: 44
 - Average duration: 3.1 min
-- Total execution time: 2.3 hours
+- Total execution time: 2.4 hours
 
 **By Phase:**
 
@@ -133,10 +133,10 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 05 | 5 | 16 min | 3.2 min |
 | 06 | 5 | 15 min | 3.0 min |
 | 07 | 7 | 16 min | 2.3 min |
-| 08 | 1 | 4 min | 4.0 min |
+| 08 | 2 | 6 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 08-01 (4 min), 07-07 (3 min), 07-06 (4 min), 07-05 (3 min), 07-04 (2 min)
+- Last 5 plans: 08-02 (2 min), 08-01 (4 min), 07-07 (3 min), 07-06 (4 min), 07-05 (3 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -274,6 +274,10 @@ Recent decisions affecting current work:
 | 2026-01-31 | 08-01 | cy.session for auth caching | Caches authentication across specs to reduce test time |
 | 2026-01-31 | 08-01 | cy.task for Supabase DB operations | Node-side database verification for E2E tests |
 | 2026-01-31 | 08-01 | Video auto-cleanup | Delete videos for passing specs to conserve disk space |
+| 2026-01-31 | 08-02 | Health checks run first in CI | Fail-fast on environment issues before running test suite |
+| 2026-01-31 | 08-02 | 4 parallel containers with manual split | No Cypress Cloud, manual spec splitting across workers |
+| 2026-01-31 | 08-02 | Build artifacts shared between jobs | Build once, distribute to test containers for efficiency |
+| 2026-01-31 | 08-02 | serve package for CI serving | Static file serving in CI instead of dev servers |
 
 ### Pending Todos
 
@@ -288,6 +292,7 @@ Recent decisions affecting current work:
 - Set up UPSTASH_REDIS_REST_TOKEN environment variable for rate limiting (Phase 6)
 - Set up SENTRY_DSN environment variable in Supabase Dashboard for edge function error tracking (Phase 6)
 - Set up VITE_SENTRY_DSN environment variable in frontend deployments for error tracking (Phase 6)
+- Configure GitHub Secrets for E2E CI (Phase 8): VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, STRIPE_TEST_PK, STRIPE_TEST_SK, SCANNER_TEST_EMAIL, SCANNER_TEST_PASSWORD
 
 ### Blockers/Concerns
 
@@ -332,6 +337,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 08-01-PLAN.md (Cypress E2E Infrastructure)
-Resume file: `.planning/phases/08-ga-e2e-testing/08-01-SUMMARY.md`
-Next action: Execute 08-02-PLAN.md (GA purchase flow E2E tests)
+Stopped at: Completed 08-02-PLAN.md (Health Check and CI Pipeline)
+Resume file: `.planning/phases/08-ga-e2e-testing/08-02-SUMMARY.md`
+Next action: Execute 08-03-PLAN.md (GA scan flow E2E tests)
