@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Calendar,
   MapPin,
-  Loader2,
   Instagram,
   Facebook,
   RefreshCw,
@@ -22,6 +21,8 @@ import { HeroCarousel } from "@/components/HeroCarousel";
 import { CustomCursor } from "@/components/CustomCursor";
 import { AuthButton } from "@/components/AuthButton";
 import { useNewsletter } from "@/hooks/useNewsletter";
+import { EventCardSkeleton } from "@/components/ui/skeleton-card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const genreIcons: Record<string, React.ReactNode> = {
@@ -183,11 +184,42 @@ const Events = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-forest-950">
-        <Loader2 className="w-8 h-8 animate-spin text-copper-400" />
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-500">
-          Initializing System...
-        </p>
+      <div className="min-h-screen bg-forest-950 text-stone-300 overflow-x-hidden">
+        <CustomCursor />
+        <div className="noise-overlay" />
+
+        {/* Navigation skeleton */}
+        <nav className="fixed top-0 left-0 right-0 z-40 px-6 md:px-10 py-8 flex justify-between items-center text-stone-300">
+          <Link to="/" className="font-mono text-xs tracking-[0.2em] uppercase mix-blend-difference z-50 relative group">
+            MAGUEY <span className="text-copper-400">/</span> DE
+          </Link>
+        </nav>
+
+        {/* Hero skeleton */}
+        <header className="relative w-full h-screen overflow-hidden">
+          <div className="absolute inset-0 bg-forest-900/50" />
+          <div className="absolute bottom-20 left-10 right-10 space-y-4">
+            <Skeleton className="h-12 w-96 max-w-full bg-white/5" />
+            <Skeleton className="h-6 w-64 max-w-full bg-white/5" />
+          </div>
+        </header>
+
+        {/* Events section skeleton */}
+        <section className="relative py-32 md:py-48 overflow-hidden border-b border-white/5">
+          <div className="relative z-20 max-w-7xl mx-auto px-6">
+            <div className="flex flex-col md:flex-row justify-between items-end mb-24">
+              <div>
+                <Skeleton className="h-12 w-48 mb-4 bg-white/5" />
+                <Skeleton className="h-4 w-64 bg-white/5" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <EventCardSkeleton key={i} />
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     );
   }
@@ -516,10 +548,10 @@ const Events = () => {
 
                 {/* CTA */}
                 <Link
-                  to="/vip-tables"
+                  to="/events"
                   className="inline-flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.2em] text-bronze-400 hover:text-bronze-500 transition-colors group"
                 >
-                  Reserve Your Table
+                  Browse Events for VIP Tables
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
@@ -727,10 +759,13 @@ const Events = () => {
                   </p>
 
                   <div className="space-y-4">
-                    <Link
-                      to="/vip-tables"
+                    <button
+                      onClick={() => {
+                        setTicketModalOpen(false);
+                        // Scroll to events section where user can select an event for VIP
+                        document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' });
+                      }}
                       className="block w-full py-4 border border-white/10 bg-white/5 hover:bg-white/10 hover:border-bronze-400/50 transition-all text-left px-6 group"
-                      onClick={() => setTicketModalOpen(false)}
                     >
                       <div className="flex justify-between items-center">
                         <span className="font-mono text-[10px] uppercase tracking-widest text-stone-300">
@@ -738,7 +773,8 @@ const Events = () => {
                         </span>
                         <Plus className="text-bronze-400 w-4 h-4" />
                       </div>
-                    </Link>
+                      <p className="text-[9px] text-stone-500 mt-1">Select an event below to view VIP tables</p>
+                    </button>
 
                     {events.length > 0 && (
                       <button
