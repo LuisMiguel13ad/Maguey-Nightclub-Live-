@@ -43,10 +43,10 @@ Requirements for launch readiness. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: Health check endpoints exist for monitoring
-- [ ] **INFRA-02**: Rate limiting prevents API abuse
-- [ ] **INFRA-03**: Error tracking captures production issues (Sentry)
-- [ ] **INFRA-04**: Logs are structured and searchable
+- [x] **INFRA-01**: Health check endpoints exist for monitoring
+- [x] **INFRA-02**: Rate limiting prevents API abuse
+- [x] **INFRA-03**: Error tracking captures production issues (Sentry)
+- [x] **INFRA-04**: Logs are structured and searchable
 
 ### UX Polish
 
@@ -119,10 +119,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DASH-02 | Phase 5 | Complete |
 | DASH-03 | Phase 5 | Complete |
 | DASH-04 | Phase 5 | Complete |
-| INFRA-01 | Phase 6 | Pending |
-| INFRA-02 | Phase 6 | Pending |
-| INFRA-03 | Phase 6 | Pending |
-| INFRA-04 | Phase 6 | Pending |
+| INFRA-01 | Phase 6 | Complete |
+| INFRA-02 | Phase 6 | Complete |
+| INFRA-03 | Phase 6 | Complete |
+| INFRA-04 | Phase 6 | Complete |
 | UX-01 | Phase 7 | Pending |
 | UX-02 | Phase 7 | Pending |
 | UX-03 | Phase 7 | Pending |
@@ -137,4 +137,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-31 after Phase 5 completion*
+*Last updated: 2026-01-31 after Phase 6 completion*

@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Scanner System Hardening** - Validate scanner correctly accepts/rejects QR codes and handles offline mode
 - [x] **Phase 4: VIP System Reliability** - Fix race conditions and ensure correct status transitions
 - [x] **Phase 5: Dashboard Accuracy** - Verify all analytics match source of truth
-- [ ] **Phase 6: Infrastructure & Monitoring** - Add health checks, rate limiting, error tracking, and logging
+- [x] **Phase 6: Infrastructure & Monitoring** - Add health checks, rate limiting, error tracking, and logging
 - [ ] **Phase 7: UX Polish** - Improve loading states, error messages, and mobile experience
 - [ ] **Phase 8: GA End-to-End Testing** - Validate complete GA ticket flow from purchase to gate scan
 - [ ] **Phase 9: VIP End-to-End Testing** - Validate complete VIP reservation flow including guest passes
@@ -138,11 +138,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Health check endpoint (DB, Stripe, Resend, edge functions)
-- [ ] 06-02-PLAN.md — Rate limiting with Upstash Redis (tiered limits)
-- [ ] 06-03-PLAN.md — Sentry integration (frontends + edge functions)
-- [ ] 06-04-PLAN.md — Structured JSON logging with request ID
-- [ ] 06-05-PLAN.md — Email alert digest system (pg_cron + Resend)
+- [x] 06-01-PLAN.md — Health check endpoint (DB, Stripe, Resend, edge functions)
+- [x] 06-02-PLAN.md — Rate limiting with Upstash Redis (tiered limits)
+- [x] 06-03-PLAN.md — Sentry integration (frontends + edge functions)
+- [x] 06-04-PLAN.md — Structured JSON logging with request ID
+- [x] 06-05-PLAN.md — Email alert digest system (pg_cron + Resend)
 
 ### Phase 7: UX Polish
 **Goal**: User experience is smooth with clear feedback during all operations
@@ -247,7 +247,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 3. Scanner System Hardening | 5/5 | Complete | 2026-01-30 |
 | 4. VIP System Reliability | 7/7 | Complete | 2026-01-30 |
 | 5. Dashboard Accuracy | 5/5 | Complete | 2026-01-31 |
-| 6. Infrastructure & Monitoring | 0/5 | Not started | - |
+| 6. Infrastructure & Monitoring | 5/5 | Complete | 2026-01-31 |
 | 7. UX Polish | 0/TBD | Not started | - |
 | 8. GA End-to-End Testing | 0/TBD | Not started | - |
 | 9. VIP End-to-End Testing | 0/TBD | Not started | - |
