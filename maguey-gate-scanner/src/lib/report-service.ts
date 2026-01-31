@@ -895,6 +895,85 @@ export const exportEventOrdersPDF = async (
 };
 
 /**
+ * Interface for discrepancy data
+ */
+export interface DiscrepancyReportData {
+  id: string;
+  checked_at: string;
+  db_revenue: number;
+  stripe_revenue: number;
+  discrepancy_amount: number;
+  discrepancy_percent: number;
+  resolved_at: string | null;
+  resolution_notes: string | null;
+  period_start: string | null;
+  period_end: string | null;
+}
+
+/**
+ * Export revenue discrepancies to CSV
+ */
+export const exportDiscrepanciesCSV = (
+  discrepancies: DiscrepancyReportData[],
+  filename?: string
+): void => {
+  const headers = [
+    "Date Checked",
+    "DB Revenue",
+    "Stripe Revenue",
+    "Discrepancy",
+    "Discrepancy %",
+    "Period Start",
+    "Period End",
+    "Status",
+    "Resolution Notes",
+  ];
+
+  const rows = discrepancies.map(d => [
+    new Date(d.checked_at).toLocaleString(),
+    `$${d.db_revenue.toFixed(2)}`,
+    `$${d.stripe_revenue.toFixed(2)}`,
+    `$${d.discrepancy_amount.toFixed(2)}`,
+    `${d.discrepancy_percent.toFixed(2)}%`,
+    d.period_start ? format(new Date(d.period_start), 'yyyy-MM-dd') : "-",
+    d.period_end ? format(new Date(d.period_end), 'yyyy-MM-dd') : "-",
+    d.resolved_at ? "Resolved" : "Unresolved",
+    d.resolution_notes || "-",
+  ]);
+
+  const csvContent = [
+    headers.join(","),
+    ...rows.map(row =>
+      row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+    ),
+  ].join("\n");
+
+  downloadFile(csvContent, `text/csv;charset=utf-8;`, filename || `revenue-discrepancies-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+};
+
+/**
+ * Fetch revenue discrepancies
+ */
+export const fetchDiscrepancies = async (
+  limit: number = 100
+): Promise<DiscrepancyReportData[]> => {
+  if (!isSupabaseConfigured()) {
+    throw new Error("Supabase is not configured");
+  }
+
+  // Use type assertion since revenue_discrepancies may not be in generated types
+  const { data, error } = await (supabase as any)
+    .from("revenue_discrepancies")
+    .select("*")
+    .order("checked_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return (data || []) as DiscrepancyReportData[];
+};
+
+/**
  * Helper function to download files
  */
 const downloadFile = (content: string, mimeType: string, filename: string): void => {

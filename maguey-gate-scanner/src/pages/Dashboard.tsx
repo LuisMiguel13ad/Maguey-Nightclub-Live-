@@ -38,9 +38,11 @@ import {
   exportScanLogsExcel,
   exportRevenueReportExcel,
   exportStaffPerformanceExcel,
+  exportDiscrepanciesCSV,
   fetchScanLogs,
   fetchRevenueReport,
   fetchStaffPerformance,
+  fetchDiscrepancies,
   type ReportFilters,
 } from "@/lib/report-service";
 import {
@@ -145,7 +147,7 @@ const Dashboard = () => {
   
   // Report export state
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [reportType, setReportType] = useState<'scan-logs' | 'revenue' | 'staff-performance'>('scan-logs');
+  const [reportType, setReportType] = useState<'scan-logs' | 'revenue' | 'staff-performance' | 'discrepancies'>('scan-logs');
   const [exportFormat, setExportFormat] = useState<'csv' | 'pdf' | 'excel'>('csv');
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
@@ -618,10 +620,18 @@ const Dashboard = () => {
       } else if (reportType === 'staff-performance') {
         const staffData = await fetchStaffPerformance(filters);
         exportStaffPerformanceExcel(staffData);
-        
+
         toast({
           title: "Export Successful",
           description: `Exported staff performance report for ${staffData.length} staff members`,
+        });
+      } else if (reportType === 'discrepancies') {
+        const discrepancyData = await fetchDiscrepancies(100);
+        exportDiscrepanciesCSV(discrepancyData);
+
+        toast({
+          title: "Export Successful",
+          description: `Exported ${discrepancyData.length} revenue discrepancy records`,
         });
       }
 
@@ -1573,6 +1583,7 @@ const Dashboard = () => {
                     <SelectItem value="scan-logs">Scan Logs</SelectItem>
                     <SelectItem value="revenue">Revenue Report</SelectItem>
                     <SelectItem value="staff-performance">Staff Performance</SelectItem>
+                    <SelectItem value="discrepancies">Revenue Discrepancies</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
