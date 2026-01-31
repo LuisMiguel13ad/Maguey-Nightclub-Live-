@@ -1,7 +1,30 @@
 import { createRoot } from "react-dom/client";
+import * as Sentry from "@sentry/react";
 import App from "./App.tsx";
 import "./index.css";
-import ErrorBoundary from "./components/ErrorBoundary";
+
+// Initialize Sentry first (before any errors can occur)
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: import.meta.env.MODE || 'development',
+    tracesSampleRate: import.meta.env.MODE === 'production' ? 0.1 : 1.0,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+    ],
+    beforeSend(event, hint) {
+      const error = hint.originalException;
+      // Filter out noisy errors
+      if (error instanceof Error) {
+        if (error.message?.includes('ResizeObserver')) return null;
+        if (error.message?.includes('blocked:mixed-content')) return null;
+      }
+      return event;
+    },
+  });
+  console.log('[Sentry] Initialized');
+}
 
 // Initialize error tracking (with error handling to prevent app crash)
 setTimeout(() => {
@@ -21,12 +44,26 @@ if (!rootElement) {
   try {
     const root = createRoot(rootElement);
     root.render(
-      <ErrorBoundary>
+      <Sentry.ErrorBoundary fallback={
+        <div style={{padding: '2rem', fontFamily: 'sans-serif', background: '#000', color: '#fff', minHeight: '100vh'}}>
+          <h1 style={{color: '#ff6b6b'}}>Something went wrong</h1>
+          <p style={{color: '#888'}}>The application encountered an error. Please refresh the page.</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{padding: '0.5rem 1rem', background: '#6366f1', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginTop: '1rem'}}
+          >
+            Reload Page
+          </button>
+        </div>
+      }>
         <App />
-      </ErrorBoundary>
+      </Sentry.ErrorBoundary>
     );
   } catch (error) {
     console.error("Failed to render app:", error);
+    if (sentryDsn) {
+      Sentry.captureException(error);
+    }
     rootElement.innerHTML = `
       <div style="padding: 2rem; font-family: sans-serif; background: #000; color: #fff; min-height: 100vh;">
         <h1 style="color: #ff6b6b;">Error Loading Application</h1>
