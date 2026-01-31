@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 4 of 12 (VIP System Reliability) - IN PROGRESS
-Plan: 5 of 7 complete
+Plan: 6 of 7 complete
 Status: Wave 2 in progress
-Last activity: 2026-01-31 — Completed 04-05-PLAN.md (VIP scanner re-entry UI)
+Last activity: 2026-01-31 — Completed 04-07-PLAN.md (Unified VIP checkout)
 
-Progress: [████████████████████░░] 30.1% (22/73 plans)
+Progress: [████████████████████░░] 31.5% (23/73 plans)
 
 ### Phase 4 Plans
 
@@ -26,7 +26,7 @@ Progress: [████████████████████░░] 3
 | 04-04 | Owner event cancellation (bulk refund flow) | 2 | Complete |
 | 04-05 | VIP scanner re-entry UI | 2 | Complete |
 | 04-06 | GA scanner VIP link detection | 3 | Pending |
-| 04-07 | Unified VIP checkout (GA + VIP in single purchase) | 2 | Pending |
+| 04-07 | Unified VIP checkout (GA + VIP in single purchase) | 2 | Complete |
 
 ### Phase 3 Plans
 
@@ -63,9 +63,9 @@ Progress: [████████████████████░░] 3
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 22
+- Total plans completed: 23
 - Average duration: 3.5 min
-- Total execution time: 1.33 hours
+- Total execution time: 1.45 hours
 
 **By Phase:**
 
@@ -74,11 +74,11 @@ Progress: [████████████████████░░] 3
 | 01 | 6 | 21 min | 3.5 min |
 | 02 | 6 | 18 min | 3.0 min |
 | 03 | 5 | 41 min | 8.2 min |
-| 04 | 5 | 14 min | 2.8 min |
+| 04 | 6 | 21 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-05 (3 min), 04-04 (3 min), 04-03 (3 min), 04-02 (3 min), 04-01 (2 min)
-- Trend: Phase 4 extremely fast (focused UI and infrastructure changes)
+- Last 5 plans: 04-07 (7 min), 04-05 (3 min), 04-04 (3 min), 04-03 (3 min), 04-02 (3 min)
+- Trend: Phase 4 fast execution (focused database and UI changes)
 
 *Updated after each plan completion*
 
@@ -147,6 +147,11 @@ Recent decisions affecting current work:
 | 2026-01-30 | 04-03 | Floor plan component self-contained | VIPTableFloorPlan fetches own data via useRealtimeFloorPlan hook |
 | 2026-01-30 | 04-03 | Dual subscription approach | Subscribe to both vip_reservations (*) and event_vip_tables (UPDATE) |
 | 2026-01-30 | 04-03 | Visual "Live" indicator | Pulsing green dot shows realtime subscriptions are active |
+| 2026-01-31 | 04-07 | VIP purchaser MUST buy GA ticket | Context requirement enforced via required field validation in UI and edge function |
+| 2026-01-31 | 04-07 | Unified QR code for entry + VIP host | GA ticket and VIP reservation share same qr_code_token for seamless check-in |
+| 2026-01-31 | 04-07 | Auto-select first ticket tier | Reduces friction while maintaining required field constraint |
+| 2026-01-31 | 04-07 | Rollback on Stripe failure | Delete ticket and reservation if payment intent creation fails |
+| 2026-01-31 | 04-07 | vip_unified payment intent type | Metadata distinguishes unified checkouts from legacy VIP-only for webhook routing |
 | 2026-01-31 | 04-04 | Events can only be cancelled before they start | Datetime check prevents cancellation of active events |
 | 2026-01-31 | 04-04 | Only confirmed and checked_in reservations refundable | Pending reservations have no payment to refund |
 | 2026-01-31 | 04-04 | Refund reason set to 'requested_by_customer' | Standard Stripe practice for event cancellations |
@@ -183,6 +188,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 04-05-PLAN.md - VIP scanner re-entry UI
+Stopped at: Completed 04-07-PLAN.md - Unified VIP checkout
 Resume file: None
 Next action: Execute Phase 4 plan 06 (`/gsd:execute-plan 04 06`)
