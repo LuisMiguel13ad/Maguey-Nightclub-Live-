@@ -2,15 +2,17 @@
 
 ## New Ports
 
-### Purchase Site (maguey-pass-lounge)
-- **Old Port:** 5173
-- **New Port:** 3010
-- **URL:** `http://localhost:3010`
+### Main Site (maguey-nights)
+- **Port:** 3017
+- **URL:** `http://localhost:3017`
 
-### Scanner Site (maguey-gate-scanner)
-- **Old Port:** 3005 (or 5174 if 3005 was in use)
-- **New Port:** 3011
-- **URL:** `http://localhost:3011`
+### Purchase Site (maguey-pass-lounge)
+- **Port:** 3016
+- **URL:** `http://localhost:3016`
+
+### Scanner/Owner Site (maguey-gate-scanner)
+- **Port:** 3015
+- **URL:** `http://localhost:3015`
 
 ## Next Steps
 
@@ -28,13 +30,15 @@
    ```
 
 3. **Access the sites:**
-   - Purchase: `http://localhost:3010`
-   - Scanner: `http://localhost:3011`
+   - Main Site: `http://localhost:3017`
+   - Purchase: `http://localhost:3016`
+   - Scanner: `http://localhost:3015`
 
 ## Changes Made
 
-- Updated `maguey-pass-lounge/vite.config.ts` - port changed to 3010
-- Updated `maguey-gate-scanner/vite.config.ts` - port changed to 3011
+- Updated `maguey-nights/vite.config.ts` - port set to 3017
+- Updated `maguey-pass-lounge/vite.config.ts` - port set to 3016
+- Updated `maguey-gate-scanner/vite.config.ts` - port set to 3015
 
 
 
