@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 4 of 12 (VIP System Reliability) - IN PROGRESS
-Plan: 6 of 7 complete
-Status: Wave 2 in progress
-Last activity: 2026-01-31 — Completed 04-07-PLAN.md (Unified VIP checkout)
+Plan: 7 of 7 complete
+Status: Phase 4 complete
+Last activity: 2026-01-31 — Completed 04-06-PLAN.md (GA scanner VIP link detection)
 
-Progress: [████████████████████░░] 31.5% (23/73 plans)
+Progress: [████████████████████░░] 32.9% (24/73 plans)
 
 ### Phase 4 Plans
 
@@ -25,7 +25,7 @@ Progress: [████████████████████░░] 3
 | 04-03 | Realtime floor plan updates (Supabase subscriptions) | 1 | Complete |
 | 04-04 | Owner event cancellation (bulk refund flow) | 2 | Complete |
 | 04-05 | VIP scanner re-entry UI | 2 | Complete |
-| 04-06 | GA scanner VIP link detection | 3 | Pending |
+| 04-06 | GA scanner VIP link detection | 3 | Complete |
 | 04-07 | Unified VIP checkout (GA + VIP in single purchase) | 2 | Complete |
 
 ### Phase 3 Plans
@@ -63,9 +63,9 @@ Progress: [████████████████████░░] 3
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23
-- Average duration: 3.5 min
-- Total execution time: 1.45 hours
+- Total plans completed: 24
+- Average duration: 3.6 min
+- Total execution time: 1.52 hours
 
 **By Phase:**
 
@@ -74,11 +74,11 @@ Progress: [████████████████████░░] 3
 | 01 | 6 | 21 min | 3.5 min |
 | 02 | 6 | 18 min | 3.0 min |
 | 03 | 5 | 41 min | 8.2 min |
-| 04 | 6 | 21 min | 3.5 min |
+| 04 | 7 | 26 min | 3.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-07 (7 min), 04-05 (3 min), 04-04 (3 min), 04-03 (3 min), 04-02 (3 min)
-- Trend: Phase 4 fast execution (focused database and UI changes)
+- Last 5 plans: 04-06 (5 min), 04-07 (7 min), 04-05 (3 min), 04-04 (3 min), 04-03 (3 min)
+- Trend: Phase 4 consistent fast execution (database and UI changes)
 
 *Updated after each plan completion*
 
@@ -161,6 +161,10 @@ Recent decisions affecting current work:
 | 2026-01-31 | 04-05 | Re-entry shown with gold 'RE-ENTRY GRANTED' banner and green success overlay | Re-entry preserves positive UX while being visually distinct |
 | 2026-01-31 | 04-05 | Linked guests detected by guest_number === 0 | Differentiates GA tickets linked to VIP tables |
 | 2026-01-31 | 04-05 | Last entry time formatted as HH:MM | Quick scanning readability for VIP staff |
+| 2026-01-31 | 04-06 | VIP-linked GA tickets get re-entry privilege | Per 04-CONTEXT.md re-entry policy: VIP perk extends to linked guests |
+| 2026-01-31 | 04-06 | Regular GA tickets remain one-time entry | Non-linked GA rejected on second scan to maintain standard policy |
+| 2026-01-31 | 04-06 | Atomic guest count updates with row locking | increment_vip_checked_in uses FOR UPDATE to prevent race conditions |
+| 2026-01-31 | 04-06 | Re-entry shows gold banner with VIP table info | Consistent with 04-05 VIP scanner re-entry UI pattern |
 
 ### Pending Todos
 
@@ -188,6 +192,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 04-07-PLAN.md - Unified VIP checkout
+Stopped at: Completed 04-06-PLAN.md - GA scanner VIP link detection
 Resume file: None
-Next action: Execute Phase 4 plan 06 (`/gsd:execute-plan 04 06`)
+Next action: Phase 4 complete. Review phase or move to Phase 5 (`/gsd:review-phase 04` or `/gsd:start-phase 05`)
