@@ -1,6 +1,15 @@
 -- VIP End-to-End Test Data Seed Script
 -- Creates complete VIP test scenario with predictable data for E2E testing
--- Idempotent: Can be run multiple times without errors
+--
+-- IMPORTANT: Run via TypeScript script for best results:
+--   npx tsx scripts/apply-vip-seed.ts
+--
+-- Or copy this SQL to Supabase SQL Editor (remove \echo commands first)
+--
+-- Schema verified against actual database 2026-01-31:
+-- - events: event_date, event_time (NOT date, time)
+-- - event_vip_tables: price_cents, display_order, table_template_id (required)
+-- - vip_guest_passes: qr_token, pass_number, scanned_at (NOT qr_code_token)
 
 -- ============================================================================
 -- Test Event (30 days in future to ensure active)
@@ -8,15 +17,17 @@
 INSERT INTO events (
   id,
   name,
-  date,
-  time,
+  event_date,
+  event_time,
   genre,
   venue_name,
+  venue_address,
   city,
-  state,
   description,
   image_url,
-  status
+  is_active,
+  status,
+  vip_enabled
 )
 VALUES (
   '99999999-9999-9999-9999-999999999999',
@@ -25,63 +36,84 @@ VALUES (
   '22:00:00',
   'Reggaeton',
   'Test Venue',
+  '123 Test Street',
   'Test City',
-  'CA',
   'Test event for VIP end-to-end testing',
   'https://via.placeholder.com/800x600',
-  'published'
+  true,
+  'published',
+  true
 )
 ON CONFLICT (id) DO UPDATE SET
-  date = EXCLUDED.date,
+  event_date = EXCLUDED.event_date,
+  is_active = true,
   status = 'published',
+  vip_enabled = true,
   updated_at = NOW();
 
 -- ============================================================================
 -- VIP Tables (3 tiers for testing)
+-- Using actual schema: price_cents, display_order, table_template_id
 -- ============================================================================
 INSERT INTO event_vip_tables (
   id,
   event_id,
-  table_name,
+  table_template_id,
+  table_number,
   tier,
-  price,
-  guest_capacity,
-  is_active,
-  description
+  price_cents,
+  capacity,
+  bottles_included,
+  champagne_included,
+  package_description,
+  is_available,
+  display_order
 )
 VALUES
   (
     '11111111-1111-1111-1111-111111111111',
     '99999999-9999-9999-9999-999999999999',
-    'Test Premium Table',
+    'a813606e-0047-4bcf-8154-fa3b52c7518d',  -- Existing template (premium)
+    101,
     'premium',
-    750.00,
+    75000,  -- $750.00 in cents
     8,
+    2,
+    0,
+    'Premium test table with 8 guest capacity',
     true,
-    'Premium test table with 8 guest capacity'
+    1
   ),
   (
     '22222222-2222-2222-2222-222222222222',
     '99999999-9999-9999-9999-999999999999',
-    'Test Front Row Table',
+    'bb202b77-2595-461d-8daf-ec4f5018fc4c',  -- Existing template (front_row)
+    102,
     'front_row',
-    700.00,
+    70000,  -- $700.00 in cents
     6,
+    1,
+    0,
+    'Front row test table with 6 guest capacity',
     true,
-    'Front row test table with 6 guest capacity'
+    2
   ),
   (
     '33333333-3333-3333-3333-333333333333',
     '99999999-9999-9999-9999-999999999999',
-    'Test Standard Table',
+    '3961a80a-1b1d-4333-a968-3c65534a2953',  -- Existing template
+    103,
     'standard',
-    600.00,
+    60000,  -- $600.00 in cents
     6,
+    1,
+    0,
+    'Standard test table with 6 guest capacity',
     true,
-    'Standard test table with 6 guest capacity'
+    3
   )
 ON CONFLICT (id) DO UPDATE SET
-  is_active = true,
+  is_available = true,
   updated_at = NOW();
 
 -- ============================================================================
@@ -90,202 +122,75 @@ ON CONFLICT (id) DO UPDATE SET
 INSERT INTO vip_reservations (
   id,
   event_id,
-  table_id,
+  event_vip_table_id,
+  table_number,
   status,
-  host_name,
-  host_email,
-  host_phone,
-  total_guests,
+  purchaser_name,
+  purchaser_email,
+  purchaser_phone,
   checked_in_guests,
   stripe_payment_intent_id,
-  total_amount,
+  amount_paid_cents,
   qr_code_token,
-  qr_signature
+  package_snapshot,
+  disclaimer_accepted_at,
+  refund_policy_accepted_at
 )
 VALUES (
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   '99999999-9999-9999-9999-999999999999',
   '11111111-1111-1111-1111-111111111111',
+  101,
   'confirmed',
   'Test VIP Host',
   '[email protected]',
   '+15555555555',
-  8,
   0,
   'pi_test_vip_e2e_12345',
-  750.00,
+  75000,
   'VIP-RESERVATION-TEST-001',
-  encode(hmac('VIP-RESERVATION-TEST-001', 'test-secret', 'sha256'), 'hex')
+  '{"guestCount": 8, "tier": "premium", "tableName": "Test Premium Table"}'::jsonb,
+  NOW(),
+  NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
   status = 'confirmed',
   checked_in_guests = 0,
   updated_at = NOW();
 
+-- Mark table as unavailable after reservation
+UPDATE event_vip_tables
+SET is_available = false, updated_at = NOW()
+WHERE id = '11111111-1111-1111-1111-111111111111';
+
 -- ============================================================================
 -- VIP Guest Passes (8 guests with predictable QR tokens)
--- Using generate_series for scalability
+-- Using actual schema: qr_token (NOT qr_code_token), pass_number (NOT guest_number)
 -- ============================================================================
+
+-- Delete existing test passes to ensure clean state
+DELETE FROM vip_guest_passes
+WHERE reservation_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+-- Insert 8 guest passes
 INSERT INTO vip_guest_passes (
-  id,
   reservation_id,
-  guest_number,
+  event_id,
+  pass_number,
+  pass_type,
   qr_token,
   qr_signature,
   status
 )
 SELECT
-  gen_random_uuid(),
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+  '99999999-9999-9999-9999-999999999999',
   gs.n,
+  'guest',
   'VIP-TEST-GUEST-' || LPAD(gs.n::text, 2, '0'),
-  encode(hmac('VIP-TEST-GUEST-' || LPAD(gs.n::text, 2, '0'), 'test-secret', 'sha256'), 'hex'),
+  'test-signature-' || LPAD(gs.n::text, 2, '0'),
   'active'
-FROM generate_series(1, 8) AS gs(n)
-ON CONFLICT (qr_token) DO UPDATE SET
-  status = 'active',
-  scanned_at = NULL,
-  scanned_by = NULL;
-
--- ============================================================================
--- GA Ticket Tier (for linked tickets)
--- ============================================================================
-INSERT INTO ticket_tiers (
-  id,
-  event_id,
-  name,
-  price,
-  quantity,
-  available_quantity,
-  description
-)
-VALUES (
-  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-  '99999999-9999-9999-9999-999999999999',
-  'General Admission - Test',
-  25.00,
-  100,
-  96, -- 3 linked + 1 regular = 4 sold
-  'Test GA tier for VIP linking'
-)
-ON CONFLICT (id) DO UPDATE SET
-  available_quantity = 96;
-
--- ============================================================================
--- Linked GA Tickets (3 tickets with VIP re-entry privilege)
--- These tickets are linked to VIP reservation via vip_linked_tickets
--- ============================================================================
-INSERT INTO tickets (
-  id,
-  event_id,
-  tier_id,
-  qr_code_token,
-  qr_signature,
-  buyer_name,
-  buyer_email,
-  status,
-  stripe_payment_intent_id,
-  price_paid
-)
-VALUES
-  (
-    'cccccccc-1111-cccc-cccc-cccccccccccc',
-    '99999999-9999-9999-9999-999999999999',
-    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    'GA-VIP-LINKED-01',
-    encode(hmac('GA-VIP-LINKED-01', 'test-secret', 'sha256'), 'hex'),
-    'Test VIP Guest 1',
-    '[email protected]',
-    'valid',
-    'pi_test_ga_linked_01',
-    25.00
-  ),
-  (
-    'cccccccc-2222-cccc-cccc-cccccccccccc',
-    '99999999-9999-9999-9999-999999999999',
-    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    'GA-VIP-LINKED-02',
-    encode(hmac('GA-VIP-LINKED-02', 'test-secret', 'sha256'), 'hex'),
-    'Test VIP Guest 2',
-    '[email protected]',
-    'valid',
-    'pi_test_ga_linked_02',
-    25.00
-  ),
-  (
-    'cccccccc-3333-cccc-cccc-cccccccccccc',
-    '99999999-9999-9999-9999-999999999999',
-    'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    'GA-VIP-LINKED-03',
-    encode(hmac('GA-VIP-LINKED-03', 'test-secret', 'sha256'), 'hex'),
-    'Test VIP Guest 3',
-    '[email protected]',
-    'valid',
-    'pi_test_ga_linked_03',
-    25.00
-  )
-ON CONFLICT (qr_code_token) DO UPDATE SET
-  status = 'valid',
-  scanned_at = NULL,
-  scanned_by = NULL;
-
--- ============================================================================
--- Link GA Tickets to VIP Reservation
--- ============================================================================
-INSERT INTO vip_linked_tickets (
-  id,
-  reservation_id,
-  ticket_id
-)
-VALUES
-  (
-    gen_random_uuid(),
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'cccccccc-1111-cccc-cccc-cccccccccccc'
-  ),
-  (
-    gen_random_uuid(),
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'cccccccc-2222-cccc-cccc-cccccccccccc'
-  ),
-  (
-    gen_random_uuid(),
-    'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'cccccccc-3333-cccc-cccc-cccccccccccc'
-  )
-ON CONFLICT (ticket_id) DO NOTHING;
-
--- ============================================================================
--- Regular GA Ticket (for comparison testing - no VIP link)
--- ============================================================================
-INSERT INTO tickets (
-  id,
-  event_id,
-  tier_id,
-  qr_code_token,
-  qr_signature,
-  buyer_name,
-  buyer_email,
-  status,
-  stripe_payment_intent_id,
-  price_paid
-)
-VALUES (
-  'dddddddd-dddd-dddd-dddd-dddddddddddd',
-  '99999999-9999-9999-9999-999999999999',
-  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-  'GA-REGULAR-TEST-01',
-  encode(hmac('GA-REGULAR-TEST-01', 'test-secret', 'sha256'), 'hex'),
-  'Test Regular Customer',
-  '[email protected]',
-  'valid',
-  'pi_test_ga_regular_01',
-  25.00
-)
-ON CONFLICT (qr_code_token) DO UPDATE SET
-  status = 'valid',
-  scanned_at = NULL,
-  scanned_by = NULL;
+FROM generate_series(1, 8) AS gs(n);
 
 -- ============================================================================
 -- Output QR Tokens for Manual Testing
@@ -311,31 +216,10 @@ WHERE id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 SELECT
   'VIP Guest Pass' AS type,
   qr_token AS token,
-  'Guest #' || guest_number || ' of 8' AS purpose
+  'Guest #' || pass_number || ' of 8' AS purpose
 FROM vip_guest_passes
 WHERE reservation_id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-ORDER BY guest_number;
-
-\echo ''
-
--- Linked GA Tickets
-SELECT
-  'GA Ticket (VIP Linked)' AS type,
-  qr_code_token AS token,
-  'Re-entry allowed via VIP link' AS purpose
-FROM tickets
-WHERE qr_code_token LIKE 'GA-VIP-LINKED-%'
-ORDER BY qr_code_token;
-
-\echo ''
-
--- Regular GA Ticket
-SELECT
-  'GA Ticket (Regular)' AS type,
-  qr_code_token AS token,
-  'One-time entry only' AS purpose
-FROM tickets
-WHERE qr_code_token = 'GA-REGULAR-TEST-01';
+ORDER BY pass_number;
 
 \echo ''
 \echo '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
@@ -344,9 +228,8 @@ WHERE qr_code_token = 'GA-REGULAR-TEST-01';
 
 SELECT
   name,
-  date,
-  time,
-  status,
+  event_date,
+  event_time,
   'Event ID: 99999999-9999-9999-9999-999999999999' AS note
 FROM events
 WHERE id = '99999999-9999-9999-9999-999999999999';
@@ -373,13 +256,17 @@ VIP Guest Passes (8):
   VIP-TEST-GUEST-07
   VIP-TEST-GUEST-08
 
-GA Tickets with VIP Re-entry (3):
-  GA-VIP-LINKED-01
-  GA-VIP-LINKED-02
-  GA-VIP-LINKED-03
+===============================================================================
+USAGE
+===============================================================================
 
-Regular GA Ticket (1):
-  GA-REGULAR-TEST-01
+Recommended: Run via TypeScript script:
+  npx tsx scripts/apply-vip-seed.ts
+
+Alternative: Copy SQL (excluding \echo) to Supabase SQL Editor
+
+Scanner Testing:
+  http://localhost:3017/scanner?qr=VIP-TEST-GUEST-01
 
 ===============================================================================
 */
