@@ -193,10 +193,16 @@ Plans:
   3. VIP QR code scans successfully and marks reservation as checked-in
   4. Guest passes link correctly and scan independently at gate
   5. Multiple concurrent checkins for same reservation handled correctly
-**Plans**: TBD
+**Plans**: 7 plans
 
 Plans:
-- [ ] 09-01: TBD during planning
+- [ ] 09-01-PLAN.md — Migration verification and seed data setup
+- [ ] 09-02-PLAN.md — Playwright: VIP checkout E2E test
+- [ ] 09-03-PLAN.md — Playwright: Floor plan realtime updates test
+- [ ] 09-04-PLAN.md — Manual UAT: VIP scanner flows (first entry, re-entry)
+- [ ] 09-05-PLAN.md — Manual UAT: GA ticket with VIP link re-entry
+- [ ] 09-06-PLAN.md — Concurrency test: Multiple simultaneous check-ins
+- [ ] 09-07-PLAN.md — Email delivery verification
 
 ### Phase 10: Load Testing & Performance
 **Goal**: System handles production-level traffic without degradation
@@ -258,7 +264,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 6. Infrastructure & Monitoring | 5/5 | Complete | 2026-01-31 |
 | 7. UX Polish | 0/7 | Planned | - |
 | 8. GA End-to-End Testing | 0/4 | Planned | - |
-| 9. VIP End-to-End Testing | 0/TBD | Not started | - |
+| 9. VIP End-to-End Testing | 0/7 | Planned | - |
 | 10. Load Testing & Performance | 0/TBD | Not started | - |
 | 11. Error Handling & Recovery | 0/TBD | Not started | - |
 | 12. Launch Readiness Review | 0/TBD | Not started | - |
