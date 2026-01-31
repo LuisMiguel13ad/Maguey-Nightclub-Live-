@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 4 of 12 (VIP System Reliability) - IN PROGRESS
-Plan: 3 of 7 complete
-Status: Executing Wave 1
-Last activity: 2026-01-30 — Completed 04-03-PLAN.md (Realtime floor plan updates)
+Plan: 4 of 7 complete
+Status: Wave 1 complete, executing Wave 2
+Last activity: 2026-01-31 — Completed 04-04-PLAN.md (Owner event cancellation with bulk refunds)
 
-Progress: [████████████████████░░] 27.4% (20/73 plans)
+Progress: [████████████████████░░] 28.8% (21/73 plans)
 
 ### Phase 4 Plans
 
@@ -23,7 +23,7 @@ Progress: [████████████████████░░] 2
 | 04-01 | State transition enforcement (forward-only DB trigger) | 1 | Complete |
 | 04-02 | Re-entry detection (VIP scan with re-entry support) | 1 | Complete |
 | 04-03 | Realtime floor plan updates (Supabase subscriptions) | 1 | Complete |
-| 04-04 | Owner event cancellation (bulk refund flow) | 2 | Pending |
+| 04-04 | Owner event cancellation (bulk refund flow) | 2 | Complete |
 | 04-05 | VIP scanner re-entry UI | 2 | Pending |
 | 04-06 | GA scanner VIP link detection | 3 | Pending |
 | 04-07 | Unified VIP checkout (GA + VIP in single purchase) | 2 | Pending |
@@ -63,9 +63,9 @@ Progress: [████████████████████░░] 2
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
-- Average duration: 3.7 min
-- Total execution time: 1.23 hours
+- Total plans completed: 21
+- Average duration: 3.6 min
+- Total execution time: 1.28 hours
 
 **By Phase:**
 
@@ -74,11 +74,11 @@ Progress: [████████████████████░░] 2
 | 01 | 6 | 21 min | 3.5 min |
 | 02 | 6 | 18 min | 3.0 min |
 | 03 | 5 | 41 min | 8.2 min |
-| 04 | 3 | 8 min | 2.7 min |
+| 04 | 4 | 11 min | 2.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (3 min), 04-02 (3 min), 04-01 (2 min), 03-05 (25 min), 03-04 (4 min)
-- Trend: Phase 4 Wave 1 very fast (focused database and realtime changes)
+- Last 5 plans: 04-04 (3 min), 04-03 (3 min), 04-02 (3 min), 04-01 (2 min), 03-05 (25 min)
+- Trend: Phase 4 extremely fast (focused infrastructure changes)
 
 *Updated after each plan completion*
 
@@ -147,6 +147,12 @@ Recent decisions affecting current work:
 | 2026-01-30 | 04-03 | Floor plan component self-contained | VIPTableFloorPlan fetches own data via useRealtimeFloorPlan hook |
 | 2026-01-30 | 04-03 | Dual subscription approach | Subscribe to both vip_reservations (*) and event_vip_tables (UPDATE) |
 | 2026-01-30 | 04-03 | Visual "Live" indicator | Pulsing green dot shows realtime subscriptions are active |
+| 2026-01-31 | 04-04 | Events can only be cancelled before they start | Datetime check prevents cancellation of active events |
+| 2026-01-31 | 04-04 | Only confirmed and checked_in reservations refundable | Pending reservations have no payment to refund |
+| 2026-01-31 | 04-04 | Refund reason set to 'requested_by_customer' | Standard Stripe practice for event cancellations |
+| 2026-01-31 | 04-04 | All tables reset to available after cancellation | Allows table reuse if event rescheduled |
+| 2026-01-31 | 04-04 | Event cancellation_status column added | Tracks active vs cancelled events separately from other statuses |
+| 2026-01-31 | 04-04 | Individual refund failures don't block others | Graceful degradation allows partial success scenarios |
 
 ### Pending Todos
 
@@ -173,7 +179,7 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 
 ## Session Continuity
 
-Last session: 2026-01-30
-Stopped at: Completed 04-03-PLAN.md - Realtime floor plan updates
+Last session: 2026-01-31
+Stopped at: Completed 04-04-PLAN.md - Owner event cancellation with bulk refunds
 Resume file: None
-Next action: Execute Phase 4 plan 04 (`/gsd:execute-plan 04 04`)
+Next action: Execute Phase 4 plan 05 (`/gsd:execute-plan 04 05`)
