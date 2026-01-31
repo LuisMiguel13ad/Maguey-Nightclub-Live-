@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 8 of 12 (GA End-to-End Testing)
-Plan: 3 of 4
-Status: In progress
-Last activity: 2026-01-31 — Completed 08-03-PLAN.md (GA Happy Path E2E Tests)
+Plan: 4 of 4
+Status: Complete
+Last activity: 2026-01-31 — Completed 08-04-PLAN.md (Edge Case and Offline E2E Tests)
 
-Progress: [██████████████████████████████░░] 61.6% (45/73 plans)
+Progress: [██████████████████████████████░░] 63.0% (46/73 plans)
 
-### Phase 8 Plans (In Progress)
+### Phase 8 Plans (Complete)
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
 | 08-01 | Cypress E2E infrastructure setup | 1 | Complete |
 | 08-02 | Health check and CI pipeline | 1 | Complete |
 | 08-03 | GA happy path E2E tests | 1 | Complete |
-| 08-04 | Complete GA flow integration tests | 2 | Pending |
+| 08-04 | Edge case and offline E2E tests | 2 | Complete |
 
 ### Phase 9 Context Decisions (2026-01-31)
 
@@ -118,9 +118,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 45
+- Total plans completed: 46
 - Average duration: 3.1 min
-- Total execution time: 2.4 hours
+- Total execution time: 2.5 hours
 
 **By Phase:**
 
@@ -133,10 +133,10 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 05 | 5 | 16 min | 3.2 min |
 | 06 | 5 | 15 min | 3.0 min |
 | 07 | 7 | 16 min | 2.3 min |
-| 08 | 3 | 8 min | 2.7 min |
+| 08 | 4 | 11 min | 2.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 08-03 (2 min), 08-02 (2 min), 08-01 (4 min), 07-07 (3 min), 07-06 (4 min)
+- Last 5 plans: 08-04 (3 min), 08-03 (2 min), 08-02 (2 min), 08-01 (4 min), 07-07 (3 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -282,6 +282,10 @@ Recent decisions affecting current work:
 | 2026-01-31 | 08-03 | Direct REST API for email_queue | Query Supabase directly via cy.request() for faster verification |
 | 2026-01-31 | 08-03 | cy.origin args passing | All variables needed inside origin callback passed via args object |
 | 2026-01-31 | 08-03 | this.skip() for conditional tests | Skip scan tests gracefully if test ticket creation fails |
+| 2026-01-31 | 08-04 | fillStripeDeclined for payment failure tests | Reuse existing custom command instead of raw iframe manipulation |
+| 2026-01-31 | 08-04 | cy.intercept forceNetworkError for offline | Simulate network failure via Cypress intercept rather than browser DevTools |
+| 2026-01-31 | 08-04 | Flexible selectors for UI variations | Multiple selector patterns accommodate different UI implementations |
+| 2026-01-31 | 08-04 | Direct scanner URL navigation | Visit scannerUrl/auth instead of cy.origin for cleaner cross-app testing |
 
 ### Pending Todos
 
@@ -341,6 +345,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 08-03-PLAN.md (GA Happy Path E2E Tests)
-Resume file: `.planning/phases/08-ga-e2e-testing/08-03-SUMMARY.md`
-Next action: Execute 08-04-PLAN.md (Complete GA flow integration tests)
+Stopped at: Completed 08-04-PLAN.md (Edge Case and Offline E2E Tests) - Phase 8 Complete
+Resume file: `.planning/phases/08-ga-e2e-testing/08-04-SUMMARY.md`
+Next action: Begin Phase 9 (VIP End-to-End Testing)
