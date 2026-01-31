@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 5 of 12 (Dashboard Accuracy) - IN PROGRESS
-Plan: 1 of 5 complete
+Plan: 2 of 5 complete
 Status: Executing
-Last activity: 2026-01-31 — Completed 05-01-PLAN.md (revenue reconciliation)
+Last activity: 2026-01-31 — Completed 05-02-PLAN.md (realtime infrastructure)
 
-Progress: [█████████████████████░░] 34.2% (25/73 plans)
+Progress: [██████████████████████░░] 35.6% (26/73 plans)
 
 ### Phase 5 Plans
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
 | 05-01 | Revenue discrepancies audit table + verify-revenue Edge Function | 1 | Complete |
-| 05-02 | Ticket count accuracy checks | 1 | Pending |
+| 05-02 | LiveIndicator + useDashboardRealtime hook | 1 | Complete |
 | 05-03 | VIP reservation status sync | 1 | Pending |
 | 05-04 | Real-time dashboard updates | 2 | Pending |
 | 05-05 | Event sync timing validation | 2 | Pending |
@@ -73,9 +73,9 @@ Progress: [█████████████████████░░
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25
+- Total plans completed: 26
 - Average duration: 3.5 min
-- Total execution time: 1.60 hours
+- Total execution time: 1.67 hours
 
 **By Phase:**
 
@@ -85,10 +85,10 @@ Progress: [█████████████████████░░
 | 02 | 6 | 18 min | 3.0 min |
 | 03 | 5 | 41 min | 8.2 min |
 | 04 | 7 | 26 min | 3.7 min |
-| 05 | 1 | 4 min | 4.0 min |
+| 05 | 2 | 8 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (4 min), 04-06 (5 min), 04-07 (7 min), 04-05 (3 min), 04-04 (3 min)
+- Last 5 plans: 05-02 (4 min), 05-01 (4 min), 04-06 (5 min), 04-07 (7 min), 04-05 (3 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -179,6 +179,10 @@ Recent decisions affecting current work:
 | 2026-01-31 | 05-01 | $1 discrepancy threshold for logging | Per RESEARCH.md - small timing discrepancies are normal |
 | 2026-01-31 | 05-01 | Service role INSERT only for revenue_discrepancies | Prevents unauthorized discrepancy injection |
 | 2026-01-31 | 05-01 | Authenticated SELECT/UPDATE for revenue_discrepancies | Owners need to view and mark resolved |
+| 2026-01-31 | 05-02 | Pulsing green dot with animate-ping | Visual live indicator consistent with existing UI |
+| 2026-01-31 | 05-02 | Visibility change triggers full data refresh | Catch up on missed updates when tab regains focus |
+| 2026-01-31 | 05-02 | Channel names include timestamp | Prevent stale subscription conflicts |
+| 2026-01-31 | 05-02 | onUpdate ref pattern | Prevents unnecessary re-subscriptions when callback changes |
 
 ### Pending Todos
 
@@ -206,6 +210,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 05-01-PLAN.md (revenue reconciliation)
+Stopped at: Completed 05-02-PLAN.md (realtime infrastructure)
 Resume file: None
-Next action: Execute 05-02-PLAN.md (ticket count accuracy)
+Next action: Execute 05-03-PLAN.md (revenue display components)
