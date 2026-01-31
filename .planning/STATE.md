@@ -22,7 +22,7 @@ Progress: [███████████████████████
 |------|-----------|------|--------|
 | 05-01 | Revenue discrepancies audit table + verify-revenue Edge Function | 1 | Complete |
 | 05-02 | LiveIndicator + useDashboardRealtime hook | 1 | Complete |
-| 05-03 | VIP reservation status sync | 1 | Pending |
+| 05-03 | Revenue display components | 2 | Complete |
 | 05-04 | Real-time dashboard updates | 2 | Complete |
 | 05-05 | Event sync timing validation | 2 | Pending |
 
@@ -187,6 +187,9 @@ Recent decisions affecting current work:
 | 2026-01-31 | 05-04 | Visibility change triggers data refresh | Tab regaining focus fetches latest data to catch missed updates |
 | 2026-01-31 | 05-04 | CheckInProgress multi-event support | Component can display single event or aggregate multiple events |
 | 2026-01-31 | 05-04 | Live indicator in Checkout | Pulsing green dot shows when real-time subscription is active |
+| 2026-01-31 | 05-03 | 5-minute cache TTL for Stripe rate limits | Per RESEARCH.md pitfall on Stripe API rate limits |
+| 2026-01-31 | 05-03 | Show BOTH figures when discrepancy | User decision: transparency over hiding discrepancies |
+| 2026-01-31 | 05-03 | Month-to-date verification default | Practical default period for dashboard load |
 
 ### Pending Todos
 
