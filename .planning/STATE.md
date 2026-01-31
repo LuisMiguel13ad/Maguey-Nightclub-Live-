@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 5 of 12 (Dashboard Accuracy) - IN PROGRESS
-Plan: 2 of 5 complete
+Plan: 4 of 5 complete
 Status: Executing
-Last activity: 2026-01-31 — Completed 05-02-PLAN.md (realtime infrastructure)
+Last activity: 2026-01-31 — Completed 05-04-PLAN.md (real-time dashboard updates)
 
-Progress: [██████████████████████░░] 35.6% (26/73 plans)
+Progress: [████████████████████████░░] 38.4% (28/73 plans)
 
 ### Phase 5 Plans
 
@@ -23,7 +23,7 @@ Progress: [██████████████████████░
 | 05-01 | Revenue discrepancies audit table + verify-revenue Edge Function | 1 | Complete |
 | 05-02 | LiveIndicator + useDashboardRealtime hook | 1 | Complete |
 | 05-03 | VIP reservation status sync | 1 | Pending |
-| 05-04 | Real-time dashboard updates | 2 | Pending |
+| 05-04 | Real-time dashboard updates | 2 | Complete |
 | 05-05 | Event sync timing validation | 2 | Pending |
 
 ### Phase 4 Plans
@@ -73,9 +73,9 @@ Progress: [██████████████████████░
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26
-- Average duration: 3.5 min
-- Total execution time: 1.67 hours
+- Total plans completed: 28
+- Average duration: 3.4 min
+- Total execution time: 1.72 hours
 
 **By Phase:**
 
@@ -85,10 +85,10 @@ Progress: [██████████████████████░
 | 02 | 6 | 18 min | 3.0 min |
 | 03 | 5 | 41 min | 8.2 min |
 | 04 | 7 | 26 min | 3.7 min |
-| 05 | 2 | 8 min | 4.0 min |
+| 05 | 4 | 11 min | 2.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (4 min), 05-01 (4 min), 04-06 (5 min), 04-07 (7 min), 04-05 (3 min)
+- Last 5 plans: 05-04 (3 min), 05-02 (4 min), 05-01 (4 min), 04-06 (5 min), 04-07 (7 min)
 - Trend: Consistent fast execution
 
 *Updated after each plan completion*
@@ -183,6 +183,10 @@ Recent decisions affecting current work:
 | 2026-01-31 | 05-02 | Visibility change triggers full data refresh | Catch up on missed updates when tab regains focus |
 | 2026-01-31 | 05-02 | Channel names include timestamp | Prevent stale subscription conflicts |
 | 2026-01-31 | 05-02 | onUpdate ref pattern | Prevents unnecessary re-subscriptions when callback changes |
+| 2026-01-31 | 05-04 | Events filter for upcoming/published by default | useEventsRealtime filters to future events, excludes cancelled/draft |
+| 2026-01-31 | 05-04 | Visibility change triggers data refresh | Tab regaining focus fetches latest data to catch missed updates |
+| 2026-01-31 | 05-04 | CheckInProgress multi-event support | Component can display single event or aggregate multiple events |
+| 2026-01-31 | 05-04 | Live indicator in Checkout | Pulsing green dot shows when real-time subscription is active |
 
 ### Pending Todos
 
@@ -210,6 +214,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 05-02-PLAN.md (realtime infrastructure)
+Stopped at: Completed 05-04-PLAN.md (real-time dashboard updates)
 Resume file: None
-Next action: Execute 05-03-PLAN.md (revenue display components)
+Next action: Execute 05-05-PLAN.md (event sync timing validation)
