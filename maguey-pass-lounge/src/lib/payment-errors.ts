@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { showError } from "./error-messages";
 
 // Error types for logging/analytics
 export type PaymentErrorType =
@@ -31,14 +31,14 @@ function categorizeError(error: Error | unknown): PaymentErrorType {
   return 'unknown';
 }
 
-// User-friendly messages (per user decision: simple, no technical details)
-const USER_MESSAGES: Record<PaymentErrorType, string> = {
-  card_declined: 'Payment failed. Please try again.',
-  insufficient_funds: 'Payment failed. Please try again.',
-  expired_card: 'Payment failed. Please try again.',
-  processing_error: 'Payment failed. Please try again.',
-  network_error: 'Connection issue. Please try again.',
-  unknown: 'Payment failed. Please try again.',
+// Map payment error types to ERROR_MESSAGES keys
+const ERROR_TYPE_MAP: Record<PaymentErrorType, string> = {
+  card_declined: 'payment_declined',
+  insufficient_funds: 'payment_declined',
+  expired_card: 'payment_expired',
+  processing_error: 'payment_failed',
+  network_error: 'network_error',
+  unknown: 'payment_failed',
 };
 
 interface HandlePaymentErrorOptions {
@@ -51,11 +51,11 @@ interface HandlePaymentErrorOptions {
 
 /**
  * Handle payment errors with toast notification and retry button.
- * Per user decisions:
+ * Per context decisions:
  * - Toast notification (not modal)
- * - Auto-dismiss after 5 seconds
- * - Simple friendly message
- * - Retry button on toast
+ * - Persist until dismissed (duration: Infinity via showError)
+ * - Professional/formal tone from ERROR_MESSAGES
+ * - Always include action button
  * - Full loading overlay during retry
  * - No retry limit
  * - Log all failed payment attempts
@@ -66,7 +66,7 @@ export function handlePaymentError(
 ) {
   const { onRetry, setIsLoading, customerEmail, paymentType, eventId } = options;
   const errorType = categorizeError(error);
-  const userMessage = USER_MESSAGES[errorType];
+  const errorMessageKey = ERROR_TYPE_MAP[errorType];
 
   // Log error for debugging (per user decision: log all failed payment attempts)
   console.error('[Payment Error]', {
@@ -78,16 +78,12 @@ export function handlePaymentError(
     rawError: error instanceof Error ? error.message : String(error),
   });
 
-  // Show toast with retry button (per user decisions)
-  toast.error(userMessage, {
-    duration: 5000, // 5 second auto-dismiss
-    action: {
-      label: 'Retry',
-      onClick: () => {
-        // Show loading overlay during retry (per user decision)
-        setIsLoading(true);
-        onRetry();
-      },
+  // Show persistent error toast with retry action (via showError utility)
+  showError(errorMessageKey, {
+    onRetry: () => {
+      // Show loading overlay during retry (per user decision)
+      setIsLoading(true);
+      onRetry();
     },
   });
 }
