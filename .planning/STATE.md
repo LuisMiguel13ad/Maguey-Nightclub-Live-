@@ -5,16 +5,30 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Customers can buy tickets/VIP tables, receive QR codes, and get scanned at the door seamlessly — a complete end-to-end flow that rivals Ticketmaster and Eventbrite.
-**Current focus:** Phase 7 - UX Polish
+**Current focus:** Phase 9 - VIP End-to-End Testing (context gathered)
 
 ## Current Position
 
-Phase: 7 of 12 (UX Polish) - Complete
-Plan: 7 of 7 complete
-Status: Phase complete
-Last activity: 2026-01-31 — Completed 07-07-PLAN.md (Checkout UX Integration)
+Phase: 9 of 12 (VIP End-to-End Testing)
+Plan: 0 of TBD
+Status: Context gathered, ready for planning
+Last activity: 2026-01-31 — Created 09-CONTEXT.md with implementation decisions
 
 Progress: [███████████████████████████████░] 56.2% (41/73 plans)
+
+### Phase 9 Context Decisions (2026-01-31)
+
+| Gray Area | Decision |
+|-----------|----------|
+| Migration Prerequisites | Verify first - Plan 1 checks all VIP RPCs exist |
+| Testing Approach | Hybrid - Playwright for UI flows, manual UAT for scanner |
+| Scanner Input | URL parameter `?qr=TOKEN` for testing |
+| Offline Testing | DevTools Network offline simulation |
+| Test Data | SQL seed script creates complete test data |
+| Email Verification | Full delivery via Resend webhooks |
+| Concurrent Check-ins | Database-level SQL concurrency test |
+
+See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 
 ### Phase 7 Plans (Complete)
 
@@ -303,6 +317,8 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 07-07-PLAN.md (Checkout UX Integration) - Phase 7 complete
-Resume file: None
-Next action: Phase 7 complete - ready for Phase 8 (E2E Testing)
+Stopped at: Created 09-CONTEXT.md with all implementation decisions
+Resume file: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
+Next action: Run `/gsd:plan-phase 9` to create Phase 9 plans
+
+**Note:** Phase 8 (GA End-to-End Testing) was skipped - user chose to proceed directly to Phase 9 (VIP End-to-End Testing). Phase 8 can be addressed separately if needed.
