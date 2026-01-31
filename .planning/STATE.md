@@ -5,16 +5,28 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Customers can buy tickets/VIP tables, receive QR codes, and get scanned at the door seamlessly — a complete end-to-end flow that rivals Ticketmaster and Eventbrite.
-**Current focus:** Phase 3 Execution In Progress
+**Current focus:** Phase 4 VIP System Reliability - Wave 1 in progress
 
 ## Current Position
 
-Phase: 3 of 12 (Scanner System Hardening) - IN PROGRESS
-Plan: 4 of 5 complete
-Status: Executing Wave 2
-Last activity: 2026-01-30 — Completed 03-04-PLAN.md (Enhanced error details and offline validation)
+Phase: 4 of 12 (VIP System Reliability) - IN PROGRESS
+Plan: 3 of 7 complete
+Status: Executing Wave 1
+Last activity: 2026-01-30 — Completed 04-03-PLAN.md (Realtime floor plan updates)
 
-Progress: [██████████████████░░░░] 22.2% (16/72 plans)
+Progress: [████████████████████░░] 27.4% (20/73 plans)
+
+### Phase 4 Plans
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 04-01 | State transition enforcement (forward-only DB trigger) | 1 | Complete |
+| 04-02 | Re-entry detection (VIP scan with re-entry support) | 1 | Complete |
+| 04-03 | Realtime floor plan updates (Supabase subscriptions) | 1 | Complete |
+| 04-04 | Owner event cancellation (bulk refund flow) | 2 | Pending |
+| 04-05 | VIP scanner re-entry UI | 2 | Pending |
+| 04-06 | GA scanner VIP link detection | 3 | Pending |
+| 04-07 | Unified VIP checkout (GA + VIP in single purchase) | 2 | Pending |
 
 ### Phase 3 Plans
 
@@ -24,7 +36,7 @@ Progress: [██████████████████░░░░] 2
 | 03-02 | Offline ticket cache service with race condition handling | 1 | Complete |
 | 03-03 | Scan history, check-in counter, offline banner | 2 | Complete |
 | 03-04 | Enhanced error details and offline validation | 2 | Complete |
-| 03-05 | Dashboard scanner status and human verification | 3 | Pending |
+| 03-05 | Dashboard scanner status and human verification | 3 | Complete |
 
 ### Phase 2 Plans
 
@@ -154,5 +166,6 @@ Several pre-existing migrations had non-standard naming. Repaired during 02-01 e
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 03-04-PLAN.md - Enhanced error details and offline validation
+Stopped at: Completed 04-02-PLAN.md - VIP re-entry support
 Resume file: None
+Next action: Execute Phase 4 plan 03 (`/gsd:execute-plan 04 03`)
