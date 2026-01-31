@@ -141,15 +141,13 @@ const Checkout = () => {
     if (email) setValue('email', email);
   }, [user, persistedData, hasPersistedData, setValue, userFirstName, userLastName, userEmail]);
 
-  // Auto-advance checkout steps based on ticket selection
+  // Reset to Step 1 if no tickets selected
   useEffect(() => {
     const hasSelectedTickets = Object.values(selectedTickets).some(t => t.quantity > 0);
 
-    if (!hasSelectedTickets) {
+    if (!hasSelectedTickets && checkoutStep > 1) {
+      // Go back to Step 1 if all tickets removed
       setCheckoutStep(1);
-    } else if (checkoutStep === 1) {
-      // Auto-advance to details when tickets selected
-      setCheckoutStep(2);
     }
   }, [selectedTickets, checkoutStep]);
 
@@ -691,7 +689,8 @@ const Checkout = () => {
       {/* Event Hero Section */}
       <section className="relative z-10 py-12 lg:py-20">
         <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
-          <AnimatedStep key={checkoutStep}>
+          {/* Step 1 & 2 Content */}
+          <FadeTransition show={checkoutStep === 1 || checkoutStep === 2}>
           <div className="grid lg:grid-cols-[42%_58%] gap-8 lg:gap-12 items-start">
             {/* Event Poster - Left Side (~42% width) */}
             <div className="relative">
@@ -930,14 +929,124 @@ const Checkout = () => {
               
             </div>
           </div>
-          </AnimatedStep>
+          </FadeTransition>
+
+          {/* Step 2: Customer Details Form */}
+          <FadeTransition show={checkoutStep === 2} className="mt-8">
+            <div className="max-w-2xl mx-auto">
+              <div className="glass-panel rounded-sm p-6 space-y-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <User className="w-6 h-6 text-copper-400" />
+                  <h2 className="font-serif text-2xl text-stone-100">Guest Information</h2>
+                </div>
+
+                <form onSubmit={handleSubmit((data) => {
+                  // Persist form data
+                  setFormField('firstName', data.firstName);
+                  setFormField('lastName', data.lastName);
+                  setFormField('email', data.email);
+                  // Proceed to checkout
+                  handleCheckout();
+                })} className="space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="text-stone-300">First Name</Label>
+                      <Input
+                        id="firstName"
+                        {...register("firstName")}
+                        placeholder="Enter your first name"
+                        className="bg-forest-950 border-white/10 text-stone-100 placeholder:text-stone-600"
+                      />
+                      {errors.firstName && (
+                        <p className="text-red-400 text-xs">{errors.firstName.message}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-stone-300">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        {...register("lastName")}
+                        placeholder="Enter your last name"
+                        className="bg-forest-950 border-white/10 text-stone-100 placeholder:text-stone-600"
+                      />
+                      {errors.lastName && (
+                        <p className="text-red-400 text-xs">{errors.lastName.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-stone-300">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      {...register("email")}
+                      placeholder="Enter your email"
+                      className="bg-forest-950 border-white/10 text-stone-100 placeholder:text-stone-600"
+                    />
+                    {errors.email && (
+                      <p className="text-red-400 text-xs">{errors.email.message}</p>
+                    )}
+                    <p className="text-stone-500 text-xs">Your tickets will be sent to this email</p>
+                  </div>
+
+                  <div className="pt-4 flex gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setCheckoutStep(1)}
+                      className="flex-1 border-white/20 text-stone-300 hover:bg-white/10"
+                    >
+                      Back to Tickets
+                    </Button>
+                    <LoadingButton
+                      type="submit"
+                      isLoading={isLoading}
+                      loadingText="Processing..."
+                      className="flex-1 bg-copper-400 hover:bg-copper-500 text-forest-950 font-semibold"
+                    >
+                      Continue to Payment
+                    </LoadingButton>
+                  </div>
+                </form>
+
+                {/* Order Summary in Step 2 */}
+                <div className="pt-4 border-t border-white/10">
+                  <h3 className="text-sm font-medium text-stone-300 mb-3">Order Summary</h3>
+                  <div className="space-y-2 text-sm">
+                    {Object.entries(selectedTickets).map(([ticketId, ticket]) => (
+                      ticket.quantity > 0 && (
+                        <div key={ticketId} className="flex justify-between text-stone-400">
+                          <span>{ticket.quantity}x {ticket.name}</span>
+                          <span>${((ticket.price + ticket.fee) * ticket.quantity).toFixed(2)}</span>
+                        </div>
+                      )
+                    ))}
+                    <div className="flex justify-between text-stone-100 font-semibold pt-2 border-t border-white/10">
+                      <span>Total</span>
+                      <span>${total.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </FadeTransition>
+
+          {/* Step 3: Processing - shows briefly before redirect */}
+          <FadeTransition show={checkoutStep === 3} className="mt-8">
+            <div className="max-w-md mx-auto text-center py-12">
+              <Loader2 className="w-12 h-12 text-copper-400 animate-spin mx-auto mb-4" />
+              <h2 className="font-serif text-2xl text-stone-100 mb-2">Preparing Payment</h2>
+              <p className="text-stone-400">Please wait while we set up your secure checkout...</p>
+            </div>
+          </FadeTransition>
         </div>
       </section>
 
-      {/* Floating Checkout Summary - Bottom Right */}
+      {/* Floating Checkout Summary - Bottom Right (only show on Step 1) */}
       {(() => {
         const totalQuantity = Object.values(selectedTickets).reduce((sum, ticket) => sum + ticket.quantity, 0);
-        return totalQuantity >= 1 && (
+        return totalQuantity >= 1 && checkoutStep === 1 && (
           <div className="fixed bottom-0 right-0 left-0 lg:left-auto lg:right-8 lg:bottom-8 z-50 p-4 lg:p-0">
             <div className="bg-forest-900/95 backdrop-blur-md rounded-sm shadow-2xl border border-white/10 p-4 max-w-md mx-auto lg:mx-0">
               <div className="space-y-4">
@@ -1003,21 +1112,20 @@ const Checkout = () => {
                   </div>
                 </div>
 
-                <LoadingButton
+                <Button
                   type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handleCheckout();
+                    // Advance to Step 2: Customer Details
+                    setCheckoutStep(2);
                   }}
-                  isLoading={isLoading}
-                  loadingText="Processing payment..."
                   disabled={totalQuantity === 0}
                   className="w-full bg-copper-400 hover:bg-copper-500 text-forest-950 font-semibold py-3 px-6 rounded-sm flex items-center justify-between disabled:opacity-50"
                 >
-                  <span>Checkout</span>
-                  <span className="font-bold">${total.toFixed(2)}</span>
-                </LoadingButton>
+                  <span>Continue to Details</span>
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
               </div>
             </div>
           </div>
