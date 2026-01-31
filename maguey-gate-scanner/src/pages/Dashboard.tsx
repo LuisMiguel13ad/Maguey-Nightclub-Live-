@@ -76,6 +76,7 @@ import { getTicketsSoldPerEvent, getDailyWeeklySales, getCheckInRates, type Tick
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";
 import { RevenueVerification } from "@/components/dashboard/RevenueVerification";
+import { CheckInProgress } from "@/components/dashboard/CheckInProgress";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -1169,6 +1170,19 @@ const Dashboard = () => {
             <EntryExitFlowVisualization eventId={activeEvent.id} />
           </div>
         )}
+
+        {/* Check-In Progress - Simple "X / Y checked in" with progress bar per CONTEXT.md */}
+        <div className="mb-8">
+          {activeEvent ? (
+            <CheckInProgress
+              eventId={activeEvent.id}
+              eventName={activeEvent.name}
+              showDetails={true}
+            />
+          ) : (
+            <CheckInProgress showDetails={true} />
+          )}
+        </div>
 
         {/* Event Analytics Charts */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
