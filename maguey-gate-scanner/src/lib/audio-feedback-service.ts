@@ -226,18 +226,64 @@ const playBackstageChime = (volume: number): void => {
 };
 
 /**
+ * Distinct haptic patterns per context decision:
+ * - Success: quick buzz (50ms)
+ * - Rejection: longer pattern (200, 100, 200)
+ * - VIP: triple pulse (50, 30, 50, 30, 50)
+ * - Re-entry: double pulse (100, 50, 100)
+ */
+
+/**
+ * Success: Quick buzz (per context: quick buzz for success)
+ */
+export const hapticSuccess = (): void => {
+  const settings = getAudioSettings();
+  if (settings.hapticEnabled && navigator.vibrate) {
+    navigator.vibrate(50);
+  }
+};
+
+/**
+ * Rejection: Longer pattern (per context: longer for rejection)
+ */
+export const hapticRejection = (): void => {
+  const settings = getAudioSettings();
+  if (settings.hapticEnabled && navigator.vibrate) {
+    navigator.vibrate([200, 100, 200]);
+  }
+};
+
+/**
+ * VIP success: Triple pulse pattern
+ */
+export const hapticVIP = (): void => {
+  const settings = getAudioSettings();
+  if (settings.hapticEnabled && navigator.vibrate) {
+    navigator.vibrate([50, 30, 50, 30, 50]);
+  }
+};
+
+/**
+ * Re-entry: Double pulse pattern
+ */
+export const hapticReentry = (): void => {
+  const settings = getAudioSettings();
+  if (settings.hapticEnabled && navigator.vibrate) {
+    navigator.vibrate([100, 50, 100]);
+  }
+};
+
+/**
  * Play success feedback (400Hz, 100ms) + vibration (50ms)
  */
 export const playSuccess = (): void => {
   const settings = getAudioSettings();
-  
+
   if (settings.soundEnabled) {
     playTone(400, 0.1, settings.volume);
   }
-  
-  if (settings.hapticEnabled) {
-    triggerVibration(50);
-  }
+
+  hapticSuccess(); // Use distinct pattern function
 };
 
 /**
@@ -282,18 +328,16 @@ export const playTierSuccess = (tier: string | null | undefined): void => {
 };
 
 /**
- * Play error feedback (200Hz, 200ms) + double vibration
+ * Play error feedback (200Hz, 200ms) + rejection vibration pattern
  */
 export const playError = (): void => {
   const settings = getAudioSettings();
-  
+
   if (settings.soundEnabled) {
     playTone(200, 0.2, settings.volume);
   }
-  
-  if (settings.hapticEnabled) {
-    triggerVibration([50, 50, 50, 50]); // Double vibration pattern
-  }
+
+  hapticRejection(); // Use distinct rejection pattern (200, 100, 200)
 };
 
 /**
