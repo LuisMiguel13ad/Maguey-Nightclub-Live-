@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useWakeLock } from "@/hooks/use-wake-lock";
 import {
   Keyboard,
   Camera,
@@ -24,6 +25,8 @@ import { RejectionOverlay, RejectionReason } from "@/components/scanner/Rejectio
 import { ScanHistory, ScanHistoryEntry } from "@/components/scanner/ScanHistory";
 import { CheckInCounter } from "@/components/scanner/CheckInCounter";
 import { OfflineBanner } from "@/components/scanner/OfflineBanner";
+import { OfflineAcknowledgeModal } from "@/components/scanner/OfflineAcknowledgeModal";
+import { BatteryIndicator } from "@/components/scanner/BatteryIndicator";
 import { QrScanner } from "@/components/QrScanner";
 import { NFCScanner } from "@/components/NFCScanner";
 import {
@@ -39,6 +42,12 @@ import {
   getSyncStatus,
 } from "@/lib/offline-queue-service";
 import { sendHeartbeat } from "@/lib/scanner-status-service";
+import {
+  hapticSuccess,
+  hapticRejection,
+  hapticVIP,
+  hapticReentry,
+} from "@/lib/audio-feedback-service";
 import { Ticket as TicketType } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import {
@@ -101,6 +110,11 @@ const Scanner = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
+  // Keep screen awake while scanner is active
+  const { isSupported: wakeLockSupported, isLocked } = useWakeLock(
+    scanMode === "qr" || scanMode === "nfc" // Active when in scanning mode
+  );
+
   // State
   const [scanMode, setScanMode] = useState<ScanMode>("qr");
   const [manualInput, setManualInput] = useState("");
@@ -134,6 +148,7 @@ const Scanner = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingScans, setPendingScans] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [offlineAcknowledged, setOfflineAcknowledged] = useState(false);
 
   // Scan history state
   const [scanHistory, setScanHistory] = useState<ScanHistoryEntry[]>([]);
@@ -225,7 +240,10 @@ const Scanner = () => {
 
   // Monitor online status
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      setOfflineAcknowledged(false); // Reset for next offline event
+    };
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener("online", handleOnline);
@@ -357,6 +375,9 @@ const Scanner = () => {
             message: result.message,
           });
 
+          // Haptic feedback for offline success
+          hapticSuccess();
+
           // Add to history (offline success)
           addToHistory({
             timestamp: new Date(),
@@ -389,6 +410,9 @@ const Scanner = () => {
             rejectionReason: result.rejectionReason,
             rejectionDetails: result.rejectionDetails,
           });
+
+          // Haptic feedback for offline rejection
+          hapticRejection();
 
           // Add to history (offline failure)
           addToHistory({
@@ -423,6 +447,9 @@ const Scanner = () => {
             wrongEventDate: result.ticket.event_name,
           },
         });
+
+        // Haptic feedback for wrong event rejection
+        hapticRejection();
 
         // Add to history (wrong event)
         addToHistory({
@@ -471,6 +498,15 @@ const Scanner = () => {
           }
         }
 
+        // Haptic feedback based on scan type
+        if (isReentry) {
+          hapticReentry(); // Double pulse for re-entry
+        } else if (ticketVipInfo.isVipGuest || result.vipInfo) {
+          hapticVIP(); // Triple pulse for VIP
+        } else {
+          hapticSuccess(); // Quick buzz for regular success
+        }
+
         // Add to history (online success or re-entry)
         addToHistory({
           timestamp: new Date(),
@@ -502,6 +538,9 @@ const Scanner = () => {
           },
         });
 
+        // Haptic feedback for already scanned rejection
+        hapticRejection();
+
         // Add to history (already scanned)
         addToHistory({
           timestamp: new Date(),
@@ -528,6 +567,9 @@ const Scanner = () => {
           rejectionReason,
         });
 
+        // Haptic feedback for other rejection types
+        hapticRejection();
+
         // Add to history (other failure)
         addToHistory({
           timestamp: new Date(),
@@ -548,6 +590,9 @@ const Scanner = () => {
         message: "An error occurred while scanning",
         rejectionReason: 'invalid',
       });
+
+      // Haptic feedback for system error
+      hapticRejection();
 
       // Add to history (exception)
       addToHistory({
@@ -663,6 +708,13 @@ const Scanner = () => {
       {/* Offline Banner - very top, above everything */}
       <OfflineBanner className="fixed top-0 left-0 right-0 z-[70]" />
 
+      {/* Offline Acknowledge Modal - requires acknowledgment before continuing */}
+      {!isOnline && !offlineAcknowledged && (
+        <OfflineAcknowledgeModal
+          onAcknowledge={() => setOfflineAcknowledged(true)}
+        />
+      )}
+
       {/* Check-in Counter - below offline banner (when shown) */}
       <div className={cn(
         "fixed left-0 right-0 z-[65]",
@@ -766,24 +818,27 @@ const Scanner = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Sync Status Button */}
-        <div className="relative">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={handleSync}
-            className={cn("bg-black/40 backdrop-blur-md text-white border border-white/10 rounded-full h-12 w-12 hover:bg-white/10",
-              !isOnline && "text-red-500 border-red-500/50",
-              isSyncing && "animate-spin text-yellow-500 border-yellow-500/50"
+        {/* Battery and Sync Status */}
+        <div className="flex items-center gap-2">
+          <BatteryIndicator />
+          <div className="relative">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleSync}
+              className={cn("bg-black/40 backdrop-blur-md text-white border border-white/10 rounded-full h-12 w-12 hover:bg-white/10",
+                !isOnline && "text-red-500 border-red-500/50",
+                isSyncing && "animate-spin text-yellow-500 border-yellow-500/50"
+              )}
+            >
+              {isOnline ? <Cloud className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}
+            </Button>
+            {pendingScans > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-yellow-500 text-[10px] font-bold text-black flex items-center justify-center border-2 border-black">
+                {pendingScans}
+              </span>
             )}
-          >
-            {isOnline ? <Cloud className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}
-          </Button>
-          {pendingScans > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-yellow-500 text-[10px] font-bold text-black flex items-center justify-center border-2 border-black">
-              {pendingScans}
-            </span>
-          )}
+          </div>
         </div>
       </div>
 
@@ -827,7 +882,7 @@ const Scanner = () => {
                     type="text"
                     placeholder="MAGUEY-XXXX"
                     value={manualInput}
-                    onChange={(e) => setManualInput(e.target.value.toUpperCase())}
+                    onChange={(e) => setManualInput(e.target.value)}
                     disabled={isProcessing}
                     className="bg-zinc-900/50 border-white/10 text-center text-2xl h-16 text-white placeholder:text-white/20 rounded-2xl focus:ring-purple-500 focus:border-purple-500 transition-all uppercase tracking-widest font-mono"
                     autoFocus
@@ -943,10 +998,10 @@ const Scanner = () => {
           lastEntryTime={
             scanState.status === "reentry" && scanState.ticket?.scanned_at
               ? new Date(scanState.ticket.scanned_at).toLocaleTimeString('en-US', {
-                  hour: 'numeric',
-                  minute: '2-digit',
-                  hour12: true
-                })
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              })
               : undefined
           }
           onDismiss={handleScanAnother}
