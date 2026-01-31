@@ -73,6 +73,8 @@ import { UnifiedCapacityDisplay } from "@/components/UnifiedCapacityDisplay";
 import { DiscrepancyAlerts } from "@/components/DiscrepancyAlerts";
 import { EntryExitFlowVisualization } from "@/components/EntryExitFlowVisualization";
 import { getTicketsSoldPerEvent, getDailyWeeklySales, getCheckInRates, type TicketsSoldPerEvent, type DailyWeeklySales, type CheckInRate } from "@/lib/analytics-service";
+import { LiveIndicator } from "@/components/ui/LiveIndicator";
+import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -149,6 +151,16 @@ const Dashboard = () => {
   const [exportTicketTier, setExportTicketTier] = useState<string>('');
   const [exporting, setExporting] = useState(false);
   const [availableEvents, setAvailableEvents] = useState<Array<{ name: string }>>([]);
+
+  // Real-time subscription hook for dashboard updates
+  const { isLive, lastUpdate } = useDashboardRealtime({
+    tables: ['tickets', 'orders', 'vip_reservations', 'scan_logs'],
+    onUpdate: () => {
+      loadData();
+      loadScanSpeedMetrics();
+      loadAnalytics();
+    },
+  });
 
   const currencyFormatter = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -698,9 +710,12 @@ const Dashboard = () => {
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">
-            Analytics Dashboard
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold tracking-tight">
+              Analytics Dashboard
+            </h1>
+            <LiveIndicator isLive={isLive} lastUpdate={lastUpdate} showLastUpdate />
+          </div>
           <p className="text-muted-foreground mt-2">
             View scan statistics and recent activity
           </p>
