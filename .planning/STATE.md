@@ -239,6 +239,33 @@ This is brownfield work — all features are built. Roadmap focuses on reliabili
 **Migration Naming:**
 Several pre-existing migrations had non-standard naming. Repaired during 02-01 execution.
 
+## Workflow Practices
+
+### Cleanup After Each Milestone
+
+After completing a milestone (set of phases), run a cleanup checkpoint:
+
+**Quick Checklist:**
+1. Dead imports/exports - Check for references to deleted files
+2. Orphaned scripts - Debug scripts at root level should move to `/scripts/`
+3. Migration state - Ensure all migrations are staged/committed
+4. Documentation sync - Verify port numbers, URLs, and file paths are accurate
+
+**Cleanup Structure:**
+```
+/scripts/
+├── debug/    # Inspection and verification utilities
+├── seed/     # Test data seeding scripts
+└── e2e/      # End-to-end test scripts
+```
+
+**Last Cleanup:** 2026-01-31 (after Phase 5)
+- Removed dead VIP component exports
+- Deleted duplicate supabase file
+- Organized 17 debug scripts into /scripts/
+- Deleted 4 orphaned crew pages
+- Consolidated VIP migrations
+
 ## Session Continuity
 
 Last session: 2026-01-31
