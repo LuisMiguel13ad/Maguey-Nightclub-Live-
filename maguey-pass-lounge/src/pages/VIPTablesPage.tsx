@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
-import { Calendar, MapPin, Loader2, Speaker, MoveDown, Users, Wine, Info, X, ChevronRight, Crown, Sparkles } from 'lucide-react';
+import { Calendar, MapPin, Speaker, MoveDown, Users, Wine, Info, X, ChevronRight, Crown, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getAvailableTablesForEvent, type VipTableWithAvailability } from '@/lib/vip-tables-service';
 import { supabase } from '@/lib/supabase';
 import { VipProgressIndicator } from '@/components/vip/VipProgressIndicator';
 import { CustomCursor } from '@/components/CustomCursor';
+import { TableCardSkeleton } from '@/components/ui/skeleton-card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Serif font style for elegant typography
 const serifFont = { fontFamily: "'Times New Roman', Georgia, serif" };
@@ -216,6 +218,42 @@ const VIPTablesPage: React.FC = () => {
     loadEventData();
   }, [eventId]);
 
+  // Subscribe to realtime table availability changes
+  useEffect(() => {
+    if (!eventId || tables.length === 0) return;
+
+    // Subscribe to changes on event_vip_tables for this event
+    const subscription = supabase
+      .channel(`vip-tables-${eventId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'event_vip_tables',
+          filter: `event_id=eq.${eventId}`,
+        },
+        (payload) => {
+          // Update local state when table availability changes
+          setTables(prev => prev.map(table =>
+            table.id === payload.new.id
+              ? { ...table, is_available: payload.new.is_available }
+              : table
+          ));
+
+          // If the selected table became unavailable, deselect it
+          if (payload.new.id === selectedTableId && !payload.new.is_available) {
+            setSelectedTableId(undefined);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [eventId, tables.length, selectedTableId]);
+
   const handleSelectTable = (tableId: string) => {
     setSelectedTableId(selectedTableId === tableId ? undefined : tableId);
   };
@@ -248,11 +286,55 @@ const VIPTablesPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-forest-950 flex flex-col items-center justify-center gap-4">
-        <Loader2 className="w-8 h-8 animate-spin text-copper-400" />
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-stone-500">
-          Loading VIP Tables...
-        </p>
+      <div className="min-h-screen bg-forest-950 text-stone-300 font-sans flex flex-col overflow-x-hidden">
+        <CustomCursor />
+        <div className="noise-overlay" />
+
+        {/* Header skeleton */}
+        <header className="w-full bg-forest-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-4">
+              <Crown className="w-5 h-5 text-copper-400" />
+              <span className="text-lg font-light tracking-wide" style={serifFont}>
+                <span className="text-stone-100">VIP </span>
+                <span className="italic text-copper-400">Tables</span>
+              </span>
+            </div>
+          </div>
+        </header>
+
+        {/* Progress indicator skeleton */}
+        <div className="w-full bg-forest-900/50 border-b border-white/5 py-4 px-4 relative z-10">
+          <div className="max-w-4xl mx-auto">
+            <Skeleton className="h-8 w-full bg-white/5" />
+          </div>
+        </div>
+
+        {/* Main content skeleton */}
+        <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col items-center gap-10 relative z-10">
+          {/* Banner skeleton */}
+          <section className="w-full max-w-5xl mx-auto">
+            <Skeleton className="h-4 w-32 mb-3 bg-white/5" />
+            <Skeleton className="w-full h-48 sm:h-64 md:h-80 rounded-sm bg-white/5" />
+          </section>
+
+          {/* Floor plan section skeleton */}
+          <section className="w-full relative">
+            <div className="text-center mb-6">
+              <Skeleton className="h-4 w-32 mx-auto mb-3 bg-white/5" />
+              <Skeleton className="h-10 w-64 mx-auto bg-white/5" />
+            </div>
+
+            {/* Table grid skeleton */}
+            <div className="max-w-6xl mx-auto px-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <TableCardSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          </section>
+        </main>
       </div>
     );
   }
