@@ -5,16 +5,28 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Customers can buy tickets/VIP tables, receive QR codes, and get scanned at the door seamlessly — a complete end-to-end flow that rivals Ticketmaster and Eventbrite.
-**Current focus:** Phase 8 - GA End-to-End Testing
+**Current focus:** Phase 9 - VIP End-to-End Testing
 
 ## Current Position
 
-Phase: 8 of 12 (GA End-to-End Testing)
-Plan: 4 of 4
-Status: Complete
-Last activity: 2026-01-31 — Completed 08-04-PLAN.md (Edge Case and Offline E2E Tests)
+Phase: 9 of 12 (VIP End-to-End Testing)
+Plan: 3 of 7
+Status: In progress
+Last activity: 2026-01-31 — Completed 09-03-PLAN.md (Floor Plan Realtime E2E)
 
-Progress: [██████████████████████████████░░] 63.0% (46/73 plans)
+Progress: [████████████████████████████████░░] 67.1% (49/73 plans)
+
+### Phase 9 Plans (In Progress)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 09-01 | Migration verification and seed data setup | 1 | Complete |
+| 09-02 | VIP checkout E2E test | 1 | Complete |
+| 09-03 | Floor plan realtime updates test | 1 | Complete |
+| 09-04 | Manual UAT: VIP scanner flows | 2 | Pending |
+| 09-05 | Manual UAT: GA+VIP link re-entry | 2 | Pending |
+| 09-06 | Concurrent check-in tests | 2 | Pending |
+| 09-07 | Email delivery verification | 2 | Pending |
 
 ### Phase 8 Plans (Complete)
 
@@ -286,6 +298,8 @@ Recent decisions affecting current work:
 | 2026-01-31 | 08-04 | cy.intercept forceNetworkError for offline | Simulate network failure via Cypress intercept rather than browser DevTools |
 | 2026-01-31 | 08-04 | Flexible selectors for UI variations | Multiple selector patterns accommodate different UI implementations |
 | 2026-01-31 | 08-04 | Direct scanner URL navigation | Visit scannerUrl/auth instead of cy.origin for cleaner cross-app testing |
+| 2026-01-31 | 09-03 | Test event_vip_tables.is_available changes | VIPTablesPage subscribes to event_vip_tables updates, not vip_reservations status |
+| 2026-01-31 | 09-03 | UI state: available=button, reserved=RESERVED text | UI only differentiates available vs reserved, not pending vs confirmed |
 
 ### Pending Todos
 
@@ -345,6 +359,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 08-04-PLAN.md (Edge Case and Offline E2E Tests) - Phase 8 Complete
-Resume file: `.planning/phases/08-ga-e2e-testing/08-04-SUMMARY.md`
-Next action: Begin Phase 9 (VIP End-to-End Testing)
+Stopped at: Completed 09-03-PLAN.md (Floor Plan Realtime E2E)
+Resume file: `.planning/phases/09-vip-end-to-end-testing/09-03-SUMMARY.md`
+Next action: Execute 09-04-PLAN.md (VIP Scanner UAT)
