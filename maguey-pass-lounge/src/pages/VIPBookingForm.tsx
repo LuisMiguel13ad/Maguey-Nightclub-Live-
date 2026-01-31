@@ -277,11 +277,16 @@ export default function VIPBookingForm() {
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [reservationId, setReservationId] = useState<string | null>(null);
   const [initializingPayment, setInitializingPayment] = useState(false);
-  const [preInitStarted, setPreInitStarted] = useState(false);
 
   // Confirmation state
   const [paymentComplete, setPaymentComplete] = useState(false);
   const [confirmedReservation, setConfirmedReservation] = useState<VipReservationConfirmation | null>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [inviteLinkCopied, setInviteLinkCopied] = useState(false);
+
+  // GA Ticket state (REQUIRED for VIP checkout)
+  const [selectedTicketTier, setSelectedTicketTier] = useState<string | null>(null);
+  const [ticketTiers, setTicketTiers] = useState<Array<{id: string; name: string; price: number}>>([]);
 
   const [formData, setFormData] = useState<BookingFormData>({
     firstName: '',
@@ -301,66 +306,32 @@ export default function VIPBookingForm() {
     loadEvent();
   }, [eventId]);
 
-  // Pre-initialize payment in background once we have required info
-  // This makes the payment form appear instantly when user clicks "Continue"
+  // Fetch GA ticket tiers from ticket_types
   useEffect(() => {
-    const canPreInit = 
-      formData.email && 
-      formData.firstName && 
-      formData.lastName && 
-      formData.phone &&
-      eventId && 
-      tableId && 
-      tablePrice &&
-      !clientSecret && 
-      !preInitStarted &&
-      !paymentComplete;
+    const fetchTicketTiers = async () => {
+      if (!eventId) return;
 
-    if (canPreInit) {
-      // Debounce to avoid too many calls while user is typing
-      const timer = setTimeout(() => {
-        preInitializePayment();
-      }, 1000); // Wait 1 second after user stops typing
-      
-      return () => clearTimeout(timer);
-    }
-  }, [formData.email, formData.firstName, formData.lastName, formData.phone, eventId, tableId, tablePrice, clientSecret, preInitStarted, paymentComplete]);
+      try {
+        const { data: tiers, error } = await supabase
+          .from('ticket_types')
+          .select('id, name, price')
+          .eq('event_id', eventId)
+          .order('price', { ascending: true });
 
-  // Pre-initialize payment in background (doesn't show payment form yet)
-  const preInitializePayment = async () => {
-    if (!eventId || !tableId || !tablePrice || !formData.email || !formData.firstName) return;
-    if (clientSecret || preInitStarted) return; // Already done
-    
-    setPreInitStarted(true);
+        if (tiers && tiers.length > 0) {
+          setTicketTiers(tiers);
+          // Auto-select first tier as default
+          setSelectedTicketTier(tiers[0].id);
+        } else {
+          console.warn('No ticket tiers found for event:', eventId);
+        }
+      } catch (err) {
+        console.error('Error fetching ticket tiers:', err);
+      }
+    };
 
-    try {
-      const result = await createVipPaymentIntent({
-        eventId,
-        tableId,
-        tableNumber: tableNumber || '',
-        tableTier: tableTier || 'standard',
-        tablePrice: tablePrice,
-        tableCapacity: tableCapacity || '6',
-        bottlesIncluded: bottlesIncluded,
-        customerEmail: formData.email,
-        customerName: `${formData.firstName} ${formData.lastName}`,
-        customerPhone: formData.phone,
-        guestCount: formData.guestCount,
-        celebration: formData.celebration,
-        celebrantName: formData.celebrantName,
-        specialRequests: formData.specialRequests,
-        bottlePreferences: formData.bottlePreferences,
-        estimatedArrival: formData.estimatedArrival,
-      });
-
-      setClientSecret(result.clientSecret);
-      setPaymentIntentId(result.paymentIntentId);
-      setReservationId(result.reservationId);
-    } catch (err) {
-      console.error('Pre-initialization failed (will retry on submit):', err);
-      setPreInitStarted(false); // Allow retry
-    }
-  };
+    fetchTicketTiers();
+  }, [eventId]);
 
   const loadEvent = async () => {
     if (!eventId) return;
@@ -403,14 +374,19 @@ export default function VIPBookingForm() {
       return;
     }
 
+    if (!selectedTicketTier) {
+      setError('Please select an entry ticket tier');
+      return;
+    }
+
     // Initialize payment instead of navigating
     await initializePayment();
   };
 
   const initializePayment = async () => {
-    if (!eventId || !tableId || !tablePrice) return;
+    if (!eventId || !tableId || !tablePrice || !selectedTicketTier) return;
 
-    // If we already pre-initialized, just show the payment form
+    // Prevent duplicate initialization
     if (clientSecret && paymentIntentId && reservationId) {
       setShowPayment(true);
       return;
@@ -420,12 +396,23 @@ export default function VIPBookingForm() {
     setError('');
 
     try {
+      // Get selected ticket tier details
+      const selectedTier = ticketTiers.find(t => t.id === selectedTicketTier);
+      if (!selectedTier) {
+        throw new Error('Selected ticket tier not found');
+      }
+
+      // Calculate total amount: VIP table + GA ticket
+      const vipPrice = parseFloat(tablePrice);
+      const ticketPrice = selectedTier.price;
+      const totalAmount = vipPrice + ticketPrice;
+
       const result = await createVipPaymentIntent({
         eventId,
         tableId,
         tableNumber: tableNumber || '',
         tableTier: tableTier || 'standard',
-        tablePrice: tablePrice,
+        tablePrice: vipPrice.toString(), // Just VIP table price
         tableCapacity: tableCapacity || '6',
         bottlesIncluded: bottlesIncluded,
         customerEmail: formData.email,
@@ -437,6 +424,10 @@ export default function VIPBookingForm() {
         specialRequests: formData.specialRequests,
         bottlePreferences: formData.bottlePreferences,
         estimatedArrival: formData.estimatedArrival,
+        // GA ticket data (REQUIRED)
+        ticketTierId: selectedTier.id,
+        ticketTierName: selectedTier.name,
+        ticketPriceCents: Math.round(ticketPrice * 100),
       });
 
       setClientSecret(result.clientSecret);
@@ -452,10 +443,28 @@ export default function VIPBookingForm() {
     }
   };
 
-  const handlePaymentSuccess = (reservation: VipReservationConfirmation) => {
+  const handlePaymentSuccess = async (reservation: VipReservationConfirmation) => {
     setConfirmedReservation(reservation);
     setPaymentComplete(true);
     toast.success('Payment successful! Your reservation is confirmed.');
+
+    // Fetch the invite code (may take a moment to be generated by webhook)
+    const fetchInviteCode = async (attempts = 0) => {
+      const { data } = await supabase
+        .from('vip_reservations')
+        .select('invite_code')
+        .eq('id', reservation.id)
+        .single();
+
+      if (data?.invite_code) {
+        setInviteCode(data.invite_code);
+      } else if (attempts < 5) {
+        // Retry after a short delay (webhook may still be processing)
+        setTimeout(() => fetchInviteCode(attempts + 1), 1000);
+      }
+    };
+
+    fetchInviteCode();
   };
 
   const handlePaymentError = (errorMessage: string) => {
@@ -636,6 +645,42 @@ export default function VIPBookingForm() {
               </div>
             </div>
 
+            {/* Invite Link Section */}
+            {inviteCode && (
+              <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-sm p-6 mb-6">
+                <h3 className="font-semibold text-stone-200 mb-3 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-purple-400" />
+                  Invite Your Guests
+                </h3>
+                <p className="text-sm text-stone-400 mb-4">
+                  Share this link with your guests so they can purchase their GA tickets and be linked to your VIP table.
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${window.location.origin}/checkout?event=${eventId}&vip=${inviteCode}`}
+                    className="flex-1 bg-forest-900 border border-white/10 rounded-sm px-4 py-3 text-stone-300 text-sm font-mono"
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/checkout?event=${eventId}&vip=${inviteCode}`);
+                      setInviteLinkCopied(true);
+                      toast.success('Invite link copied to clipboard!');
+                      setTimeout(() => setInviteLinkCopied(false), 2000);
+                    }}
+                    className="px-4 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-sm transition-colors flex items-center gap-2"
+                  >
+                    {inviteLinkCopied ? <Check className="w-4 h-4" /> : <QrCode className="w-4 h-4" />}
+                    {inviteLinkCopied ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+                <p className="text-xs text-stone-500 mt-3">
+                  Table capacity: {tableCapacity} guests • Share this link for guests to purchase their tickets
+                </p>
+              </div>
+            )}
+
             {/* What's Next */}
             <div className="bg-copper-400/5 border border-copper-400/20 rounded-sm p-6 mb-6">
               <h3 className="font-semibold text-stone-200 mb-3 flex items-center gap-2">
@@ -644,19 +689,29 @@ export default function VIPBookingForm() {
               </h3>
               <ul className="text-sm text-stone-400 space-y-2">
                 <li className="flex gap-2"><span className="text-copper-400">1.</span> Check your email for the confirmation with QR code</li>
-                <li className="flex gap-2"><span className="text-copper-400">2.</span> Purchase General Admission tickets for your guests</li>
-                <li className="flex gap-2"><span className="text-copper-400">3.</span> Arrive by {formData.estimatedArrival} and show your QR code at VIP check-in</li>
-                <li className="flex gap-2"><span className="text-copper-400">4.</span> Enjoy your premium VIP experience!</li>
+                <li className="flex gap-2"><span className="text-copper-400">2.</span> Your QR code grants you entry and identifies you as VIP host for Table {tableNumber}</li>
+                <li className="flex gap-2"><span className="text-copper-400">3.</span> Share the invite link above for your guests to purchase tickets</li>
+                <li className="flex gap-2"><span className="text-copper-400">4.</span> Arrive by {formData.estimatedArrival} and show your QR code at check-in</li>
+                <li className="flex gap-2"><span className="text-copper-400">5.</span> Enjoy your premium VIP experience!</li>
               </ul>
             </div>
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-3">
+              {confirmedReservation && (
+                <Link
+                  to={`/vip/dashboard/${confirmedReservation.id}`}
+                  className="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 rounded-sm transition-all flex items-center justify-center gap-2"
+                >
+                  <Users className="w-4 h-4" />
+                  View Guest List
+                </Link>
+              )}
               <Link
-                to={`/event/${eventId}`}
+                to={`/event/${eventId}${inviteCode ? `?vip=${inviteCode}` : ''}`}
                 className="flex-1 bg-copper-400 hover:bg-copper-500 text-forest-950 font-semibold py-3 rounded-sm transition-all flex items-center justify-center gap-2"
               >
-                Buy GA Tickets for Guests
+                Buy More GA Tickets
               </Link>
               <Link
                 to="/"
@@ -891,6 +946,67 @@ export default function VIPBookingForm() {
                 </div>
               </div>
 
+              {/* Entry Ticket Selection - REQUIRED */}
+              <div className="bg-white/[0.02] backdrop-blur-sm rounded-sm p-6 border border-white/5">
+                <h2 className="text-lg text-stone-100 mb-4 flex items-center gap-3" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
+                  <div className="w-8 h-8 rounded-full bg-copper-400/10 border border-copper-400/20 flex items-center justify-center">
+                    <CreditCard className="w-4 h-4 text-copper-400" />
+                  </div>
+                  <span className="font-light tracking-wide">Entry Ticket</span>
+                  <span className="text-xs text-red-400 font-semibold">*REQUIRED</span>
+                </h2>
+
+                <div className="bg-copper-400/5 border border-copper-400/20 rounded-sm p-4 mb-4">
+                  <p className="text-sm text-stone-300 font-medium mb-2">
+                    VIP table reservation includes bottle service only — entry ticket required.
+                  </p>
+                  <p className="text-xs text-stone-500">
+                    Your unified QR code will grant you entry and identify you as the VIP host for Table {tableNumber}.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm text-stone-400 mb-2 block font-medium">Select Your Entry Ticket *</label>
+                  {ticketTiers.length === 0 ? (
+                    <div className="text-sm text-stone-500 italic">Loading ticket options...</div>
+                  ) : (
+                    ticketTiers.map((tier) => (
+                      <label
+                        key={tier.id}
+                        className={`flex items-center justify-between p-4 rounded-sm border cursor-pointer transition-all ${
+                          selectedTicketTier === tier.id
+                            ? 'bg-copper-400/10 border-copper-400/50'
+                            : 'bg-forest-900 border-white/10 hover:border-copper-400/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="radio"
+                            name="ticketTier"
+                            value={tier.id}
+                            checked={selectedTicketTier === tier.id}
+                            onChange={(e) => setSelectedTicketTier(e.target.value)}
+                            className="w-5 h-5 text-copper-400 bg-forest-900 border-white/20 focus:ring-copper-400/50"
+                          />
+                          <div>
+                            <p className="font-medium text-stone-100">{tier.name}</p>
+                            <p className="text-xs text-stone-500">Includes event entry</p>
+                          </div>
+                        </div>
+                        <span className="text-lg font-semibold text-copper-400">${tier.price.toFixed(2)}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+
+                {selectedTicketTier && (
+                  <div className="mt-4 flex justify-between items-center p-3 bg-copper-400/10 border border-copper-400/20 rounded-sm">
+                    <span className="text-stone-300">1 × {ticketTiers.find(t => t.id === selectedTicketTier)?.name}</span>
+                    <span className="font-semibold text-copper-400">${ticketTiers.find(t => t.id === selectedTicketTier)?.price.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+
               {/* Terms & Conditions */}
               <div className="bg-copper-400/5 border border-copper-400/20 rounded-sm p-6">
                 <h3 className="font-semibold text-stone-200 mb-3">Important Information</h3>
@@ -959,7 +1075,7 @@ export default function VIPBookingForm() {
                     <EmbeddedPaymentForm
                       onSuccess={handlePaymentSuccess}
                       onError={handlePaymentError}
-                      amount={tablePrice || '0'}
+                      amount={(parseFloat(tablePrice || '0') + (ticketTiers.find(t => t.id === selectedTicketTier)?.price || 0)).toFixed(2)}
                       reservationId={reservationId}
                       paymentIntentId={paymentIntentId}
                     />
@@ -973,7 +1089,7 @@ export default function VIPBookingForm() {
                 /* Submit Button - Shows before payment */
                 <button
                   type="submit"
-                  disabled={submitting || initializingPayment}
+                  disabled={submitting || initializingPayment || !selectedTicketTier}
                   className="w-full bg-copper-400 hover:bg-copper-500 text-forest-950 font-semibold py-4 rounded-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-copper-400/20"
                 >
                   {initializingPayment ? (
@@ -983,6 +1099,11 @@ export default function VIPBookingForm() {
                     </>
                   ) : submitting ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : !selectedTicketTier ? (
+                    <>
+                      <CreditCard className="w-5 h-5" />
+                      Select Entry Ticket to Continue
+                    </>
                   ) : (
                     <>
                       <CreditCard className="w-5 h-5" />
@@ -1053,10 +1174,26 @@ export default function VIPBookingForm() {
                 </div>
               </div>
 
-              {/* Price */}
-              <div className="flex justify-between items-center">
-                <span className="text-stone-500">Total</span>
-                <span className="text-2xl font-semibold text-stone-100">${tablePrice}</span>
+              {/* Price Breakdown */}
+              <div className="space-y-2 pt-2 border-t border-white/5">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-stone-500">VIP Table {tableNumber}</span>
+                  <span className="text-stone-300">${tablePrice}</span>
+                </div>
+
+                {selectedTicketTier && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-stone-500">Entry Ticket (Host)</span>
+                    <span className="text-stone-300">${ticketTiers.find(t => t.id === selectedTicketTier)?.price.toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                  <span className="text-stone-400 font-medium">Total</span>
+                  <span className="text-2xl font-semibold text-stone-100">
+                    ${(parseFloat(tablePrice || '0') + (ticketTiers.find(t => t.id === selectedTicketTier)?.price || 0)).toFixed(2)}
+                  </span>
+                </div>
               </div>
               <p className="text-xs text-stone-600 mt-1">+ tax & gratuity at venue</p>
             </div>
