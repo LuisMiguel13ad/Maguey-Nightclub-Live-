@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, useRole } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -29,7 +29,7 @@ import { NFCScanner } from "@/components/NFCScanner";
 import {
   scanTicket,
   scanTicketOffline,
-  getEventNamesFromTickets,
+  getEventsFromTickets,
   debugGetSampleTickets,
 } from "@/lib/simple-scanner";
 import { ensureCacheIsFresh } from "@/lib/offline-ticket-cache";
@@ -59,13 +59,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 type ScanMode = "manual" | "qr" | "nfc";
 
 interface ScanState {
-  status: "idle" | "scanning" | "success" | "error" | "already_scanned";
+  status: "idle" | "scanning" | "success" | "error" | "already_scanned" | "reentry";
   ticket: TicketType | null;
   message: string;
   rejectionReason?: RejectionReason;
   rejectionDetails?: {
     previousScan?: { staff: string; gate: string; time: string };
     wrongEventDate?: string;
+  };
+  vipInfo?: {
+    tableName: string;
+    tableNumber: string;
+    reservationId: string;
   };
 }
 
@@ -122,7 +127,7 @@ const Scanner = () => {
 
   // Event filter
   const [selectedEvent, setSelectedEvent] = useState<string>("all");
-  const [eventNames, setEventNames] = useState<string[]>([]);
+  const [events, setEvents] = useState<{ id: string; name: string }[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Offline state
@@ -146,15 +151,15 @@ const Scanner = () => {
     return 0;
   });
 
-  // Load event names on mount and debug tickets
+  // Load events on mount and debug tickets
   useEffect(() => {
     const loadEvents = async () => {
-      const names = await getEventNamesFromTickets();
+      const eventList = await getEventsFromTickets(supabase);
       // Guard: Only update state if component is still mounted
       if (mountedRef.current) {
-        setEventNames(names);
+        setEvents(eventList);
       }
-      await debugGetSampleTickets();
+      await debugGetSampleTickets(supabase);
     };
     loadEvents();
   }, []);
@@ -402,7 +407,7 @@ const Scanner = () => {
       }
 
       // Online: perform the scan
-      const result = await scanTicket(input.trim(), user?.id, method);
+      const result = await scanTicket(input.trim(), user?.id, method, supabase);
 
       // Guard: Don't update state if component unmounted
       if (!mountedRef.current) return;
@@ -435,22 +440,38 @@ const Scanner = () => {
       }
 
       if (result.success) {
+        // Check if this is a re-entry (VIP-linked ticket scanned again)
+        const isReentry = result.rejectionReason === 'reentry';
+
         setScanState({
-          status: "success",
+          status: isReentry ? "reentry" : "success",
           ticket: result.ticket,
           message: result.message,
+          vipInfo: result.vipInfo,
         });
 
-        // Check if this ticket is linked to a VIP reservation
+        // Check if this ticket is linked to a VIP reservation (for display)
+        // VipInfo is now returned directly from scanTicket for linked tickets
         let ticketVipInfo: VipLinkInfo = { isVipGuest: false, tableNumber: null, purchaserName: null };
-        if (result.ticket?.id) {
+        if (result.vipInfo) {
+          // Use vipInfo from scan result
+          ticketVipInfo = {
+            isVipGuest: true,
+            tableNumber: parseInt(result.vipInfo.tableNumber) || null,
+            purchaserName: null,
+          };
+          if (mountedRef.current) {
+            setVipLinkInfo(ticketVipInfo);
+          }
+        } else if (result.ticket?.id) {
+          // Fallback: check VIP link for non-linked tickets (backward compatibility)
           ticketVipInfo = await checkVipLink(result.ticket.id);
           if (mountedRef.current) {
             setVipLinkInfo(ticketVipInfo);
           }
         }
 
-        // Add to history (online success)
+        // Add to history (online success or re-entry)
         addToHistory({
           timestamp: new Date(),
           status: 'success',
@@ -494,7 +515,7 @@ const Scanner = () => {
         // Determine reason based on message content
         let rejectionReason: RejectionReason = 'invalid';
         if (result.message?.toLowerCase().includes('not found') ||
-            result.message?.toLowerCase().includes('does not exist')) {
+          result.message?.toLowerCase().includes('does not exist')) {
           rejectionReason = 'not_found';
         } else if (result.message?.toLowerCase().includes('expired')) {
           rejectionReason = 'expired';
@@ -721,12 +742,25 @@ const Scanner = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-black/90 border-white/10 backdrop-blur-xl text-white">
-            <DropdownMenuItem onClick={() => setSelectedEvent("all")} className="focus:bg-white/10 cursor-pointer">
+            <DropdownMenuItem
+              onClick={() => {
+                setSelectedEvent("all");
+                setSelectedEventId(null);
+              }}
+              className="focus:bg-white/10 cursor-pointer"
+            >
               All Events
             </DropdownMenuItem>
-            {eventNames.map((name) => (
-              <DropdownMenuItem key={name} onClick={() => setSelectedEvent(name)} className="focus:bg-white/10 cursor-pointer">
-                {name}
+            {events.map((event) => (
+              <DropdownMenuItem
+                key={event.id}
+                onClick={() => {
+                  setSelectedEvent(event.name);
+                  setSelectedEventId(event.id);
+                }}
+                className="focus:bg-white/10 cursor-pointer"
+              >
+                {event.name}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -893,16 +927,28 @@ const Scanner = () => {
       </div>
 
       {/* Success Overlay - Full screen green */}
-      {scanState.status === "success" && (
+      {(scanState.status === "success" || scanState.status === "reentry") && (
         <SuccessOverlay
           ticketType={determineTicketType(scanState.ticket, vipLinkInfo)}
           guestName={scanState.ticket?.guest_name || undefined}
-          vipDetails={vipLinkInfo.isVipGuest ? {
-            tableName: `Table ${vipLinkInfo.tableNumber}`,
-            tier: 'VIP',
-            guestCount: 1,
-            holderName: vipLinkInfo.purchaserName || 'VIP Host'
-          } : undefined}
+          vipDetails={
+            vipLinkInfo.isVipGuest || scanState.vipInfo ? {
+              tableName: scanState.vipInfo?.tableName || `Table ${vipLinkInfo.tableNumber}`,
+              tier: 'VIP',
+              guestCount: 1,
+              holderName: vipLinkInfo.purchaserName || 'VIP Host'
+            } : undefined
+          }
+          isReentry={scanState.status === "reentry"}
+          lastEntryTime={
+            scanState.status === "reentry" && scanState.ticket?.scanned_at
+              ? new Date(scanState.ticket.scanned_at).toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true
+                })
+              : undefined
+          }
           onDismiss={handleScanAnother}
         />
       )}

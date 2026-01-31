@@ -19,6 +19,8 @@ export interface SuccessOverlayProps {
     holderName: string;
   };
   groupCheckIn?: { current: number; total: number };
+  isReentry?: boolean; // Flag for VIP-linked re-entry
+  lastEntryTime?: string; // Time of last entry (for re-entry display)
   onDismiss: () => void;
 }
 
@@ -27,6 +29,8 @@ export const SuccessOverlay = ({
   guestName,
   vipDetails,
   groupCheckIn,
+  isReentry = false,
+  lastEntryTime,
   onDismiss,
 }: SuccessOverlayProps) => {
   // Play audio and auto-dismiss on mount
@@ -52,15 +56,33 @@ export const SuccessOverlay = ({
 
   return (
     <div className="fixed inset-0 z-[100] bg-green-500 flex flex-col items-center justify-center animate-in fade-in duration-200">
+      {/* Re-entry banner - gold banner at top for VIP-linked re-entry */}
+      {isReentry && (
+        <div className="absolute top-0 left-0 right-0 bg-yellow-500 text-black py-4 px-6 text-center">
+          <p className="text-2xl font-black uppercase tracking-tight">RE-ENTRY GRANTED</p>
+          {lastEntryTime && (
+            <p className="text-sm opacity-80 mt-1">Last entry: {lastEntryTime}</p>
+          )}
+        </div>
+      )}
+
       {/* Large checkmark icon with bounce animation */}
       <div className="mb-8 animate-[bounce_0.5s_ease-in-out]">
         <CheckCircle2 className="h-32 w-32 text-white" strokeWidth={1.5} />
       </div>
 
       {/* GA tickets: Minimal display - just checkmark (already shown above) */}
-      {ticketType === 'ga' && (
+      {ticketType === 'ga' && !isReentry && (
         <div className="text-center">
           {/* Intentionally minimal - checkmark is enough for GA throughput */}
+        </div>
+      )}
+
+      {/* VIP-linked GA tickets (re-entry): Show table info */}
+      {ticketType === 'ga' && isReentry && vipDetails && (
+        <div className="text-center text-white space-y-2 px-6">
+          <h2 className="text-3xl font-black uppercase tracking-tight">VIP GUEST</h2>
+          <p className="text-2xl font-bold">{vipDetails.tableName}</p>
         </div>
       )}
 
