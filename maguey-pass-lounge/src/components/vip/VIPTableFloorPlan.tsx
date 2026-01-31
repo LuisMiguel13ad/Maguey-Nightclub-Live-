@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type VipTableWithAvailability } from '@/lib/vip-tables-service';
+import { type VipTableWithAvailability, useRealtimeFloorPlan } from '@/lib/vip-tables-service';
 
 interface VIPTableFloorPlanProps {
-  tables: VipTableWithAvailability[];
-  selectedTableId?: string;
-  onSelectTable: (table: VipTableWithAvailability) => void;
   eventId: string;
   eventName: string;
+  selectedTableId?: string;
+  onSelectTable: (table: VipTableWithAvailability) => void;
 }
 
 // Tier colors matching the reference
@@ -99,12 +99,33 @@ const TableButton: React.FC<{
 };
 
 export function VIPTableFloorPlan({
-  tables,
-  selectedTableId,
-  onSelectTable,
   eventId,
   eventName,
+  selectedTableId,
+  onSelectTable,
 }: VIPTableFloorPlanProps) {
+  // Use realtime hook to fetch and subscribe to table updates
+  const { tables, isLoading, error } = useRealtimeFloorPlan(eventId);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-2">Loading floor plan...</span>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64 text-red-500">
+        <p>Failed to load floor plan: {error.message}</p>
+      </div>
+    );
+  }
+
   // Create a map for quick lookup
   const tableMap = new Map(tables.map(t => [t.table_number, t]));
 
@@ -114,10 +135,19 @@ export function VIPTableFloorPlan({
   return (
     <div className="relative w-full max-w-4xl mx-auto">
       {/* Floor plan container */}
-      <div 
+      <div
         className="relative bg-deepteal rounded-xl border border-white/5 p-4 sm:p-8"
         style={{ aspectRatio: '4/3', minHeight: '600px' }}
       >
+        {/* Live indicator */}
+        <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+          </span>
+          <span className="text-xs text-muted-foreground">Live</span>
+        </div>
+
         {/* Expand icon in corner */}
         <div className="absolute top-4 right-4 opacity-20">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-white">
