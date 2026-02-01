@@ -36,7 +36,10 @@ const VipScannerPage = () => {
   const { toast } = useToast();
 
   const [events, setEvents] = useState<Event[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(urlEventId || null);
+  // Check for event in URL query param (e.g., ?event=ID&qr=TOKEN)
+  const urlSearchParams = new URLSearchParams(window.location.search);
+  const eventFromQuery = urlSearchParams.get('event');
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(urlEventId || eventFromQuery || null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

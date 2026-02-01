@@ -344,13 +344,20 @@ export function VIPScanner({ eventId, onScanComplete }: VIPScannerProps) {
   }, [scanResult]);
 
   // Test-only: Accept QR token via URL parameter
+  // Wait for eventId to be set before processing to ensure correct event context
   useEffect(() => {
     if (import.meta.env.DEV || import.meta.env.MODE === 'test') {
+      // Only process if eventId is set (parent has selected an event)
+      if (!eventId) {
+        console.log('[TEST MODE] Waiting for eventId before processing QR param...');
+        return;
+      }
+
       const params = new URLSearchParams(window.location.search);
       const qrParam = params.get('qr');
 
       if (qrParam) {
-        console.log('[TEST MODE] Processing QR from URL parameter:', qrParam);
+        console.log('[TEST MODE] Processing QR from URL parameter:', qrParam, 'for event:', eventId);
         handleQRCode(qrParam);
 
         // Clear parameter from URL to avoid re-processing
@@ -359,7 +366,7 @@ export function VIPScanner({ eventId, onScanComplete }: VIPScannerProps) {
         window.history.replaceState({}, '', url.toString());
       }
     }
-  }, []); // Empty deps - run once on mount
+  }, [eventId]); // Re-run when eventId becomes available
 
   return (
     <div className="space-y-4">

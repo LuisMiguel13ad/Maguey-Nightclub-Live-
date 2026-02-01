@@ -78,13 +78,14 @@ async function applySeed() {
 
   // Step 1: Create test event
   // Using actual columns: event_date, event_time (NOT date, time)
+  // Use TODAY's date so scanner can see and access the event
   console.log('\n📅 Creating test event...');
-  const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
 
   const eventSuccess = await upsert('events', {
     id: '99999999-9999-9999-9999-999999999999',
     name: 'VIP E2E Test Event',
-    event_date: futureDate,       // NOT 'date'
+    event_date: today,       // NOT 'date'
     event_time: '22:00:00',       // NOT 'time'
     genre: 'Reggaeton',
     venue_name: 'Test Venue',
@@ -225,7 +226,7 @@ async function applySeed() {
   console.log('\n📆 Test Event:');
   console.log('   ID: 99999999-9999-9999-9999-999999999999');
   console.log('   Name: VIP E2E Test Event');
-  console.log(`   Date: ${futureDate}`);
+  console.log(`   Date: ${today}`);
 
   console.log('\n' + '━'.repeat(60));
   console.log('Use these tokens in Scanner app with ?qr=TOKEN parameter');
