@@ -51,6 +51,9 @@ import {
   Loader2,
   Map,
   List,
+  Ticket,
+  Link as LinkIcon,
+  Copy,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
@@ -61,6 +64,7 @@ import {
   getReservationsForEvent,
   updateReservationStatus,
   checkInAllGuests,
+  confirmPaymentManually,
   getEventTableStats,
   type TableReservation,
   type VipTable,
@@ -128,6 +132,51 @@ const VipTablesManagement = () => {
     is_available: boolean;
     package_description: string | null;
   } | null>(null);
+
+  // Linked tickets state (GA tickets purchased via invite link)
+  interface LinkedTicket {
+    id: string;
+    purchased_by_email: string;
+    purchased_by_name: string | null;
+    is_booker_purchase: boolean;
+    created_at: string;
+    tickets: {
+      id: string;
+      status: string;
+      ticket_id: string;
+    };
+  }
+  const [linkedTickets, setLinkedTickets] = useState<LinkedTicket[]>([]);
+  const [loadingLinkedTickets, setLoadingLinkedTickets] = useState(false);
+
+  // Fetch linked tickets when a reservation is selected
+  useEffect(() => {
+    const fetchLinkedTickets = async () => {
+      if (!selectedReservation) {
+        setLinkedTickets([]);
+        return;
+      }
+
+      setLoadingLinkedTickets(true);
+      try {
+        const { data, error } = await supabase
+          .from('vip_linked_tickets')
+          .select('*, tickets(id, status, ticket_id)')
+          .eq('vip_reservation_id', selectedReservation.id)
+          .order('created_at', { ascending: true });
+
+        if (!error && data) {
+          setLinkedTickets(data as LinkedTicket[]);
+        }
+      } catch (err) {
+        console.error('Error fetching linked tickets:', err);
+      } finally {
+        setLoadingLinkedTickets(false);
+      }
+    };
+
+    fetchLinkedTickets();
+  }, [selectedReservation]);
 
   // Redirect if not owner or promoter
   useEffect(() => {
@@ -337,19 +386,69 @@ const VipTablesManagement = () => {
   const handleCheckInAll = async (reservation: TableReservation) => {
     if (!user) return;
 
+    console.log('Check-in all for reservation:', reservation.id, 'status:', reservation.status);
+
     try {
-      await checkInAllGuests(reservation.id, user.id);
-      toast({
-        title: 'All Guests Checked In',
-        description: `${reservation.guest_count} guests checked in for ${reservation.vip_table?.table_name}`,
-      });
-      loadReservations();
+      const result = await checkInAllGuests(reservation.id, user.id, reservation.status);
+
+      if (result.success) {
+        if (result.checkedIn > 0) {
+          toast({
+            title: 'Guests Checked In',
+            description: result.message,
+          });
+        } else {
+          toast({
+            title: 'Already Checked In',
+            description: result.message,
+          });
+        }
+        loadReservations();
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Cannot Check In',
+          description: result.message,
+        });
+      }
     } catch (error) {
       console.error('Error checking in guests:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Failed to check in guests',
+        description: 'An unexpected error occurred',
+      });
+    }
+  };
+
+  const handleConfirmPayment = async (reservation: TableReservation) => {
+    if (!user) return;
+
+    try {
+      const result = await confirmPaymentManually(reservation.id, user.id);
+
+      if (result.success) {
+        toast({
+          title: 'Payment Confirmed',
+          description: result.message,
+        });
+        loadReservations();
+        // Refresh the selected reservation to show updated data
+        setSelectedReservation(null);
+        setShowDetailDialog(false);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Cannot Confirm Payment',
+          description: result.message,
+        });
+      }
+    } catch (error) {
+      console.error('Error confirming payment:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'An unexpected error occurred',
       });
     }
   };
@@ -429,11 +528,12 @@ const VipTablesManagement = () => {
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { className: string; label: string }> = {
-      pending: { className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50', label: 'Pending' },
-      confirmed: { className: 'bg-green-500/20 text-green-400 border-green-500/50', label: 'Confirmed' },
-      cancelled: { className: 'bg-red-500/20 text-red-400 border-red-500/50', label: 'Cancelled' },
-      completed: { className: 'bg-blue-500/20 text-blue-400 border-blue-500/50', label: 'Completed' },
-      no_show: { className: 'bg-gray-500/20 text-gray-400 border-gray-500/50', label: 'No Show' },
+      pending: { className: 'bg-red-500/20 text-red-400 border-red-500/50', label: '⚠ UNPAID' },
+      confirmed: { className: 'bg-green-500/20 text-green-400 border-green-500/50', label: '✓ PAID' },
+      checked_in: { className: 'bg-blue-500/20 text-blue-400 border-blue-500/50', label: '✓ Checked In' },
+      cancelled: { className: 'bg-gray-500/20 text-gray-400 border-gray-500/50', label: 'Cancelled' },
+      completed: { className: 'bg-purple-500/20 text-purple-400 border-purple-500/50', label: 'Completed' },
+      no_show: { className: 'bg-orange-500/20 text-orange-400 border-orange-500/50', label: 'No Show' },
     };
     const variant = variants[status] || variants.pending;
     return <Badge className={variant.className}>{variant.label}</Badge>;
@@ -1082,6 +1182,90 @@ const VipTablesManagement = () => {
                   </div>
                 </div>
 
+                {/* Linked Guests - GA tickets purchased via invite link */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <Ticket className="h-4 w-4" />
+                      Linked GA Tickets
+                    </h4>
+                    {selectedReservation.invite_code && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => {
+                          // Use env variable with fallback for development
+                          const purchaseBaseUrl = import.meta.env.VITE_PURCHASE_SITE_URL || (import.meta.env.DEV ? 'http://localhost:3016' : 'https://tickets.maguey.club');
+                          const link = `${purchaseBaseUrl}/checkout?event=${selectedReservation.event_id}&vip=${selectedReservation.invite_code}`;
+                          navigator.clipboard.writeText(link);
+                          toast({
+                            title: 'Invite Link Copied',
+                            description: 'Share this link with guests to join the VIP table',
+                          });
+                        }}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy Invite Link
+                      </Button>
+                    )}
+                  </div>
+
+                  {loadingLinkedTickets ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  ) : linkedTickets.length > 0 ? (
+                    <div className="space-y-2">
+                      {linkedTickets.map((lt, index) => (
+                        <div
+                          key={lt.id}
+                          className={`p-2 rounded border ${
+                            lt.tickets?.status === 'checked_in'
+                              ? 'bg-green-500/10 border-green-500/30'
+                              : 'bg-muted/50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">
+                                {lt.purchased_by_name || 'Guest'}
+                                {lt.is_booker_purchase && (
+                                  <Badge variant="secondary" className="ml-2 text-xs">Booker</Badge>
+                                )}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{lt.purchased_by_email}</p>
+                            </div>
+                            <Badge
+                              className={
+                                lt.tickets?.status === 'checked_in'
+                                  ? 'bg-green-500/20 text-green-400'
+                                  : ''
+                              }
+                            >
+                              {lt.tickets?.status === 'checked_in' ? 'Checked In' : 'Confirmed'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      <Ticket className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No linked GA tickets yet</p>
+                      {selectedReservation.invite_code && (
+                        <p className="text-xs mt-1">Share the invite link for guests to purchase</p>
+                      )}
+                    </div>
+                  )}
+
+                  {linkedTickets.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {linkedTickets.filter(lt => lt.tickets?.status === 'checked_in').length} / {linkedTickets.length} guests checked in
+                    </p>
+                  )}
+                </div>
+
                 {selectedReservation.bottle_choice && (
                   <div className="border-t pt-4">
                     <p className="text-sm text-muted-foreground">Bottle Choice</p>
@@ -1124,11 +1308,25 @@ const VipTablesManagement = () => {
               </div>
             )}
 
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
                 Close
               </Button>
-              {selectedReservation && selectedReservation.checked_in_guests < selectedReservation.guest_count && (
+              {/* Show Confirm Payment button for pending reservations */}
+              {selectedReservation && selectedReservation.status === 'pending' && (
+                <Button
+                  onClick={() => handleConfirmPayment(selectedReservation)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Confirm Cash/Card Payment
+                </Button>
+              )}
+              {/* Show Check In All button only for paid/confirmed reservations */}
+              {selectedReservation &&
+                selectedReservation.status !== 'pending' &&
+                selectedReservation.status !== 'cancelled' &&
+                selectedReservation.checked_in_guests < selectedReservation.guest_count && (
                 <Button onClick={() => handleCheckInAll(selectedReservation)}>
                   <UserCheck className="h-4 w-4 mr-2" />
                   Check In All Guests

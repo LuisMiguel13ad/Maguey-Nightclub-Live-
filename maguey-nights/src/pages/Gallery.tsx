@@ -165,8 +165,8 @@ const Gallery = () => {
             <p className="text-white/60 mb-8">
               Join us for an unforgettable night of music, dancing, and premium hospitality.
             </p>
-            <a 
-              href="http://localhost:3016" 
+            <a
+              href={import.meta.env.VITE_PURCHASE_SITE_URL || (import.meta.env.DEV ? 'http://localhost:3016' : 'https://tickets.maguey.club')}
               className="inline-block px-10 py-4 bg-[#39B54A] text-white font-semibold
                          tracking-[0.15em] text-sm uppercase transition-all duration-300 rounded-full
                          hover:bg-[#2d9a3c] hover:shadow-[0_0_30px_rgba(57,181,74,0.3)]"

@@ -67,7 +67,7 @@ export default function VIPPassView() {
           event_vip_tables (*)
         )
       `)
-      .eq('qr_token', token)
+      .eq('qr_code_token', token)
       .single();
 
     if (passError || !passData) {

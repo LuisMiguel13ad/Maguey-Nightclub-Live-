@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { isSupabaseConfigured } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabase-config';
 import { getUserRole, type UserRole } from '@/lib/auth';
 import { localStorageService } from '@/lib/localStorage';
 
@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     let mounted = true;
-    
+
     const initAuth = async () => {
       try {
         await refreshRole();

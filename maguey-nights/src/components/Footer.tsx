@@ -24,7 +24,7 @@ const Footer = () => {
   };
 
   return (
-    <footer className="bg-black border-t border-white/10">
+    <footer className="bg-transparent backdrop-blur-sm border-t border-white/5 relative z-10">
       <div className="container mx-auto px-4 py-12">
         {/* Newsletter Section */}
         <div className="mb-12 pb-8 border-b border-white/10">

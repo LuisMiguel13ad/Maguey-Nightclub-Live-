@@ -1,15 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Radio, AlertCircle, RefreshCw, CheckCircle2 } from "lucide-react";
-import { 
-  readNFCTag, 
-  isNFCAvailable, 
-  isNFCEnabled, 
+import {
+  readNFCTag,
+  isNFCAvailable,
+  isNFCEnabled,
   getNFCErrorMessage,
   triggerHapticFeedback,
-  type NFCTicketPayload 
+  type NFCTicketPayload
 } from "@/lib/nfc-service";
 
 interface NFCScannerProps {
@@ -19,6 +19,7 @@ interface NFCScannerProps {
 }
 
 export const NFCScanner = ({ onScanSuccess, isScanning, onError }: NFCScannerProps) => {
+  const mountedRef = useRef(true);
   const [error, setError] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
@@ -26,16 +27,32 @@ export const NFCScanner = ({ onScanSuccess, isScanning, onError }: NFCScannerPro
   const [isDetected, setIsDetected] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
 
+  // Track mount state
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   // Check NFC availability on mount
   useEffect(() => {
     const checkNFC = async () => {
       const available = isNFCAvailable();
+
+      // Guard: Don't update state if component unmounted
+      if (!mountedRef.current) return;
+
       setIsAvailable(available);
-      
+
       if (available) {
         const enabled = await isNFCEnabled();
+
+        // Guard: Don't update state if component unmounted
+        if (!mountedRef.current) return;
+
         setIsEnabled(enabled);
-        
+
         if (!enabled) {
           const errorMsg = "NFC is not enabled. Please enable NFC on your device.";
           setError(errorMsg);
@@ -62,25 +79,32 @@ export const NFCScanner = ({ onScanSuccess, isScanning, onError }: NFCScannerPro
     }
 
     const startReading = async () => {
+      if (!mountedRef.current) return;
+
       setIsReading(true);
       setIsDetected(false);
       setError(null);
 
       try {
         const result = await readNFCTag();
-        
+
+        // Guard: Don't update state if component unmounted
+        if (!mountedRef.current) return;
+
         if (result.success && result.payload) {
           // Visual feedback
           setIsDetected(true);
-          
+
           // Haptic feedback
           triggerHapticFeedback('success');
-          
+
           // Call success callback
           onScanSuccess(result.payload);
-          
+
           // Reset detection state after a moment
           setTimeout(() => {
+            // Guard: Don't update state if component unmounted
+            if (!mountedRef.current) return;
             setIsDetected(false);
             setIsReading(false);
           }, 1000);
@@ -89,22 +113,25 @@ export const NFCScanner = ({ onScanSuccess, isScanning, onError }: NFCScannerPro
           const errorMsg = result.error || 'Failed to read NFC tag';
           setError(getNFCErrorMessage(errorMsg));
           triggerHapticFeedback('error');
-          
+
           if (onError) {
             onError(errorMsg);
           }
-          
+
           setIsReading(false);
         }
       } catch (err: any) {
+        // Guard: Don't update state if component unmounted
+        if (!mountedRef.current) return;
+
         const errorMsg = err?.message || 'NFC read failed';
         setError(getNFCErrorMessage(errorMsg));
         triggerHapticFeedback('error');
-        
+
         if (onError) {
           onError(errorMsg);
         }
-        
+
         setIsReading(false);
       }
     };
@@ -113,23 +140,35 @@ export const NFCScanner = ({ onScanSuccess, isScanning, onError }: NFCScannerPro
   }, [isScanning, isAvailable, isEnabled, isReading, onScanSuccess, onError]);
 
   const handleRetry = async () => {
+    if (!mountedRef.current) return;
+
     setIsRetrying(true);
     setError(null);
     setIsReading(false);
     setIsDetected(false);
-    
+
     // Wait a moment before retrying
     await new Promise(resolve => setTimeout(resolve, 500));
-    
+
+    // Guard: Don't continue if component unmounted during wait
+    if (!mountedRef.current) return;
+
     // Re-check NFC availability
     const available = isNFCAvailable();
     setIsAvailable(available);
-    
+
     if (available) {
       const enabled = await isNFCEnabled();
+
+      // Guard: Don't update state if component unmounted
+      if (!mountedRef.current) return;
+
       setIsEnabled(enabled);
     }
-    
+
+    // Guard: Don't update state if component unmounted
+    if (!mountedRef.current) return;
+
     setIsRetrying(false);
   };
 

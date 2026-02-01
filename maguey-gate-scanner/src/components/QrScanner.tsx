@@ -15,6 +15,7 @@ interface QrScannerProps {
 export const QrScanner = ({ onScanSuccess, isScanning, onError, minimal = false }: QrScannerProps) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isInitialized = useRef(false);
+  const mountedRef = useRef(true);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
@@ -41,7 +42,7 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError, minimal = false 
   };
 
   const initScanner = async () => {
-    if (!isScanning || isInitialized.current) return;
+    if (!isScanning || isInitialized.current || !mountedRef.current) return;
 
     setError(null);
     setIsRetrying(false);
@@ -73,7 +74,10 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError, minimal = false 
           },
         },
         (decodedText) => {
-          onScanSuccess(decodedText);
+          // Only call callback if still mounted
+          if (mountedRef.current) {
+            onScanSuccess(decodedText);
+          }
         },
         (errorMessage) => {
           // Silent error callback for scanning errors (not critical)
@@ -85,6 +89,10 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError, minimal = false 
       );
     } catch (err: any) {
       console.error("Scanner initialization error:", err);
+
+      // Guard: Don't update state if component unmounted
+      if (!mountedRef.current) return;
+
       const errorMsg = getErrorMessage(err);
       setError(errorMsg);
       isInitialized.current = false;
@@ -95,28 +103,51 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError, minimal = false 
     }
   };
 
+  // Track mount state
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     if (isScanning) {
       initScanner();
     }
 
     return () => {
+      // Mark as unmounted before cleanup to prevent callbacks
+      mountedRef.current = false;
+
       if (scannerRef.current) {
-        scannerRef.current
-          .stop()
-          .then(() => {
-            scannerRef.current?.clear();
-            isInitialized.current = false;
-          })
-          .catch(() => {
-            // Silently ignore "Cannot stop" errors - scanner may not be running
-            isInitialized.current = false;
-          });
+        try {
+          // Try to stop the scanner - wrap in try-catch to prevent any errors from bubbling up
+          scannerRef.current
+            .stop()
+            .then(() => {
+              try {
+                scannerRef.current?.clear();
+              } catch {
+                // Ignore clear errors
+              }
+              isInitialized.current = false;
+            })
+            .catch(() => {
+              // Silently ignore "Cannot stop" errors - scanner may not be running
+              isInitialized.current = false;
+            });
+        } catch {
+          // Silently ignore synchronous errors during cleanup
+          isInitialized.current = false;
+        }
       }
     };
   }, [isScanning]);
 
   const handleRetry = async () => {
+    if (!mountedRef.current) return;
+
     setIsRetrying(true);
     if (scannerRef.current) {
       try {
@@ -128,7 +159,15 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError, minimal = false 
     }
     isInitialized.current = false;
     await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Guard: Don't continue if component unmounted during wait
+    if (!mountedRef.current) return;
+
     await initScanner();
+
+    // Guard: Don't update state if component unmounted
+    if (!mountedRef.current) return;
+
     setIsRetrying(false);
   };
 
@@ -148,36 +187,61 @@ export const QrScanner = ({ onScanSuccess, isScanning, onError, minimal = false 
           <CardTitle className="text-2xl">Scan Ticket QR Code</CardTitle>
         </CardHeader>
       )}
-      <CardContent className="p-6 space-y-4">
+      <CardContent className="p-0 h-full flex flex-col justify-center">
         {error ? (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Camera Error</AlertTitle>
-            <AlertDescription className="mt-2">
-              {error}
-            </AlertDescription>
+          <div className="flex flex-col items-center justify-center h-[400px] w-full bg-zinc-950/80 backdrop-blur-sm rounded-3xl border border-white/10 p-8 text-center animate-in fade-in zoom-in duration-300">
+            <div className="mb-6 relative">
+              <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full animate-pulse" />
+              <div className="relative bg-zinc-900 p-4 rounded-full border border-red-500/30">
+                <Camera className="h-8 w-8 text-red-500" />
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-white mb-2">Camera Issue</h3>
+            <p className="text-white/60 text-sm max-w-[260px] mb-8 leading-relaxed">
+              {error.replace("Camera error: ", "")}
+            </p>
+
             <Button
               onClick={handleRetry}
-              variant="outline"
-              className="mt-4 w-full"
+              className="w-full max-w-[200px] h-12 bg-white text-black hover:bg-white/90 font-bold rounded-full transition-all hover:scale-105"
               disabled={isRetrying}
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isRetrying ? 'animate-spin' : ''}`} />
-              {isRetrying ? 'Retrying...' : 'Retry Camera'}
+              {isRetrying ? 'Restarting...' : 'Try Again'}
             </Button>
-          </Alert>
+          </div>
         ) : (
           <>
-            <div className="relative rounded-lg overflow-hidden border-2 border-primary/30 bg-black">
-              <div id="qr-reader" className="w-full min-h-[300px] md:min-h-[400px]" />
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="border-2 border-primary/50 rounded-lg animate-pulse"
-                  style={{ width: '80%', maxWidth: '300px', aspectRatio: '1' }} />
+            <div className="relative rounded-3xl overflow-hidden bg-black h-full w-full">
+              <div id="qr-reader" className="w-full h-full min-h-[400px]" />
+
+              {/* Viewfinder Overlay */}
+              <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center p-12">
+                <div className="relative w-[280px] h-[280px] sm:w-[320px] sm:h-[320px]">
+                  {/* Corners - Glowing Neon Style */}
+                  <div className="absolute top-0 left-0 w-16 h-16 border-t-[6px] border-l-[6px] border-purple-500 rounded-tl-3xl shadow-[0_0_20px_rgba(168,85,247,0.6)]" />
+                  <div className="absolute top-0 right-0 w-16 h-16 border-t-[6px] border-r-[6px] border-purple-500 rounded-tr-3xl shadow-[0_0_20px_rgba(168,85,247,0.6)]" />
+                  <div className="absolute bottom-0 left-0 w-16 h-16 border-b-[6px] border-l-[6px] border-purple-500 rounded-bl-3xl shadow-[0_0_20px_rgba(168,85,247,0.6)]" />
+                  <div className="absolute bottom-0 right-0 w-16 h-16 border-b-[6px] border-r-[6px] border-purple-500 rounded-br-3xl shadow-[0_0_20px_rgba(168,85,247,0.6)]" />
+
+                  {/* Scanning Animation - Smoother & brighter */}
+                  <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-purple-400 to-transparent shadow-[0_0_25px_rgba(168,85,247,1)] animate-[scan_2s_ease-in-out_infinite]" />
+
+                  {/* Center Icon hint */}
+                  <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                    <Camera className="h-24 w-24 text-white" />
+                  </div>
+                </div>
+
+                <div className="mt-12 bg-black/40 backdrop-blur-xl border border-white/10 px-6 py-3 rounded-full flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                  <p className="text-white font-medium text-sm tracking-wide">
+                    Align code within frame
+                  </p>
+                </div>
               </div>
             </div>
-            <p className="text-center text-muted-foreground mt-4 text-sm md:text-base">
-              Position QR code within the frame
-            </p>
           </>
         )}
       </CardContent>

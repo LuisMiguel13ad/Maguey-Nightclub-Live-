@@ -27,6 +27,7 @@ import {
   Users,
   CheckCircle,
   Loader2,
+  Crown,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -150,6 +151,30 @@ const EventManagement = () => {
   const [customMessage, setCustomMessage] = useState("");
   const [sendingNotification, setSendingNotification] = useState(false);
   const [subscriberCount, setSubscriberCount] = useState<number | null>(null);
+
+  // VIP section state for new events
+  const [enableVipOnCreate, setEnableVipOnCreate] = useState(false);
+
+  // Wizard step state for new event creation (1 = Event Details, 2 = VIP Setup)
+  const [wizardStep, setWizardStep] = useState(1);
+
+  // VIP table pricing configuration
+  const [vipTablePricing, setVipTablePricing] = useState({
+    premium: 750,
+    front_row: 600,
+    standard: 500,
+  });
+
+  const timeSlots = Array.from({ length: 48 }, (_, i) => {
+    const hour = Math.floor(i / 2);
+    const minute = i % 2 === 0 ? "00" : "30";
+    const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    const ampm = hour < 12 ? "AM" : "PM";
+    return {
+      value: `${hour.toString().padStart(2, '0')}:${minute}`,
+      label: `${hour12}:${minute} ${ampm}`
+    };
+  });
 
   useEffect(() => {
     // Load API key from local storage on mount
@@ -340,11 +365,15 @@ const EventManagement = () => {
     setImageFile(null);
     setImagePreview("");
     setTicketTypes([{ name: "General Admission", price: 25, capacity: 100 }]);
-    setEventStatus('draft');
+    setEventStatus('published');
     setCategories([]);
     setTags([]);
     setCategoriesInput("");
     setTagsInput("");
+    setEnableVipOnCreate(false);
+    // Reset wizard state for new event creation
+    setWizardStep(1);
+    setVipTablePricing({ premium: 750, front_row: 600, standard: 500 });
     setEditDialogOpen(true);
   };
 
@@ -705,6 +734,57 @@ const EventManagement = () => {
 
       if (ttError) throw ttError;
 
+      // Enable VIP section and create VIP tables if requested for new events
+      if (!editingEvent && enableVipOnCreate) {
+        // Create VIP tables with custom pricing
+        const vipTableTemplates = [
+          { table_number: 1, tier: 'premium', table_name: 'Premium 1' },
+          { table_number: 2, tier: 'premium', table_name: 'Premium 2' },
+          { table_number: 3, tier: 'premium', table_name: 'Premium 3' },
+          { table_number: 4, tier: 'front_row', table_name: 'Front Row 4' },
+          { table_number: 5, tier: 'front_row', table_name: 'Front Row 5' },
+          { table_number: 6, tier: 'front_row', table_name: 'Front Row 6' },
+          { table_number: 7, tier: 'front_row', table_name: 'Front Row 7' },
+          { table_number: 8, tier: 'standard', table_name: 'Standard 8' },
+        ];
+
+        const tablesToInsert = vipTableTemplates.map(t => ({
+          event_id: eventId,
+          table_number: t.table_number,
+          table_name: t.table_name,
+          tier: t.tier,
+          price_cents: vipTablePricing[t.tier as keyof typeof vipTablePricing] * 100,
+          capacity: t.tier === 'premium' ? 8 : 6,
+          bottles_included: t.tier === 'premium' ? 2 : 1,
+          is_available: true,
+          is_active: true,
+          display_order: t.table_number,
+        }));
+
+        const { error: tablesError } = await supabase
+          .from('event_vip_tables')
+          .insert(tablesToInsert);
+
+        if (tablesError) {
+          console.warn('Failed to create VIP tables:', tablesError);
+          // Don't fail the event creation, just warn
+        }
+
+        // Update event to mark VIP as enabled
+        const { error: vipError } = await supabase
+          .from("events")
+          .update({
+            vip_enabled: true,
+            vip_configured_at: new Date().toISOString(),
+          })
+          .eq("id", eventId);
+
+        if (vipError) {
+          console.warn('Failed to enable VIP section:', vipError);
+          // Don't fail the event creation, just warn
+        }
+      }
+
       // Sync event to other sites
       try {
         const syncResult = await syncEvent(eventId);
@@ -946,205 +1026,186 @@ const EventManagement = () => {
         </Card>
 
         {/* Edit/Create Dialog */}
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
+        <Dialog open={editDialogOpen} onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          // Reset wizard state when dialog closes
+          if (!open) {
+            setWizardStep(1);
+            setVipTablePricing({ premium: 750, front_row: 600, standard: 500 });
+          }
+        }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-[#030712] border-white/10 text-white shadow-2xl backdrop-blur-xl">
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
                 {editingEvent ? "Edit Event" : "Create New Event"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-slate-400">
                 {editingEvent
                   ? "Update event details and ticket types."
-                  : "Create a new event with capacity and ticket type configurations."}
+                  : wizardStep === 1
+                    ? "Step 1: Enter event details and ticket configurations."
+                    : "Step 2: Configure VIP table reservations."}
               </DialogDescription>
             </DialogHeader>
 
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="details">Event Details</TabsTrigger>
-                {editingEvent && (
-                  <>
-                    <TabsTrigger value="vip-setup">VIP Setup</TabsTrigger>
-                    <TabsTrigger value="vip-reservations">VIP Reservations</TabsTrigger>
-                  </>
-                )}
-              </TabsList>
+            {/* Step Indicator - Only show for new events */}
+            {!editingEvent && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-xl border border-white/10 my-2">
+                {/* Step 1 */}
+                <div className={`flex items-center gap-2 ${wizardStep >= 1 ? 'text-indigo-400' : 'text-slate-500'}`}>
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    wizardStep >= 1 ? 'bg-indigo-500 text-white' : 'bg-white/10 text-slate-400'
+                  }`}>
+                    1
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wide hidden sm:inline">Event Details</span>
+                </div>
 
-              <TabsContent value="details" className="space-y-4 py-4">
+                {/* Connector */}
+                <div className={`flex-1 h-0.5 rounded-full ${wizardStep >= 2 ? 'bg-indigo-500' : 'bg-white/10'}`} />
+
+                {/* Step 2 */}
+                <div className={`flex items-center gap-2 ${wizardStep >= 2 ? 'text-indigo-400' : 'text-slate-500'}`}>
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                    wizardStep >= 2 ? 'bg-indigo-500 text-white' : 'bg-white/10 text-slate-400'
+                  }`}>
+                    2
+                  </div>
+                  <span className="text-xs font-semibold uppercase tracking-wide hidden sm:inline">VIP Setup</span>
+                </div>
+              </div>
+            )}
+
+            {/* Section indicator for edit mode */}
+            {editingEvent && (
+              <div className="flex items-center justify-between px-4 py-2 bg-white/5 rounded-xl border border-white/10 my-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-1 w-8 bg-indigo-500 rounded-full" />
+                  <span className="text-xs font-semibold uppercase tracking-widest text-indigo-400">Event Details</span>
+                </div>
+              </div>
+            )}
+
+            {/* For editing events - use Tabs */}
+            {editingEvent ? (
+              <Tabs defaultValue="details" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 bg-white/5 border border-white/10 rounded-xl p-1">
+                  <TabsTrigger value="details" className="rounded-lg data-[state=active]:bg-indigo-500/20 data-[state=active]:text-white">Event Details</TabsTrigger>
+                  <TabsTrigger value="vip-setup" className="rounded-lg data-[state=active]:bg-indigo-500/20 data-[state=active]:text-white">VIP Setup</TabsTrigger>
+                  <TabsTrigger value="vip-reservations" className="rounded-lg data-[state=active]:bg-indigo-500/20 data-[state=active]:text-white">VIP Reservations</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="details" className="space-y-6 py-6">
                 <div className="space-y-2">
-                  <Label htmlFor="event-name">Event Name *</Label>
+                  <Label htmlFor="event-name" className="text-slate-300 font-medium tracking-wide">Event Name *</Label>
                   <Input
                     id="event-name"
                     value={eventName}
                     onChange={(e) => setEventName(e.target.value)}
                     placeholder="e.g., Perreo Fridays"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="venue-name">Venue Name</Label>
-                    <Input
-                      id="venue-name"
-                      value={venueName}
-                      onChange={(e) => setVenueName(e.target.value)}
-                      placeholder="e.g., Club Maguey"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="city">City (optional)</Label>
-                    <Input
-                      id="city"
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="Wilmington (default)"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="venue-address">Venue Address</Label>
-                  <Input
-                    id="venue-address"
-                    value={venueAddress}
-                    onChange={(e) => setVenueAddress(e.target.value)}
-                    placeholder="e.g., 123 Main St"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 h-11 rounded-xl"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="event-status">Status *</Label>
-                  <Select value={eventStatus} onValueChange={(value: 'draft' | 'published' | 'archived') => setEventStatus(value)}>
-                    <SelectTrigger id="event-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          Draft
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="published">
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4" />
-                          Published
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="archived">
-                        <div className="flex items-center gap-2">
-                          <Archive className="h-4 w-4" />
-                          Archived
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    {eventStatus === 'draft' && 'Event is not visible to public'}
-                    {eventStatus === 'published' && 'Event is visible on main and purchase sites'}
-                    {eventStatus === 'archived' && 'Event is hidden but preserved'}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="event-description">Description</Label>
-                  <RichTextEditor
-                    content={eventDescription}
-                    onChange={setEventDescription}
-                    placeholder="Event description... (supports rich text formatting)"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="categories">Categories</Label>
-                    <Input
-                      id="categories"
-                      value={categoriesInput}
-                      onChange={(e) => setCategoriesInput(e.target.value)}
-                      placeholder="Music, Nightlife, Latin (comma-separated)"
+                  <Label htmlFor="event-description" className="text-slate-300 font-medium tracking-wide">Description</Label>
+                  <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+                    <RichTextEditor
+                      content={eventDescription}
+                      onChange={setEventDescription}
+                      placeholder="Event description... (supports rich text formatting)"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated categories for organizing events
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tags">Tags</Label>
-                    <Input
-                      id="tags"
-                      value={tagsInput}
-                      onChange={(e) => setTagsInput(e.target.value)}
-                      placeholder="reggaeton, friday, vip (comma-separated)"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Comma-separated tags for filtering and search
-                    </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="event-date">Event Date *</Label>
+                    <Label htmlFor="event-date" className="text-slate-300 font-medium tracking-wide">Event Date *</Label>
                     <Input
                       id="event-date"
                       type="date"
                       value={eventDate}
                       onChange={(e) => setEventDate(e.target.value)}
+                      className="bg-white/5 border-white/10 text-white h-11 rounded-xl [color-scheme:dark]"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="event-time">Event Time *</Label>
-                    <Input
-                      id="event-time"
-                      type="time"
-                      value={eventTime}
-                      onChange={(e) => setEventTime(e.target.value)}
-                    />
+                    <Label htmlFor="event-time" className="text-slate-300 font-medium tracking-wide">Event Time *</Label>
+                    <Select value={eventTime} onValueChange={setEventTime}>
+                      <SelectTrigger id="event-time" className="bg-white/5 border-white/10 text-white h-11 rounded-xl focus:border-indigo-500/50 focus:ring-indigo-500/20">
+                        <SelectValue placeholder="Select time" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-[#0b0f1a] border-white/10 text-white max-h-[300px]">
+                        {timeSlots.map((slot) => (
+                          <SelectItem key={slot.value} value={slot.value} className="focus:bg-white/10 focus:text-white">
+                            {slot.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Event Image / Flyer</Label>
-                  <div className="space-y-2">
+
+                <div className="space-y-4">
+                  <Label className="text-slate-300 font-medium tracking-wide">Event Image / Flyer</Label>
+                  <div className="space-y-4">
                     {imagePreview ? (
-                      <div className="relative">
+                      <div className="relative group rounded-2xl overflow-hidden border border-white/10 shadow-xl">
                         <img
                           src={imagePreview}
                           alt="Event preview"
-                          className="w-full h-48 object-cover rounded-lg border"
+                          className="w-full h-56 object-cover transition-transform duration-500 group-hover:scale-110"
                         />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                          onClick={removeImage}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="rounded-full h-10 w-10 p-0 shadow-lg"
+                            onClick={removeImage}
+                          >
+                            <X className="h-5 w-5" />
+                          </Button>
+                        </div>
+                        <div className="absolute top-4 left-4">
+                          <Badge className="bg-white/20 backdrop-blur-md text-white border-white/20">Preview</Badge>
+                        </div>
                       </div>
                     ) : (
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground mb-2">
+                      <div className="border-2 border-dashed border-white/10 rounded-2xl p-10 text-center bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
+                        <div className="h-16 w-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                          <ImageIcon className="h-8 w-8 text-slate-400 group-hover:text-indigo-400" />
+                        </div>
+                        <p className="text-sm text-slate-300 font-medium mb-1">
                           Upload event flyer or image
+                        </p>
+                        <p className="text-xs text-slate-500 mb-6 font-normal">
+                          Max resolution: 2000x2000px
                         </p>
                         <Input
                           type="file"
                           accept="image/jpeg,image/png,image/webp,image/gif"
                           onChange={handleImageSelect}
-                          className="max-w-xs mx-auto"
+                          className="max-w-xs mx-auto bg-white/5 border-white/10 text-white cursor-pointer"
                         />
                       </div>
                     )}
+
                     {imageFile && !imagePreview && (
                       <Button
                         type="button"
                         variant="outline"
                         onClick={handleImageUpload}
                         disabled={uploadingImage}
+                        className="w-full h-11 border-indigo-500/30 bg-indigo-500/10 text-white hover:bg-indigo-500/20 rounded-xl"
                       >
-                        {uploadingImage ? "Uploading..." : "Upload Image"}
+                        {uploadingImage ? (
+                          <div className="flex items-center gap-2">
+                            <span className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            Uploading...
+                          </div>
+                        ) : "Upload Image"}
                       </Button>
                     )}
 
@@ -1155,70 +1216,69 @@ const EventManagement = () => {
                           variant="secondary"
                           onClick={handleScanFlyer}
                           disabled={isScanning || uploadingImage}
-                          className="w-full"
+                          className="w-full h-11 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-white hover:from-indigo-500/30 hover:to-purple-500/30 border border-white/10 rounded-xl transition-all"
                         >
-                          <Wand2 className="mr-2 h-4 w-4" />
+                          <Wand2 className="mr-2 h-4 w-4 text-indigo-400" />
                           {isScanning ? "Reading Flyer..." : "Auto-fill Details from Flyer"}
                         </Button>
                       </div>
                     )}
-
-                    {imageUrl && !imageFile && (
-                      <p className="text-xs text-muted-foreground">
-                        Current image URL: {imageUrl.substring(0, 50)}...
-                      </p>
-                    )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-4 pt-4">
                   <div className="flex items-center justify-between">
-                    <Label>Ticket Types *</Label>
+                    <Label className="text-slate-300 font-medium tracking-wide text-base">Ticket Types *</Label>
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={addTicketType}
+                      className="border-indigo-500/30 bg-indigo-500/10 text-white hover:bg-indigo-500/20 rounded-xl px-4"
                     >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Type
                     </Button>
                   </div>
-                  <div className="space-y-3 border rounded-lg p-4">
+                  <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5">
                     {ticketTypes.map((ticketType, index) => (
-                      <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                        <div className="col-span-4 space-y-1">
-                          <Label className="text-xs">Name</Label>
+                      <div key={index} className="grid grid-cols-12 gap-3 items-end p-4 rounded-xl bg-white/5 border border-white/5 shadow-sm transition-all hover:bg-white/10">
+                        <div className="col-span-4 space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 ml-1">Name</Label>
                           <Input
                             value={ticketType.name}
                             onChange={(e) => updateTicketType(index, "name", e.target.value)}
-                            placeholder="e.g., VIP"
+                            placeholder="e.g., GA"
+                            className="bg-white/5 border-white/10 text-white h-10 rounded-lg placeholder:text-slate-600"
                           />
                         </div>
-                        <div className="col-span-3 space-y-1">
-                          <Label className="text-xs">Price ($)</Label>
+                        <div className="col-span-3 space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 ml-1">Price ($)</Label>
                           <Input
                             type="number"
                             min="0"
                             step="0.01"
                             value={ticketType.price}
                             onChange={(e) => updateTicketType(index, "price", parseFloat(e.target.value) || 0)}
+                            className="bg-white/5 border-white/10 text-white h-10 rounded-lg"
                           />
                         </div>
-                        <div className="col-span-3 space-y-1">
-                          <Label className="text-xs">Capacity</Label>
+                        <div className="col-span-3 space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 ml-1">Capacity</Label>
                           <Input
                             type="number"
                             min="1"
                             value={ticketType.capacity}
                             onChange={(e) => updateTicketType(index, "capacity", parseInt(e.target.value) || 0)}
+                            className="bg-white/5 border-white/10 text-white h-10 rounded-lg"
                           />
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-2 flex justify-center pb-1">
                           <Button
                             type="button"
                             variant="ghost"
-                            size="sm"
+                            size="icon"
+                            className="h-9 w-9 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                             onClick={() => removeTicketType(index)}
                             disabled={ticketTypes.length === 1}
                           >
@@ -1227,42 +1287,445 @@ const EventManagement = () => {
                         </div>
                       </div>
                     ))}
-                    <div className="text-sm text-muted-foreground mt-2">
-                      Total Ticket Capacity: {ticketTypes.reduce((sum, tt) => sum + tt.capacity, 0)}
+                    <div className="flex items-center justify-between px-2 pt-2">
+                      <span className="text-xs text-slate-500 font-medium">Total Ticket Capacity</span>
+                      <span className="text-sm font-bold text-white px-3 py-1 bg-white/5 border border-white/10 rounded-lg">
+                        {ticketTypes.reduce((sum, tt) => sum + tt.capacity, 0).toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
+
               </TabsContent>
 
-              {editingEvent && (
-                <>
-                  <TabsContent value="vip-setup" className="py-4">
+                <TabsContent value="vip-setup" className="py-6">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-6 min-h-[400px]">
                     <VIPSetupManager
                       eventId={editingEvent.id}
                       eventName={editingEvent.name}
                     />
-                  </TabsContent>
+                  </div>
+                </TabsContent>
 
-                  <TabsContent value="vip-reservations" className="py-4">
+                <TabsContent value="vip-reservations" className="py-6">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-6 min-h-[400px]">
                     <VIPReservationsList
                       eventId={editingEvent.id}
                     />
-                  </TabsContent>
-                </>
-              )}
-            </Tabs>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              /* For new events - step-based wizard */
+              <div className="w-full">
+                {/* Step 1: Event Details */}
+                {wizardStep === 1 && (
+                  <div className="space-y-6 py-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="event-name-new" className="text-slate-300 font-medium tracking-wide">Event Name *</Label>
+                      <Input
+                        id="event-name-new"
+                        value={eventName}
+                        onChange={(e) => setEventName(e.target.value)}
+                        placeholder="e.g., Perreo Fridays"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-indigo-500/50 focus:ring-indigo-500/20 h-11 rounded-xl"
+                      />
+                    </div>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setEditDialogOpen(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : editingEvent ? "Update Event" : "Create Event"}
-              </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="event-description-new" className="text-slate-300 font-medium tracking-wide">Description</Label>
+                      <div className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+                        <RichTextEditor
+                          content={eventDescription}
+                          onChange={setEventDescription}
+                          placeholder="Event description... (supports rich text formatting)"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="event-date-new" className="text-slate-300 font-medium tracking-wide">Event Date *</Label>
+                        <Input
+                          id="event-date-new"
+                          type="date"
+                          value={eventDate}
+                          onChange={(e) => setEventDate(e.target.value)}
+                          className="bg-white/5 border-white/10 text-white h-11 rounded-xl [color-scheme:dark]"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="event-time-new" className="text-slate-300 font-medium tracking-wide">Event Time *</Label>
+                        <Select value={eventTime} onValueChange={setEventTime}>
+                          <SelectTrigger id="event-time-new" className="bg-white/5 border-white/10 text-white h-11 rounded-xl focus:border-indigo-500/50 focus:ring-indigo-500/20">
+                            <SelectValue placeholder="Select time" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-[#0b0f1a] border-white/10 text-white max-h-[300px]">
+                            {timeSlots.map((slot) => (
+                              <SelectItem key={slot.value} value={slot.value} className="focus:bg-white/10 focus:text-white">
+                                {slot.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <Label className="text-slate-300 font-medium tracking-wide">Event Image / Flyer</Label>
+                      <div className="space-y-4">
+                        {imagePreview ? (
+                          <div className="relative group rounded-2xl overflow-hidden border border-white/10 shadow-xl">
+                            <img
+                              src={imagePreview}
+                              alt="Event preview"
+                              className="w-full h-56 object-cover transition-transform duration-500 group-hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="rounded-full h-10 w-10 p-0 shadow-lg"
+                                onClick={removeImage}
+                              >
+                                <X className="h-5 w-5" />
+                              </Button>
+                            </div>
+                            <div className="absolute top-4 left-4">
+                              <Badge className="bg-white/20 backdrop-blur-md text-white border-white/20">Preview</Badge>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-white/10 rounded-2xl p-10 text-center bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
+                            <div className="h-16 w-16 bg-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                              <ImageIcon className="h-8 w-8 text-slate-400 group-hover:text-indigo-400" />
+                            </div>
+                            <p className="text-sm text-slate-300 font-medium mb-1">
+                              Upload event flyer or image
+                            </p>
+                            <p className="text-xs text-slate-500 mb-6 font-normal">
+                              Max resolution: 2000x2000px
+                            </p>
+                            <Input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              onChange={handleImageSelect}
+                              className="max-w-xs mx-auto bg-white/5 border-white/10 text-white cursor-pointer"
+                            />
+                          </div>
+                        )}
+
+                        {imageFile && !imagePreview && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleImageUpload}
+                            disabled={uploadingImage}
+                            className="w-full h-11 border-indigo-500/30 bg-indigo-500/10 text-white hover:bg-indigo-500/20 rounded-xl"
+                          >
+                            {uploadingImage ? (
+                              <div className="flex items-center gap-2">
+                                <span className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                Uploading...
+                              </div>
+                            ) : "Upload Image"}
+                          </Button>
+                        )}
+
+                        {imageFile && openaiKey && (
+                          <div className="mt-2 flex gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={handleScanFlyer}
+                              disabled={isScanning || uploadingImage}
+                              className="w-full h-11 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-white hover:from-indigo-500/30 hover:to-purple-500/30 border border-white/10 rounded-xl transition-all"
+                            >
+                              <Wand2 className="mr-2 h-4 w-4 text-indigo-400" />
+                              {isScanning ? "Reading Flyer..." : "Auto-fill Details from Flyer"}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 pt-4">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-slate-300 font-medium tracking-wide text-base">Ticket Types *</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={addTicketType}
+                          className="border-indigo-500/30 bg-indigo-500/10 text-white hover:bg-indigo-500/20 rounded-xl px-4"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Type
+                        </Button>
+                      </div>
+                      <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5">
+                        {ticketTypes.map((ticketType, index) => (
+                          <div key={index} className="grid grid-cols-12 gap-3 items-end p-4 rounded-xl bg-white/5 border border-white/5 shadow-sm transition-all hover:bg-white/10">
+                            <div className="col-span-4 space-y-1.5">
+                              <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 ml-1">Name</Label>
+                              <Input
+                                value={ticketType.name}
+                                onChange={(e) => updateTicketType(index, "name", e.target.value)}
+                                placeholder="e.g., GA"
+                                className="bg-white/5 border-white/10 text-white h-10 rounded-lg placeholder:text-slate-600"
+                              />
+                            </div>
+                            <div className="col-span-3 space-y-1.5">
+                              <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 ml-1">Price ($)</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={ticketType.price}
+                                onChange={(e) => updateTicketType(index, "price", parseFloat(e.target.value) || 0)}
+                                className="bg-white/5 border-white/10 text-white h-10 rounded-lg"
+                              />
+                            </div>
+                            <div className="col-span-3 space-y-1.5">
+                              <Label className="text-[10px] uppercase font-bold tracking-widest text-slate-500 ml-1">Capacity</Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={ticketType.capacity}
+                                onChange={(e) => updateTicketType(index, "capacity", parseInt(e.target.value) || 0)}
+                                className="bg-white/5 border-white/10 text-white h-10 rounded-lg"
+                              />
+                            </div>
+                            <div className="col-span-2 flex justify-center pb-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                onClick={() => removeTicketType(index)}
+                                disabled={ticketTypes.length === 1}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between px-2 pt-2">
+                          <span className="text-xs text-slate-500 font-medium">Total Ticket Capacity</span>
+                          <span className="text-sm font-bold text-white px-3 py-1 bg-white/5 border border-white/10 rounded-lg">
+                            {ticketTypes.reduce((sum, tt) => sum + tt.capacity, 0).toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: VIP Setup */}
+                {wizardStep === 2 && (
+                  <div className="space-y-6 py-6">
+                    {/* VIP Enable Toggle */}
+                    <Card className="border-white/10 bg-white/5">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500/20 to-yellow-500/20 flex items-center justify-center">
+                              <Crown className="h-5 w-5 text-yellow-500" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-lg text-white">VIP Table Reservations</CardTitle>
+                              <CardDescription className="text-slate-400">
+                                Allow customers to reserve VIP tables for this event
+                              </CardDescription>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={enableVipOnCreate}
+                            onCheckedChange={setEnableVipOnCreate}
+                            className="data-[state=checked]:bg-purple-500"
+                          />
+                        </div>
+                      </CardHeader>
+                    </Card>
+
+                    {/* VIP Pricing Configuration */}
+                    {enableVipOnCreate && (
+                      <Card className="border-white/10 bg-white/5">
+                        <CardHeader>
+                          <CardTitle className="text-lg text-white flex items-center gap-2">
+                            <Ticket className="h-5 w-5 text-indigo-400" />
+                            Table Pricing
+                          </CardTitle>
+                          <CardDescription className="text-slate-400">
+                            Set prices for each table tier. Default tables will be created for your event.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {/* Premium Tables */}
+                          <div className="p-4 rounded-xl bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/20">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h4 className="font-semibold text-white">Premium Tables (1-3)</h4>
+                                <p className="text-xs text-slate-400">8 guests, 2 bottles included</p>
+                              </div>
+                              <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Premium</Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400">$</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={vipTablePricing.premium}
+                                onChange={(e) => setVipTablePricing(prev => ({ ...prev, premium: Number(e.target.value) || 0 }))}
+                                className="bg-white/5 border-white/10 text-white h-11 rounded-lg w-32"
+                              />
+                              <span className="text-slate-400">per table</span>
+                            </div>
+                          </div>
+
+                          {/* Front Row Tables */}
+                          <div className="p-4 rounded-xl bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border border-purple-500/20">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h4 className="font-semibold text-white">Front Row Tables (4-7)</h4>
+                                <p className="text-xs text-slate-400">6 guests, 1 bottle included</p>
+                              </div>
+                              <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Front Row</Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400">$</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={vipTablePricing.front_row}
+                                onChange={(e) => setVipTablePricing(prev => ({ ...prev, front_row: Number(e.target.value) || 0 }))}
+                                className="bg-white/5 border-white/10 text-white h-11 rounded-lg w-32"
+                              />
+                              <span className="text-slate-400">per table</span>
+                            </div>
+                          </div>
+
+                          {/* Standard Tables */}
+                          <div className="p-4 rounded-xl bg-gradient-to-r from-slate-500/10 to-gray-500/10 border border-slate-500/20">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h4 className="font-semibold text-white">Standard Tables (8+)</h4>
+                                <p className="text-xs text-slate-400">6 guests, 1 bottle included</p>
+                              </div>
+                              <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30">Standard</Badge>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400">$</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={vipTablePricing.standard}
+                                onChange={(e) => setVipTablePricing(prev => ({ ...prev, standard: Number(e.target.value) || 0 }))}
+                                className="bg-white/5 border-white/10 text-white h-11 rounded-lg w-32"
+                              />
+                              <span className="text-slate-400">per table</span>
+                            </div>
+                          </div>
+
+                          <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                            <p className="text-xs text-indigo-300">
+                              8 VIP tables will be created automatically when you create this event. You can customize table details later in the VIP Setup tab.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {!enableVipOnCreate && (
+                      <div className="text-center py-8 text-slate-400">
+                        <Crown className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                        <p>VIP tables are disabled for this event.</p>
+                        <p className="text-sm mt-1">Toggle the switch above to enable VIP reservations.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <DialogFooter className="border-t border-white/10 pt-6 mt-6 sm:justify-between items-center">
+              <div className="text-[10px] uppercase tracking-widest text-slate-500 hidden sm:block">
+                {editingEvent ? "All changes are synced live" : `Step ${wizardStep} of 2`}
+              </div>
+              <div className="flex gap-3 w-full sm:w-auto">
+                {/* For editing events or new events on step 2 - show cancel/back */}
+                {editingEvent ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditDialogOpen(false)}
+                    disabled={saving}
+                    className="flex-1 sm:flex-none h-11 rounded-xl border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+                  >
+                    Cancel
+                  </Button>
+                ) : wizardStep === 1 ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditDialogOpen(false)}
+                    disabled={saving}
+                    className="flex-1 sm:flex-none h-11 rounded-xl border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+                  >
+                    Cancel
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => setWizardStep(1)}
+                    disabled={saving}
+                    className="flex-1 sm:flex-none h-11 rounded-xl border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white"
+                  >
+                    Back
+                  </Button>
+                )}
+
+                {/* For editing events - Update button */}
+                {editingEvent ? (
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 sm:flex-none h-11 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-indigo-900/40 hover:scale-105 transition-transform"
+                  >
+                    {saving ? (
+                      <div className="flex items-center gap-2 px-4">
+                        <span className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        Saving...
+                      </div>
+                    ) : (
+                      <span className="px-4">Update Event</span>
+                    )}
+                  </Button>
+                ) : wizardStep === 1 ? (
+                  /* Step 1: Next button */
+                  <Button
+                    onClick={() => setWizardStep(2)}
+                    className="flex-1 sm:flex-none h-11 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-indigo-900/40 hover:scale-105 transition-transform"
+                  >
+                    <span className="px-4">Next</span>
+                  </Button>
+                ) : (
+                  /* Step 2: Create Event button */
+                  <Button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 sm:flex-none h-11 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-indigo-900/40 hover:scale-105 transition-transform"
+                  >
+                    {saving ? (
+                      <div className="flex items-center gap-2 px-4">
+                        <span className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        Creating...
+                      </div>
+                    ) : (
+                      <span className="px-4">Create Event</span>
+                    )}
+                  </Button>
+                )}
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>

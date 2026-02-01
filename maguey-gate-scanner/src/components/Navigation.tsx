@@ -48,12 +48,18 @@ export const Navigation = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = async () => {
-    if (isSupabaseConfigured()) {
-      await supabase.auth.signOut();
-    } else {
-      localStorageService.clearUser();
+    try {
+      if (isSupabaseConfigured()) {
+        await supabase.auth.signOut();
+      } else {
+        localStorageService.clearUser();
+      }
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Continue to login page even if signOut fails
+    } finally {
+      navigate("/auth");
     }
-    navigate("/auth");
   };
 
   const userDisplayName = user?.email?.split("@")[0] || user?.name || "Staff";

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { isSupabaseConfigured } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured } from "@/lib/supabase-config";
 import { setUserRole, getUserRole, type UserRole } from "@/lib/auth";
 import { useAuth, useRole } from "@/contexts/AuthContext";
 import { validateInvitation, consumeInvitation } from "@/lib/invitation-service";
@@ -19,7 +19,7 @@ const Auth = () => {
   const inviteToken = searchParams.get('invite');
   const resetToken = searchParams.get('token');
   const type = searchParams.get('type'); // 'recovery' or 'signup'
-  
+
   const [isLogin, setIsLogin] = useState(!inviteToken && !resetToken);
   const [isPasswordReset, setIsPasswordReset] = useState(false);
   const [isResetConfirm, setIsResetConfirm] = useState(!!resetToken && type === 'recovery');
@@ -35,7 +35,7 @@ const Auth = () => {
   const [invitationData, setInvitationData] = useState<{ role?: 'employee' | 'owner' | 'promoter' } | null>(null);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-  
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, refreshRole } = useAuth();
@@ -61,14 +61,14 @@ const Auth = () => {
       setPasswordStrength(0);
       return;
     }
-    
+
     let strength = 0;
     if (password.length >= 8) strength++;
     if (password.length >= 12) strength++;
     if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
     if (/\d/.test(password)) strength++;
     if (/[^a-zA-Z\d]/.test(password)) strength++;
-    
+
     setPasswordStrength(Math.min(strength, 5));
   }, [password]);
 
@@ -156,7 +156,7 @@ const Auth = () => {
 
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast({
         variant: "destructive",
@@ -191,7 +191,7 @@ const Auth = () => {
       // Audit log: password reset
       logAuditEvent('password_changed', 'user', 'Password reset completed', {
         severity: 'info',
-      }).catch(() => {});
+      }).catch(() => { });
 
       // Clear reset state and show login
       setIsResetConfirm(false);
@@ -236,7 +236,7 @@ const Auth = () => {
               console.warn('Failed to set default role:', err);
             }
           }
-          
+
           // Redirect based on role
           const userRole = getUserRole(data.user);
           if (userRole === 'owner' || userRole === 'promoter') {
@@ -259,7 +259,7 @@ const Auth = () => {
           userId: data.user?.id,
           severity: 'info',
           metadata: { email: data.user?.email },
-        }).catch(() => {});
+        }).catch(() => { });
       } else {
         // Signup flow
         const { data, error } = await supabase.auth.signUp({
@@ -306,7 +306,7 @@ const Auth = () => {
             userId: data.user?.id,
             severity: 'info',
             metadata: { email: data.user?.email, viaInvite: !!inviteToken, assignedRole: (inviteToken && inviteValid && invitationData?.role) ? invitationData.role : 'employee' },
-          }).catch(() => {});
+          }).catch(() => { });
 
           setIsLogin(true);
         } else {
@@ -320,7 +320,7 @@ const Auth = () => {
             userId: data.user?.id,
             severity: 'info',
             metadata: { email: data.user?.email, viaInvite: !!inviteToken, assignedRole: (inviteToken && inviteValid && invitationData?.role) ? invitationData.role : 'employee' },
-          }).catch(() => {});
+          }).catch(() => { });
 
           // If invited, redirect based on role after successful signup
           if (inviteToken && data.user) {
@@ -350,7 +350,7 @@ const Auth = () => {
 
   const handleDemoLogin = async () => {
     setLoading(true);
-    
+
     // Check if Supabase is configured
     const url = import.meta.env.VITE_SUPABASE_URL;
     // Standardized: Use VITE_SUPABASE_ANON_KEY with backward compatibility
@@ -368,7 +368,7 @@ const Auth = () => {
       };
       localStorageService.setUser(demoUser);
       await refreshRole();
-      
+
       toast({
         title: "Development Mode",
         description: "Logged in with demo account (local storage mode)",
@@ -408,7 +408,7 @@ const Auth = () => {
           } else {
             navigate("/scanner");
           }
-          
+
           toast({
             title: "Demo Login Successful!",
             description: `Logged in as ${creds.email}`,
@@ -425,7 +425,7 @@ const Auth = () => {
     try {
       const demoEmail = "demo@maguey.club";
       const demoPassword = "demo123";
-      
+
       // Try to sign up (will work if account doesn't exist, or we can sign in if it does)
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: demoEmail,
@@ -590,12 +590,12 @@ const Auth = () => {
     try {
       await setUserRole('owner');
       await refreshRole();
-      
+
       toast({
         title: "Promoted to Owner!",
         description: "You now have owner privileges. Redirecting...",
       });
-      
+
       setTimeout(() => {
         navigate("/dashboard");
       }, 1500);
@@ -613,7 +613,7 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="absolute inset-0 bg-gradient-scan opacity-50" />
-      
+
       <Card className="w-full max-w-md relative rounded-3xl bg-card border-0 text-card-foreground shadow-glow-lime">
         <CardHeader className="text-center space-y-2 pb-4">
           <div className="flex justify-center">
@@ -644,13 +644,13 @@ const Auth = () => {
             )}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
-            {inviteToken ? "Complete your registration to join" : 
-             isPasswordReset ? "Enter your email to receive reset instructions" :
-             isResetConfirm ? "Enter your new password" :
-             "Staff authentication portal"}
+            {inviteToken ? "Complete your registration to join" :
+              isPasswordReset ? "Enter your email to receive reset instructions" :
+                isResetConfirm ? "Enter your new password" :
+                  "Staff authentication portal"}
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent>
           {/* Quick Access Selection - For Testing */}
           {!inviteToken && !isPasswordReset && !isResetConfirm && (
@@ -822,7 +822,7 @@ const Auth = () => {
               <AlertDescription>Validating invitation...</AlertDescription>
             </Alert>
           )}
-          
+
           {inviteToken && inviteError && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
@@ -838,7 +838,7 @@ const Auth = () => {
               </AlertDescription>
             </Alert>
           )}
-          
+
           {inviteToken && inviteValid && (
             <Alert className="mb-4 border-primary/20 bg-primary/5">
               <UserPlus className="h-4 w-4" />
@@ -925,15 +925,14 @@ const Auth = () => {
                       {[1, 2, 3, 4, 5].map((level) => (
                         <div
                           key={level}
-                          className={`h-1 flex-1 rounded ${
-                            passwordStrength >= level
+                          className={`h-1 flex-1 rounded ${passwordStrength >= level
                               ? passwordStrength <= 2
                                 ? "bg-red-500"
                                 : passwordStrength <= 4
-                                ? "bg-yellow-500"
-                                : "bg-green-500"
+                                  ? "bg-yellow-500"
+                                  : "bg-green-500"
                               : "bg-muted"
-                          }`}
+                            }`}
                         />
                       ))}
                     </div>
@@ -941,8 +940,8 @@ const Auth = () => {
                       {passwordStrength <= 2
                         ? "Weak password"
                         : passwordStrength <= 4
-                        ? "Medium strength"
-                        : "Strong password"}
+                          ? "Medium strength"
+                          : "Strong password"}
                     </p>
                   </div>
                 )}
@@ -991,82 +990,82 @@ const Auth = () => {
 
           {/* Regular Login/Signup Form */}
           {!isPasswordReset && !isResetConfirm && (
-          <form onSubmit={handleAuth} className="space-y-3">
-            {!isLogin && (
+            <form onSubmit={handleAuth} className="space-y-3">
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="border-primary/20 focus:border-primary"
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="John Doe"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="staff@maguey.club"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                   className="border-primary/20 focus:border-primary"
                 />
               </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="staff@maguey.club"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="border-primary/20 focus:border-primary"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="border-primary/20 focus:border-primary"
-              />
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full bg-gradient-green hover:shadow-glow-green transition-all"
-              disabled={loading || validatingInvite || (inviteToken && !inviteValid)}
-            >
-              {loading ? "Loading..." : isLogin ? "Sign In" : inviteToken ? "Complete Registration" : "Sign Up"}
-            </Button>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="border-primary/20 focus:border-primary"
+                />
+              </div>
 
-            {!inviteToken && (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setIsLogin(!isLogin)}
-                  disabled={validatingInvite}
-                >
-                  {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
-                </Button>
-                {isLogin && (
+              <Button
+                type="submit"
+                className="w-full bg-gradient-green hover:shadow-glow-green transition-all"
+                disabled={loading || validatingInvite || (inviteToken && !inviteValid)}
+              >
+                {loading ? "Loading..." : isLogin ? "Sign In" : inviteToken ? "Complete Registration" : "Sign Up"}
+              </Button>
+
+              {!inviteToken && (
+                <>
                   <Button
                     type="button"
-                    variant="link"
-                    className="w-full text-sm"
-                    onClick={() => {
-                      setIsPasswordReset(true);
-                      setIsLogin(false);
-                    }}
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => setIsLogin(!isLogin)}
+                    disabled={validatingInvite}
                   >
-                    Forgot your password?
+                    {isLogin ? "Need an account? Sign up" : "Already have an account? Sign in"}
                   </Button>
-                )}
-              </>
-            )}
-          </form>
+                  {isLogin && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="w-full text-sm"
+                      onClick={() => {
+                        setIsPasswordReset(true);
+                        setIsLogin(false);
+                      }}
+                    >
+                      Forgot your password?
+                    </Button>
+                  )}
+                </>
+              )}
+            </form>
           )}
 
           {/* Demo Login Section - Hide when using invitation */}

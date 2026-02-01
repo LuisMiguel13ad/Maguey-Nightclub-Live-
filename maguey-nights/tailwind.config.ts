@@ -203,7 +203,10 @@ export default {
       },
       fontFamily: {
         montserrat: ['Montserrat', 'sans-serif'],
-        sans: ['Montserrat', 'sans-serif'],
+        sans: ['Inter', 'sans-serif'], // Changed default sans to Inter
+        serif: ['Newsreader', 'serif'], // Added Newsreader as default serif
+        inter: ['Inter', 'sans-serif'],
+        newsreader: ['Newsreader', 'serif'],
       },
       fontSize: {
         'h1': ['48px', { lineHeight: '1.2', letterSpacing: '0.15em', fontWeight: '800' }],
@@ -271,6 +274,14 @@ export default {
             boxShadow: "0 0 40px hsl(160 88% 35% / 0.6)"
           }
         },
+        "float-subtle": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-8px)" }
+        },
+        "dash-flow": {
+          "0%": { strokeDashoffset: "0" },
+          "100%": { strokeDashoffset: "-1000" }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -279,6 +290,8 @@ export default {
         "fade-in-slow": "fade-in-slow 1s ease-out",
         "scale-in": "scale-in 0.4s ease-out",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "float": "float-subtle 6s ease-in-out infinite",
+        "beam": "dash-flow 10s linear infinite",
       },
     },
   },

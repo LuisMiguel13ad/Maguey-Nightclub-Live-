@@ -113,29 +113,79 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
     }
   };
 
-  // Toggle VIP enabled for event
+  // Toggle VIP enabled for event - auto-creates tables when enabling
   const handleToggleVip = async (enabled: boolean) => {
     if (!eventId) return;
-    
+
     setIsTogglingVip(true);
-    
+
     try {
+      // If enabling VIP and no tables exist, auto-create all tables
+      if (enabled && tables.length === 0) {
+        // Get all table templates
+        const { data: templates, error: templatesError } = await supabase
+          .from('vip_table_templates')
+          .select('id, table_number, default_tier')
+          .order('table_number', { ascending: true });
+
+        if (templatesError || !templates) {
+          throw new Error('Failed to load table templates');
+        }
+
+        // Define tier mapping based on table position
+        const getTierForTable = (tableNumber: number): 'premium' | 'front_row' | 'standard' => {
+          if ([1, 2, 3, 8].includes(tableNumber)) return 'premium';
+          if ([4, 5, 6, 7].includes(tableNumber)) return 'front_row';
+          return 'standard'; // Tables 9-26
+        };
+
+        // Create table data for all 26 tables
+        const tablesToInsert = templates.map(template => {
+          const tier = getTierForTable(template.table_number);
+          const config = TIER_CONFIG[tier];
+
+          return {
+            event_id: eventId,
+            table_template_id: template.id,
+            table_number: template.table_number,
+            tier: tier,
+            capacity: config.capacity,
+            price_cents: config.price * 100,
+            package_description: config.package,
+            bottles_included: tier === 'premium' ? 1 : 1,
+            champagne_included: tier === 'premium' ? 1 : 0,
+            is_available: true,
+            is_active: true, // Required for ticket purchase site compatibility
+            display_order: template.table_number,
+          };
+        });
+
+        const { error: insertError } = await supabase
+          .from('event_vip_tables')
+          .insert(tablesToInsert);
+
+        if (insertError) throw insertError;
+
+        // Reload tables after creation
+        await loadTables();
+      }
+
       const { error } = await supabase
         .from('events')
-        .update({ 
+        .update({
           vip_enabled: enabled,
           vip_configured_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
         .eq('id', eventId);
-      
+
       if (error) throw error;
-      
+
       setVipEnabled(enabled);
       toast({
         title: enabled ? 'VIP Section Enabled' : 'VIP Section Disabled',
-        description: enabled 
-          ? 'VIP table reservations are now available for this event on the live website.'
+        description: enabled
+          ? 'VIP table reservations are now available for this event. Edit table pricing below.'
           : 'VIP section is now hidden from the live website.',
       });
     } catch (err) {
@@ -278,6 +328,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
         bottles_included: formData.tier === 'premium' ? 1 : 1,
         champagne_included: formData.tier === 'premium' ? 1 : 0,
         is_available: true,
+        is_active: true, // Required for ticket purchase site compatibility
         display_order: parseInt(formData.table_number),
       };
 
@@ -548,7 +599,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
               <Switch
                 checked={vipEnabled}
                 onCheckedChange={handleToggleVip}
-                disabled={isTogglingVip || tables.length === 0}
+                disabled={isTogglingVip}
                 className="data-[state=checked]:bg-green-500"
               />
               <Badge variant={vipEnabled ? 'default' : 'secondary'} className={vipEnabled ? 'bg-green-500/20 text-green-400 border-green-500/50' : ''}>
@@ -556,67 +607,51 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
               </Badge>
             </div>
           </div>
-          {tables.length === 0 && (
-            <p className="text-xs text-orange-400 mt-2 ml-14">
-              ⚠️ Add VIP tables below before enabling the VIP section.
+          {tables.length === 0 && !vipEnabled && (
+            <p className="text-xs text-muted-foreground mt-2 ml-14">
+              Enable VIP section to automatically create all 26 tables with default pricing.
+            </p>
+          )}
+          {isTogglingVip && tables.length === 0 && (
+            <p className="text-xs text-blue-400 mt-2 ml-14">
+              Creating VIP tables...
             </p>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Crown className="w-6 h-6 text-yellow-500" />
-                VIP Tables Setup
-              </CardTitle>
-              <CardDescription>
-                {eventName ? `Manage VIP tables for: ${eventName}` : 'Manage VIP table configurations, pricing, and availability'}
-              </CardDescription>
+      {/* VIP Tables Setup Card - Only show when VIP is enabled */}
+      {vipEnabled && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="w-6 h-6 text-yellow-500" />
+                  VIP Tables Setup
+                </CardTitle>
+                <CardDescription>
+                  {eventName ? `Manage VIP tables for: ${eventName}` : 'Manage VIP table configurations, pricing, and availability'}
+                </CardDescription>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={handleQuickAddAll}
-                disabled={isQuickAdding || !eventId}
-              >
-                {isQuickAdding ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4 mr-2" />
-                    Quick Add All Tables
-                  </>
-                )}
-              </Button>
-              <Button onClick={handleCreate} disabled={!eventId}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Table
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {!eventId ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Please select an event to manage VIP tables.
-              </AlertDescription>
-            </Alert>
-          ) : tables.length === 0 ? (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                No VIP tables configured for this event. Click "Add Table" to create your first VIP table, or use "Quick Add All Tables" to create all 26 tables at once.
-              </AlertDescription>
-            </Alert>
-          ) : (
+          </CardHeader>
+          <CardContent>
+            {!eventId ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Please select an event to manage VIP tables.
+                </AlertDescription>
+              </Alert>
+            ) : tables.length === 0 ? (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  VIP tables are being created... Please wait.
+                </AlertDescription>
+              </Alert>
+            ) : (
             <Tabs defaultValue="floor-plan" className="w-full">
               <TabsList className="mb-4">
                 <TabsTrigger value="floor-plan" className="gap-2">
@@ -863,6 +898,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Create/Edit Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>

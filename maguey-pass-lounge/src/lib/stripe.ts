@@ -122,6 +122,8 @@ export async function createCheckoutSession(orderData: {
   feesAmount?: number;
   successUrl: string;
   cancelUrl: string;
+  // VIP invite code for linking GA tickets to VIP reservations
+  vipInviteCode?: string;
 }): Promise<{ url: string; sessionId: string; orderId: string }> {
   // Check if Stripe key is configured
   if (!stripePublishableKey) {
@@ -396,6 +398,10 @@ export interface VipPaymentIntentData {
   specialRequests?: string;
   bottlePreferences?: string;
   estimatedArrival?: string;
+  // GA ticket integration fields
+  gaTicketCount?: number;
+  gaTicketTypeId?: string;
+  gaTicketPrice?: number;
 }
 
 export interface VipPaymentIntentResponse {

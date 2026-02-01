@@ -233,3 +233,72 @@ export type CreateOrderWithTicketsAtomicResult = {
   }>
 }
 
+// ============================================
+// VIP Tables Types (Event-Specific Schema)
+// ============================================
+
+/**
+ * VIP table available for an event
+ */
+export type EventVipTable = {
+  id: string
+  event_id: string
+  table_number: number
+  table_name: string
+  tier: string
+  price: number
+  capacity: number
+  bottles_included: number
+  bottle_service_description: string | null
+  floor_section: string | null
+  position_description: string | null
+  is_available: boolean
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * VIP reservation for an event
+ */
+export type VipReservation = {
+  id: string
+  event_id: string
+  event_vip_table_id: string
+  table_number: number
+  purchaser_name: string
+  purchaser_email: string
+  purchaser_phone: string | null
+  amount_paid_cents: number
+  stripe_payment_intent_id: string | null
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no_show' | 'checked_in'
+  qr_code_token: string
+  package_snapshot: Record<string, unknown> | null
+  special_requests: string | null
+  disclaimer_accepted_at: string | null
+  refund_policy_accepted_at: string | null
+  checked_in_at: string | null
+  checked_in_by: string | null
+  checked_in_guests: number
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Individual guest pass for VIP reservation
+ */
+export type VipGuestPass = {
+  id: string
+  reservation_id: string
+  guest_number: number
+  guest_name: string | null
+  qr_code_token: string
+  qr_signature: string
+  status: 'issued' | 'checked_in' | 'cancelled'
+  checked_in_at: string | null
+  checked_in_by: string | null
+  created_at: string
+  updated_at: string
+}
+

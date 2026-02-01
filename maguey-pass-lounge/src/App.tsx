@@ -27,13 +27,13 @@ import Terms from "./pages/Terms";
 import Refund from "./pages/Refund";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import TestTicketViewer from "./pages/TestTicketViewer";
-import VipTableReservation from "./pages/VipTableReservation";
 import VipTableConfirmation from "./pages/VipTableConfirmation";
 import VIPTablesPage from "./pages/VIPTablesPage";
 import VIPBookingForm from "./pages/VIPBookingForm";
 import VipPayment from "./pages/VipPayment";
 import VipCheckoutSuccess from "./pages/VipCheckoutSuccess";
 import VIPPassView from "./pages/VIPPassView";
+import VIPGuestDashboard from "./pages/VIPGuestDashboard";
 import TypographyShowcase from "./components/TypographyShowcase";
 
 // Redirect component for old EventDetail route - redirects to checkout with event ID
@@ -78,10 +78,11 @@ const App = () => {
             <Route path="/checkout/success" element={<CheckoutSuccess />} />
           <Route path="/ticket/:ticketId" element={<Ticket />} />
           <Route path="/test-tickets" element={<TestTicketViewer />} />
-          <Route path="/vip-tables" element={<VipTableReservation />} />
+          {/* Legacy /vip-tables route removed - use /events/:eventId/vip-tables instead */}
           <Route path="/vip-confirmation" element={<VipTableConfirmation />} />
           <Route path="/vip-checkout-success" element={<VipCheckoutSuccess />} />
           <Route path="/vip-pass/:token" element={<VIPPassView />} />
+          <Route path="/vip/dashboard/:reservationId" element={<VIPGuestDashboard />} />
             <Route
               path="/account"
               element={

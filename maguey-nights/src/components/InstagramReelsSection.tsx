@@ -194,7 +194,7 @@ const InstagramReelsSection = () => {
   };
 
   return (
-    <section className="py-24 relative bg-black overflow-hidden">
+    <section className="py-24 relative bg-transparent overflow-hidden">
       {/* Background Elements */}
       <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#39B54A]/50 to-transparent" />
       <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-[#39B54A]/20 to-transparent" />
@@ -269,8 +269,8 @@ const InstagramReelsSection = () => {
           </div>
 
           {/* Gradient Edges to fade out content */}
-          <div className="absolute top-0 left-0 w-8 md:w-32 h-full bg-gradient-to-r from-black via-black/80 to-transparent pointer-events-none z-10 hidden md:block" />
-          <div className="absolute top-0 right-0 w-8 md:w-32 h-full bg-gradient-to-l from-black via-black/80 to-transparent pointer-events-none z-10 hidden md:block" />
+          <div className="absolute top-0 left-0 w-8 md:w-32 h-full bg-gradient-to-r from-black/80 via-black/40 to-transparent pointer-events-none z-10 hidden md:block" />
+          <div className="absolute top-0 right-0 w-8 md:w-32 h-full bg-gradient-to-l from-black/80 via-black/40 to-transparent pointer-events-none z-10 hidden md:block" />
         </div>
 
         {/* Interactive Footer */}

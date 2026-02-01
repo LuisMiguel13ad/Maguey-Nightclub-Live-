@@ -18,7 +18,7 @@ export const validateTicketId = (ticketId: string): ValidationResult => {
   }
 
   // Sanitize: trim whitespace and convert to uppercase
-  const sanitized = ticketId.trim().toUpperCase();
+  const sanitized = ticketId.trim();
 
   if (sanitized.length === 0) {
     return {
@@ -66,6 +66,6 @@ export const sanitizeTicketId = (ticketId: string): string => {
   if (!ticketId || typeof ticketId !== 'string') {
     return '';
   }
-  return ticketId.trim().toUpperCase().replace(/[^A-Z0-9\-_]/g, '');
+  return ticketId.trim().replace(/[^a-zA-Z0-9\-_]/g, '');
 };
 

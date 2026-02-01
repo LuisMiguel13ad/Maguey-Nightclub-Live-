@@ -1,28 +1,54 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Maguey Nightclub | Delaware's Premier Latin Nightlife</title>
-    <meta name="description" content="Experience Delaware's most luxurious Latin-inspired nightclub. Premium bottle service, world-class DJs, and unforgettable nights at Maguey." />
-    <meta name="author" content="Maguey Nightclub" />
 
-    <meta property="og:title" content="Maguey Nightclub | Delaware's Premier Latin Nightlife" />
-    <meta property="og:description" content="Experience Delaware's most luxurious Latin-inspired nightclub. Premium bottle service, world-class DJs, and unforgettable nights." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="/images/branding/maguey-logo.jpg" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maguey Nightclub | Delaware's Premier Latin Nightlife</title>
+  <meta name="description"
+    content="Experience Delaware's most luxurious Latin-inspired nightclub. Premium bottle service, world-class DJs, and unforgettable nights at Maguey." />
+  <meta name="author" content="Maguey Nightclub" />
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@magueynightclub" />
-    <meta name="twitter:image" content="/images/branding/maguey-logo.jpg" />
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700&display=swap" rel="stylesheet">
-  </head>
+  <meta property="og:title" content="Maguey Nightclub | Delaware's Premier Latin Nightlife" />
+  <meta property="og:description"
+    content="Experience Delaware's most luxurious Latin-inspired nightclub. Premium bottle service, world-class DJs, and unforgettable nights." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/images/branding/maguey-logo.jpg" />
 
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@magueynightclub" />
+  <meta name="twitter:image" content="/images/branding/maguey-logo.jpg" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&display=swap"
+    rel="stylesheet">
+  <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Button Gradient Border */
+    [style*="--border-gradient"]::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      padding: 1px;
+      border-radius: var(--border-radius-before, inherit);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      background: var(--border-gradient);
+      pointer-events: none;
+    }
+  </style>
+  <script type="text/javascript">
+    !function () { if (!window.UnicornStudio) { window.UnicornStudio = { isInitialized: !1 }; var i = document.createElement("script"); i.src = "https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.29/dist/unicornStudio.umd.js", i.onload = function () { window.UnicornStudio.isInitialized || (UnicornStudio.init(), window.UnicornStudio.isInitialized = !0) }, (document.head || document.body).appendChild(i) } }();
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
