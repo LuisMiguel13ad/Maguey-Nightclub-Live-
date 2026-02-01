@@ -1,4 +1,11 @@
 {
+  "name": "maguey-nightclub-live",
+  "private": true,
+  "workspaces": [
+    "maguey-pass-lounge",
+    "maguey-gate-scanner",
+    "maguey-nights"
+  ],
   "scripts": {
     "cy:open": "cypress open --config-file e2e/cypress.config.ts",
     "cy:run": "cypress run --config-file e2e/cypress.config.ts",
