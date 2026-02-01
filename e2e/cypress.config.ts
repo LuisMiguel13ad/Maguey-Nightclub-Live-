@@ -134,6 +134,71 @@ export default defineConfig({
           return data;
         },
 
+        // Insert email into email_queue
+        async insertEmailQueue(emailData: {
+          email_type: 'ga_ticket' | 'vip_confirmation';
+          recipient_email: string;
+          subject: string;
+          html_body: string;
+          related_id?: string;
+          status?: string;
+          attempt_count?: number;
+          max_attempts?: number;
+          next_retry_at?: string;
+          last_error?: string;
+        }) {
+          if (!supabase) throw new Error('No Supabase client');
+          const { data, error } = await supabase
+            .from('email_queue')
+            .insert({
+              ...emailData,
+              status: emailData.status || 'pending',
+              attempt_count: emailData.attempt_count || 0,
+              max_attempts: emailData.max_attempts || 5,
+              next_retry_at: emailData.next_retry_at || new Date().toISOString(),
+            })
+            .select()
+            .single();
+          if (error) throw new Error(`insertEmailQueue failed: ${error.message}`);
+          return data;
+        },
+
+        // Update email queue entry
+        async updateEmailQueue({ id, updates }: { id: string; updates: Record<string, unknown> }) {
+          if (!supabase) throw new Error('No Supabase client');
+          const { data, error } = await supabase
+            .from('email_queue')
+            .update({ ...updates, updated_at: new Date().toISOString() })
+            .eq('id', id)
+            .select()
+            .single();
+          if (error) throw new Error(`updateEmailQueue failed: ${error.message}`);
+          return data;
+        },
+
+        // Get email queue entry
+        async getEmailQueueEntry(id: string) {
+          if (!supabase) throw new Error('No Supabase client');
+          const { data, error } = await supabase
+            .from('email_queue')
+            .select('*')
+            .eq('id', id)
+            .single();
+          if (error) throw new Error(`getEmailQueueEntry failed: ${error.message}`);
+          return data;
+        },
+
+        // Delete email queue entry
+        async deleteEmailQueueEntry(id: string) {
+          if (!supabase) throw new Error('No Supabase client');
+          const { error } = await supabase
+            .from('email_queue')
+            .delete()
+            .eq('id', id);
+          if (error) throw new Error(`deleteEmailQueueEntry failed: ${error.message}`);
+          return true;
+        },
+
         // Log message (for debugging)
         log(message: string) {
           console.log(message);
