@@ -74,16 +74,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Start servers
+        run: |
+          npx serve maguey-pass-lounge/dist -l 3016 &
+          npx serve maguey-gate-scanner/dist -l 3015 &
+          npx wait-on http://localhost:3016 http://localhost:3015 --timeout 120000
+
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           config-file: e2e/cypress.config.ts
-          # Start both preview servers
-          start: |
-            npx serve maguey-pass-lounge/dist -l 3016 &
-            npx serve maguey-gate-scanner/dist -l 3015
-          wait-on: 'http://localhost:3016, http://localhost:3015'
-          wait-on-timeout: 120
           browser: chrome
           # Split tests across containers (basic split without Cypress Cloud)
           # Container 1: health + happy path
