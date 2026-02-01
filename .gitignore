@@ -40,3 +40,6 @@ supabase/.temp
 # Large video files
 maguey-nights/public/1209.mp4
 maguey-nights/public/Maguey-nights-hero.mp4
+
+# Load test results
+load-tests/results/*.json
