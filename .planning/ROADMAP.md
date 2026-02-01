@@ -233,10 +233,13 @@ Plans:
   3. Scanner shows clear error state when network is unavailable
   4. Payment failures don't leave orphaned records in database
   5. All error states show user-friendly recovery instructions
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 11-01: TBD during planning
+- [ ] 11-01-PLAN.md — Payment failure test suite (webhook retry, idempotency, orphan prevention)
+- [ ] 11-02-PLAN.md — Email failure test suite (retry, bounce handling, dashboard retry UI)
+- [ ] 11-03-PLAN.md — Scanner offline test suite (offline mode, queue sync, error messages)
+- [ ] 11-04-PLAN.md — Support runbook (symptom-based troubleshooting guide)
 
 ### Phase 12: Launch Readiness Review
 **Goal**: Final validation that all systems are production-ready
@@ -270,5 +273,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 8. GA End-to-End Testing | 4/4 | Complete | 2026-01-31 |
 | 9. VIP End-to-End Testing | 7/7 | Complete | 2026-02-01 |
 | 10. Load Testing & Performance | 5/5 | Complete | 2026-02-01 |
-| 11. Error Handling & Recovery | 0/TBD | Not started | - |
+| 11. Error Handling & Recovery | 0/4 | Not started | - |
 | 12. Launch Readiness Review | 0/TBD | Not started | - |
