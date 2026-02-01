@@ -862,7 +862,7 @@ export async function getGuestPassByQrToken(qrToken: string): Promise<{
         event:events(id, name, event_date, event_time, venue_name)
       )
     `)
-    .eq('qr_code_token', qrToken)
+    .eq('qr_token', qrToken)
     .maybeSingle();
 
   if (!error && data) {
