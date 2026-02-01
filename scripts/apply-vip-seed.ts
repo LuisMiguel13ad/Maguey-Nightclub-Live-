@@ -198,7 +198,7 @@ async function applySeed() {
       pass_type: 'guest',
       qr_token: `VIP-TEST-GUEST-${paddedNum}`,  // NOT 'qr_code_token'
       qr_signature: `test-signature-${paddedNum}`,
-      status: 'active'            // Schema uses 'active', not 'issued'
+      status: 'issued'            // Schema uses 'issued', 'checked_in', or 'cancelled'
     });
   }
 
