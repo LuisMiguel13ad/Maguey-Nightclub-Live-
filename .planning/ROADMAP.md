@@ -214,10 +214,14 @@ Plans:
   3. Dashboard loads within 3 seconds under normal traffic
   4. Webhook processing handles burst of 50 events without timeouts
   5. Database queries complete within acceptable thresholds under peak load
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 10-01: TBD during planning
+- [ ] 10-01-PLAN.md — k6 setup, shared configuration, and helper utilities
+- [ ] 10-02-PLAN.md — Ticket purchase load test (100 concurrent VUs)
+- [ ] 10-03-PLAN.md — Scanner burst test (10 simultaneous scans)
+- [ ] 10-04-PLAN.md — Dashboard performance test (20 concurrent viewers)
+- [ ] 10-05-PLAN.md — Webhook burst test (50 events in 10 seconds)
 
 ### Phase 11: Error Handling & Recovery
 **Goal**: System recovers gracefully from all failure scenarios
@@ -265,6 +269,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 7. UX Polish | 7/7 | Complete | 2026-01-31 |
 | 8. GA End-to-End Testing | 4/4 | Complete | 2026-01-31 |
 | 9. VIP End-to-End Testing | 7/7 | Complete | 2026-02-01 |
-| 10. Load Testing & Performance | 0/TBD | Not started | - |
+| 10. Load Testing & Performance | 0/5 | Not started | - |
 | 11. Error Handling & Recovery | 0/TBD | Not started | - |
 | 12. Launch Readiness Review | 0/TBD | Not started | - |
