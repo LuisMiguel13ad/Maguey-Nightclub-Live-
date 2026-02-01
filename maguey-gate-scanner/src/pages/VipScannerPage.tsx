@@ -81,11 +81,16 @@ const VipScannerPage = () => {
 
       setEvents(data || []);
 
+      // Check for event ID from URL (route param or query param)
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      const eventFromQuery = urlSearchParams.get('event');
+      const eventIdFromUrl = urlEventId || eventFromQuery;
+
       // If URL has eventId, try to select it
-      if (urlEventId && data?.some(e => e.id === urlEventId)) {
-        setSelectedEventId(urlEventId);
-      } else if (data && data.length > 0 && !selectedEventId) {
-        // Auto-select first event if none selected
+      if (eventIdFromUrl && data?.some(e => e.id === eventIdFromUrl)) {
+        setSelectedEventId(eventIdFromUrl);
+      } else if (data && data.length > 0 && !eventIdFromUrl) {
+        // Only auto-select first event if NO URL param specified
         setSelectedEventId(data[0].id);
       }
     } catch (err) {
