@@ -9,37 +9,37 @@ Requirements for launch readiness. Each maps to roadmap phases.
 
 ### Payment Reliability
 
-- [ ] **PAY-01**: GA ticket payment completes end-to-end (checkout → Stripe → webhook → ticket created)
-- [ ] **PAY-02**: VIP table payment completes end-to-end (booking → Stripe → webhook → reservation confirmed)
-- [ ] **PAY-03**: Webhook handles duplicate events idempotently (no duplicate tickets)
-- [ ] **PAY-04**: Payment failures show clear error messages to customers
+- [x] **PAY-01**: GA ticket payment completes end-to-end (checkout -> Stripe -> webhook -> ticket created) [Verified 2026-02-01]
+- [x] **PAY-02**: VIP table payment completes end-to-end (booking -> Stripe -> webhook -> reservation confirmed) [Verified 2026-02-01]
+- [x] **PAY-03**: Webhook handles duplicate events idempotently (no duplicate tickets) [Verified 2026-02-01]
+- [x] **PAY-04**: Payment failures show clear error messages to customers [Verified 2026-02-01]
 
 ### Email Delivery
 
-- [ ] **EMAIL-01**: Ticket confirmation emails deliver reliably (retry on failure)
-- [ ] **EMAIL-02**: VIP reservation emails include correct QR codes and table details
-- [ ] **EMAIL-03**: Failed email sends are logged and can be manually retried
+- [x] **EMAIL-01**: Ticket confirmation emails deliver reliably (retry on failure) [Verified 2026-02-01]
+- [x] **EMAIL-02**: VIP reservation emails include correct QR codes and table details [Verified 2026-02-01]
+- [x] **EMAIL-03**: Failed email sends are logged and can be manually retried [Verified 2026-02-01]
 
 ### Scanner Reliability
 
-- [ ] **SCAN-01**: Valid QR codes are accepted at gate
-- [ ] **SCAN-02**: Invalid/tampered QR codes are rejected with clear feedback
-- [ ] **SCAN-03**: Already-scanned tickets show "already used" status
-- [ ] **SCAN-04**: Scanner works offline and syncs when back online
+- [x] **SCAN-01**: Valid QR codes are accepted at gate [Verified 2026-02-01]
+- [x] **SCAN-02**: Invalid/tampered QR codes are rejected with clear feedback [Verified 2026-02-01]
+- [x] **SCAN-03**: Already-scanned tickets show "already used" status [Verified 2026-02-01]
+- [x] **SCAN-04**: Scanner works offline and syncs when back online [Verified 2026-02-01]
 
 ### VIP System
 
-- [ ] **VIP-01**: VIP reservations show correct status (pending → confirmed → checked-in)
-- [ ] **VIP-02**: Concurrent checkins don't cause race conditions
-- [ ] **VIP-03**: VIP guest passes link correctly to main reservation
-- [ ] **VIP-04**: VIP floor plan reflects real-time availability
+- [x] **VIP-01**: VIP reservations show correct status (pending -> confirmed -> checked-in) [Verified 2026-02-01]
+- [x] **VIP-02**: Concurrent checkins don't cause race conditions [Verified 2026-02-01]
+- [x] **VIP-03**: VIP guest passes link correctly to main reservation [Verified 2026-02-01]
+- [x] **VIP-04**: VIP floor plan reflects real-time availability [Verified 2026-02-01]
 
 ### Dashboard Accuracy
 
-- [ ] **DASH-01**: Revenue figures match actual Stripe transactions
-- [ ] **DASH-02**: Ticket counts match database records
-- [ ] **DASH-03**: Event creation syncs to purchase site within 30 seconds
-- [ ] **DASH-04**: VIP reservations appear in real-time
+- [x] **DASH-01**: Revenue figures match actual Stripe transactions [Verified 2026-02-01]
+- [x] **DASH-02**: Ticket counts match database records [Verified 2026-02-01]
+- [x] **DASH-03**: Event creation syncs to purchase site within 30 seconds [Verified 2026-02-01]
+- [x] **DASH-04**: VIP reservations appear in real-time [Verified 2026-02-01]
 
 ### Infrastructure
 
@@ -137,4 +137,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-31 after Phase 7 completion*
+*Last updated: 2026-02-01 - All 28 v1 requirements verified for launch*
