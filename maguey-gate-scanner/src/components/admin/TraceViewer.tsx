@@ -1,6 +1,6 @@
 /**
  * Trace Viewer Component
- * 
+ *
  * Unified trace viewer with waterfall visualization.
  * Shows spans as horizontal bars with timing, color-coded by service.
  */
@@ -10,14 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { 
+import {
   ChevronRight,
   ChevronDown,
   Clock,
   AlertTriangle,
   CheckCircle2,
   Copy,
-  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -126,16 +125,16 @@ function WaterfallBar({ span, startTime, totalDuration, maxDuration, isExpanded,
   return (
     <div className="relative">
       <div
-        className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded transition-all"
+        className="flex items-center gap-2 cursor-pointer hover:bg-white/5 p-2 rounded transition-all"
         onClick={onToggle}
         style={{ paddingLeft: `${(span.depth || 0) * 24 + 8}px` }}
       >
         <div className="flex items-center gap-2 min-w-[200px]">
           {span.parent_span_id ? (
             isExpanded ? (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              <ChevronDown className="w-4 h-4 text-slate-400" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <ChevronRight className="w-4 h-4 text-slate-400" />
             )
           ) : (
             <div className="w-4" />
@@ -144,12 +143,12 @@ function WaterfallBar({ span, startTime, totalDuration, maxDuration, isExpanded,
             {getStatusIcon(span.status)}
             <span className="ml-1">{span.status}</span>
           </Badge>
-          <span className="font-medium text-sm">{span.span_name}</span>
-          <Badge variant="outline" className="text-xs">
+          <span className="font-medium text-sm text-white">{span.span_name}</span>
+          <Badge variant="outline" className="text-xs border-white/10 text-slate-300">
             {span.service_name}
           </Badge>
         </div>
-        <div className="flex-1 relative h-8 bg-muted/30 rounded overflow-hidden">
+        <div className="flex-1 relative h-8 bg-white/5 rounded overflow-hidden">
           {/* Background timeline */}
           <div className="absolute inset-0 flex items-center">
             <div
@@ -174,43 +173,43 @@ function WaterfallBar({ span, startTime, totalDuration, maxDuration, isExpanded,
             {span.duration_ms && span.duration_ms > 50 && formatDuration(span.duration_ms)}
           </div>
         </div>
-        <div className="min-w-[80px] text-right text-sm text-muted-foreground">
+        <div className="min-w-[80px] text-right text-sm text-slate-400">
           {formatDuration(span.duration_ms)}
         </div>
       </div>
       {isExpanded && (
-        <div className="ml-8 mt-2 mb-4 p-3 bg-muted/30 rounded text-sm space-y-2">
-          <div className="grid grid-cols-2 gap-2">
+        <div className="ml-8 mt-2 mb-4 p-3 bg-white/5 rounded text-sm space-y-2">
+          <div className="grid grid-cols-2 gap-2 text-slate-300">
             <div>
-              <span className="text-muted-foreground">Span ID:</span>
+              <span className="text-slate-400">Span ID:</span>
               <code className="ml-2 text-xs">{span.span_id}</code>
             </div>
             {span.parent_span_id && (
               <div>
-                <span className="text-muted-foreground">Parent:</span>
+                <span className="text-slate-400">Parent:</span>
                 <code className="ml-2 text-xs">{span.parent_span_id}</code>
               </div>
             )}
             <div>
-              <span className="text-muted-foreground">Start:</span>
+              <span className="text-slate-400">Start:</span>
               <span className="ml-2">{formatTimestamp(span.start_time)}</span>
             </div>
             {span.end_time && (
               <div>
-                <span className="text-muted-foreground">End:</span>
+                <span className="text-slate-400">End:</span>
                 <span className="ml-2">{formatTimestamp(span.end_time)}</span>
               </div>
             )}
           </div>
           {span.events.length > 0 && (
             <div>
-              <div className="font-semibold mb-1">Events:</div>
+              <div className="font-semibold mb-1 text-white">Events:</div>
               <div className="space-y-1">
                 {span.events.map((event, idx) => (
-                  <div key={idx} className="text-xs">
-                    • <span className="font-medium">{event.name}</span>
+                  <div key={idx} className="text-xs text-slate-400">
+                    • <span className="font-medium text-slate-300">{event.name}</span>
                     {event.attributes && Object.keys(event.attributes).length > 0 && (
-                      <span className="text-muted-foreground ml-2">
+                      <span className="ml-2">
                         {JSON.stringify(event.attributes)}
                       </span>
                     )}
@@ -221,15 +220,15 @@ function WaterfallBar({ span, startTime, totalDuration, maxDuration, isExpanded,
           )}
           {Object.keys(span.attributes).length > 0 && (
             <div>
-              <div className="font-semibold mb-1">Attributes:</div>
+              <div className="font-semibold mb-1 text-white">Attributes:</div>
               <div className="space-y-1">
                 {Object.entries(span.attributes).slice(0, 10).map(([key, value]) => (
-                  <div key={key} className="text-xs">
-                    <code className="text-xs">{key}</code>: {String(value)}
+                  <div key={key} className="text-xs text-slate-400">
+                    <code className="text-xs text-slate-300">{key}</code>: {String(value)}
                   </div>
                 ))}
                 {Object.keys(span.attributes).length > 10 && (
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-slate-500">
                     ... and {Object.keys(span.attributes).length - 10} more
                   </div>
                 )}
@@ -321,9 +320,9 @@ export function TraceViewer({ traceId, onClose }: TraceViewerProps) {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-white/5 border-white/10">
         <CardContent className="p-8 text-center">
-          <div className="text-muted-foreground">Loading trace...</div>
+          <div className="text-slate-400">Loading trace...</div>
         </CardContent>
       </Card>
     );
@@ -331,9 +330,9 @@ export function TraceViewer({ traceId, onClose }: TraceViewerProps) {
 
   if (error || !trace) {
     return (
-      <Card>
+      <Card className="bg-white/5 border-white/10">
         <CardContent className="p-8">
-          <div className="text-red-600">
+          <div className="text-red-400">
             {error || 'Trace not found'}
           </div>
         </CardContent>
@@ -342,7 +341,7 @@ export function TraceViewer({ traceId, onClose }: TraceViewerProps) {
   }
 
   const startTime = new Date(trace.summary.trace_start).getTime();
-  const endTime = trace.summary.trace_end 
+  const endTime = trace.summary.trace_end
     ? new Date(trace.summary.trace_end).getTime()
     : Date.now();
   const totalDuration = endTime - startTime;
@@ -351,22 +350,22 @@ export function TraceViewer({ traceId, onClose }: TraceViewerProps) {
   }, 0);
 
   return (
-    <Card>
+    <Card className="bg-white/5 border-white/10">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Trace Details</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-white">Trace Details</CardTitle>
+            <CardDescription className="text-slate-400">
               <code className="text-xs">{traceId}</code>
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={copyTraceId}>
+            <Button variant="outline" size="sm" onClick={copyTraceId} className="border-white/10 bg-white/5 text-white hover:bg-white/10">
               <Copy className="w-4 h-4 mr-2" />
               Copy Trace ID
             </Button>
             {onClose && (
-              <Button variant="outline" size="sm" onClick={onClose}>
+              <Button variant="outline" size="sm" onClick={onClose} className="border-white/10 bg-white/5 text-white hover:bg-white/10">
                 Close
               </Button>
             )}
@@ -377,41 +376,41 @@ export function TraceViewer({ traceId, onClose }: TraceViewerProps) {
         {/* Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div>
-            <div className="text-sm text-muted-foreground">Total Duration</div>
-            <div className="text-lg font-semibold">
+            <div className="text-sm text-slate-400">Total Duration</div>
+            <div className="text-lg font-semibold text-white">
               {formatDuration(trace.summary.total_duration_ms)}
             </div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground">Spans</div>
-            <div className="text-lg font-semibold">
+            <div className="text-sm text-slate-400">Spans</div>
+            <div className="text-lg font-semibold text-white">
               {trace.summary.span_count}
             </div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground">Services</div>
-            <div className="text-lg font-semibold">
+            <div className="text-sm text-slate-400">Services</div>
+            <div className="text-lg font-semibold text-white">
               {trace.summary.service_count}
             </div>
           </div>
           <div>
-            <div className="text-sm text-muted-foreground">Status</div>
+            <div className="text-sm text-slate-400">Status</div>
             <div>
-              <Badge className={trace.summary.has_errors ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
+              <Badge className={trace.summary.has_errors ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}>
                 {trace.summary.has_errors ? 'Has Errors' : 'Success'}
               </Badge>
             </div>
           </div>
         </div>
 
-        <Separator className="mb-6" />
+        <Separator className="mb-6 bg-white/10" />
 
         {/* Services Legend */}
         <div className="mb-4">
-          <div className="text-sm font-semibold mb-2">Services:</div>
+          <div className="text-sm font-semibold mb-2 text-white">Services:</div>
           <div className="flex flex-wrap gap-2">
             {trace.summary.services.map(service => (
-              <Badge key={service} variant="outline" className="text-xs">
+              <Badge key={service} variant="outline" className="text-xs border-white/10 text-slate-300">
                 <div className={`w-3 h-3 rounded mr-2 ${getServiceColor(service)}`} />
                 {service}
               </Badge>
@@ -421,8 +420,8 @@ export function TraceViewer({ traceId, onClose }: TraceViewerProps) {
 
         {/* Waterfall Chart */}
         <div className="mb-4">
-          <div className="text-sm font-semibold mb-2">Waterfall View</div>
-          <div className="border rounded p-4 bg-background space-y-1 max-h-[600px] overflow-y-auto">
+          <div className="text-sm font-semibold mb-2 text-white">Waterfall View</div>
+          <div className="border border-white/10 rounded p-4 bg-white/5 space-y-1 max-h-[600px] overflow-y-auto">
             {trace.spans.map(span => (
               <WaterfallBar
                 key={span.span_id}

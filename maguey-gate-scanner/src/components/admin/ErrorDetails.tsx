@@ -1,6 +1,6 @@
 /**
  * Error Details Component
- * 
+ *
  * Shows detailed information about a specific error group.
  */
 
@@ -10,11 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
+import {
   AlertTriangle,
-  Clock,
-  Users,
-  Activity,
   ExternalLink,
   CheckCircle2,
   XCircle,
@@ -44,15 +41,15 @@ function getSeverityColor(severity: ErrorSeverity): string {
 
 function getCategoryColor(category: ErrorCategory): string {
   const colors: Record<ErrorCategory, string> = {
-    [ErrorCategory.VALIDATION]: 'bg-blue-100 text-blue-800',
-    [ErrorCategory.PAYMENT]: 'bg-red-100 text-red-800',
-    [ErrorCategory.INVENTORY]: 'bg-orange-100 text-orange-800',
-    [ErrorCategory.DATABASE]: 'bg-purple-100 text-purple-800',
-    [ErrorCategory.NETWORK]: 'bg-yellow-100 text-yellow-800',
-    [ErrorCategory.AUTHENTICATION]: 'bg-pink-100 text-pink-800',
-    [ErrorCategory.AUTHORIZATION]: 'bg-indigo-100 text-indigo-800',
-    [ErrorCategory.EXTERNAL_SERVICE]: 'bg-cyan-100 text-cyan-800',
-    [ErrorCategory.UNKNOWN]: 'bg-gray-100 text-gray-800',
+    [ErrorCategory.VALIDATION]: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+    [ErrorCategory.PAYMENT]: 'bg-red-500/20 text-red-400 border-red-500/50',
+    [ErrorCategory.INVENTORY]: 'bg-orange-500/20 text-orange-400 border-orange-500/50',
+    [ErrorCategory.DATABASE]: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
+    [ErrorCategory.NETWORK]: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+    [ErrorCategory.AUTHENTICATION]: 'bg-pink-500/20 text-pink-400 border-pink-500/50',
+    [ErrorCategory.AUTHORIZATION]: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50',
+    [ErrorCategory.EXTERNAL_SERVICE]: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50',
+    [ErrorCategory.UNKNOWN]: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
   };
   return colors[category] || colors[ErrorCategory.UNKNOWN];
 }
@@ -84,9 +81,9 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
 
     try {
       // Fetch error group
-      const groups = await storage.getErrorGroups({ limit: 1 });
+      const groups = await storage.getErrorGroups({ limit: 100 });
       const group = groups.find(g => g.fingerprint === fingerprint);
-      
+
       if (!group) {
         setError('Error group not found');
         return;
@@ -130,7 +127,7 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
   if (selectedTraceId) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => setSelectedTraceId(null)}>
+        <Button variant="outline" onClick={() => setSelectedTraceId(null)} className="border-white/10 bg-white/5 text-white hover:bg-white/10">
           ← Back to Error Details
         </Button>
         <TraceViewer traceId={selectedTraceId} onClose={() => setSelectedTraceId(null)} />
@@ -140,9 +137,9 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-white/5 border-white/10">
         <CardContent className="p-8 text-center">
-          <div className="text-muted-foreground">Loading error details...</div>
+          <div className="text-slate-400">Loading error details...</div>
         </CardContent>
       </Card>
     );
@@ -150,9 +147,9 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
 
   if (error || !errorGroup) {
     return (
-      <Card>
+      <Card className="bg-white/5 border-white/10">
         <CardContent className="p-8">
-          <div className="text-red-600">
+          <div className="text-red-400">
             {error || 'Error group not found'}
           </div>
         </CardContent>
@@ -172,26 +169,26 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
   return (
     <div className="space-y-6">
       {/* Error Group Header */}
-      <Card>
+      <Card className="bg-white/5 border-white/10">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
+              <CardTitle className="flex items-center gap-2 text-white">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
                 Error Details
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-slate-400">
                 <code className="text-xs">{fingerprint}</code>
               </CardDescription>
             </div>
             <div className="flex gap-2">
               {errorGroup.status === 'open' && (
                 <>
-                  <Button variant="outline" onClick={handleResolve}>
+                  <Button variant="outline" onClick={handleResolve} className="border-white/10 bg-white/5 text-white hover:bg-white/10">
                     <CheckCircle2 className="w-4 h-4 mr-2" />
                     Resolve
                   </Button>
-                  <Button variant="outline" onClick={handleIgnore}>
+                  <Button variant="outline" onClick={handleIgnore} className="border-white/10 bg-white/5 text-white hover:bg-white/10">
                     <XCircle className="w-4 h-4 mr-2" />
                     Ignore
                   </Button>
@@ -204,7 +201,7 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
           <div className="space-y-4">
             {/* Error Message */}
             <div>
-              <div className="text-lg font-semibold mb-2">{errorGroup.message}</div>
+              <div className="text-lg font-semibold mb-2 text-white">{errorGroup.message}</div>
               <div className="flex items-center gap-2">
                 <Badge className={getSeverityColor(errorGroup.severity as ErrorSeverity)}>
                   {errorGroup.severity}
@@ -212,32 +209,32 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
                 <Badge variant="outline" className={getCategoryColor(errorGroup.category as ErrorCategory)}>
                   {errorGroup.category}
                 </Badge>
-                <Badge variant={errorGroup.status === 'open' ? 'destructive' : 'outline'}>
+                <Badge variant={errorGroup.status === 'open' ? 'destructive' : 'outline'} className={errorGroup.status === 'open' ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'border-white/10 text-slate-300'}>
                   {errorGroup.status}
                 </Badge>
-                <Badge variant="outline">{errorGroup.service_name}</Badge>
+                <Badge variant="outline" className="border-white/10 text-slate-300">{errorGroup.service_name}</Badge>
               </div>
             </div>
 
-            <Separator />
+            <Separator className="bg-white/10" />
 
             {/* Statistics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <div className="text-sm text-muted-foreground">Occurrences</div>
-                <div className="text-2xl font-bold">{errorGroup.occurrence_count}</div>
+                <div className="text-sm text-slate-400">Occurrences</div>
+                <div className="text-2xl font-bold text-white">{errorGroup.occurrence_count}</div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Affected Users</div>
-                <div className="text-2xl font-bold">{errorGroup.affected_users}</div>
+                <div className="text-sm text-slate-400">Affected Users</div>
+                <div className="text-2xl font-bold text-white">{errorGroup.affected_users}</div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">First Seen</div>
-                <div className="text-sm">{formatTimestamp(errorGroup.first_seen)}</div>
+                <div className="text-sm text-slate-400">First Seen</div>
+                <div className="text-sm text-white">{formatTimestamp(errorGroup.first_seen)}</div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Last Seen</div>
-                <div className="text-sm">{formatTimestamp(errorGroup.last_seen)}</div>
+                <div className="text-sm text-slate-400">Last Seen</div>
+                <div className="text-sm text-white">{formatTimestamp(errorGroup.last_seen)}</div>
               </div>
             </div>
           </div>
@@ -246,30 +243,30 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
 
       {/* Error Events */}
       <Tabs defaultValue="events" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="events">Recent Events ({errorEvents.length})</TabsTrigger>
+        <TabsList className="bg-white/5 border-white/10">
+          <TabsTrigger value="events" className="data-[state=active]:bg-white/10">Recent Events ({errorEvents.length})</TabsTrigger>
           {traceIds.length > 0 && (
-            <TabsTrigger value="traces">Related Traces ({traceIds.length})</TabsTrigger>
+            <TabsTrigger value="traces" className="data-[state=active]:bg-white/10">Related Traces ({traceIds.length})</TabsTrigger>
           )}
         </TabsList>
 
         <TabsContent value="events" className="space-y-4">
-          <Card>
+          <Card className="bg-white/5 border-white/10">
             <CardHeader>
-              <CardTitle>Error Occurrences</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Error Occurrences</CardTitle>
+              <CardDescription className="text-slate-400">
                 Recent occurrences of this error
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4 max-h-[600px] overflow-y-auto">
                 {errorEvents.map((event, idx) => (
-                  <Card key={idx} className="border-l-4 border-l-red-500">
+                  <Card key={idx} className="border-l-4 border-l-red-500 bg-white/5 border-white/10">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
-                          <div className="font-medium">{event.message}</div>
-                          <div className="text-sm text-muted-foreground mt-1">
+                          <div className="font-medium text-white">{event.message}</div>
+                          <div className="text-sm text-slate-400 mt-1">
                             {formatTimestamp(event.timestamp)}
                           </div>
                         </div>
@@ -277,13 +274,13 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
                           {event.severity}
                         </Badge>
                       </div>
-                      
+
                       {event.stack && (
                         <details className="mt-2">
-                          <summary className="cursor-pointer text-sm text-muted-foreground">
+                          <summary className="cursor-pointer text-sm text-slate-400 hover:text-slate-300">
                             Stack Trace
                           </summary>
-                          <pre className="mt-2 text-xs bg-muted p-2 rounded overflow-auto max-h-64">
+                          <pre className="mt-2 text-xs bg-black/50 p-2 rounded overflow-auto max-h-64 text-slate-300">
                             {event.stack}
                           </pre>
                         </details>
@@ -291,14 +288,14 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
 
                       {Object.keys(event.context).length > 0 && (
                         <details className="mt-2">
-                          <summary className="cursor-pointer text-sm text-muted-foreground">
+                          <summary className="cursor-pointer text-sm text-slate-400 hover:text-slate-300">
                             Context
                           </summary>
                           <div className="mt-2 text-xs space-y-1">
                             {Object.entries(event.context).map(([key, value]) => (
-                              <div key={key}>
-                                <span className="font-medium">{key}:</span>{' '}
-                                <span className="text-muted-foreground">
+                              <div key={key} className="text-slate-400">
+                                <span className="font-medium text-slate-300">{key}:</span>{' '}
+                                <span>
                                   {typeof value === 'object' ? JSON.stringify(value) : String(value)}
                                 </span>
                               </div>
@@ -313,6 +310,7 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
                             variant="outline"
                             size="sm"
                             onClick={() => setSelectedTraceId(event.context.traceId as string)}
+                            className="border-white/10 bg-white/5 text-white hover:bg-white/10"
                           >
                             <ExternalLink className="w-3 h-3 mr-2" />
                             View Trace
@@ -329,21 +327,21 @@ export function ErrorDetails({ fingerprint }: ErrorDetailsProps) {
 
         {traceIds.length > 0 && (
           <TabsContent value="traces" className="space-y-4">
-            <Card>
+            <Card className="bg-white/5 border-white/10">
               <CardHeader>
-                <CardTitle>Related Traces</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Related Traces</CardTitle>
+                <CardDescription className="text-slate-400">
                   Distributed traces associated with this error
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {traceIds.map(traceId => (
-                    <Card key={traceId} className="cursor-pointer hover:shadow-md" onClick={() => setSelectedTraceId(traceId)}>
+                    <Card key={traceId} className="cursor-pointer hover:shadow-md bg-white/5 border-white/10" onClick={() => setSelectedTraceId(traceId)}>
                       <CardContent className="p-4">
                         <div className="flex items-center justify-between">
-                          <code className="text-sm">{traceId}</code>
-                          <Button variant="ghost" size="sm">
+                          <code className="text-sm text-slate-300">{traceId}</code>
+                          <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
                             <ExternalLink className="w-4 h-4" />
                           </Button>
                         </div>

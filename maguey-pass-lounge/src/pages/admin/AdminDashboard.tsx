@@ -6,9 +6,6 @@ import TicketList from "./TicketList";
 import Reports from "./Reports";
 import GuestListManager from "./GuestListManager";
 import VIPTableManager from "./VIPTableManager";
-import { TraceDashboard } from "@/components/admin/TraceDashboard";
-import { TraceList } from "@/components/admin/TraceList";
-import { ErrorDashboard } from "@/components/admin/ErrorDashboard";
 
 const AdminDashboard = () => {
   return (
@@ -23,9 +20,6 @@ const AdminDashboard = () => {
             <Route path="guest-lists" element={<GuestListManager />} />
             <Route path="vip-tables" element={<VIPTableManager />} />
             <Route path="reports" element={<Reports />} />
-            <Route path="traces" element={<TraceDashboard />} />
-            <Route path="traces/list" element={<TraceList />} />
-            <Route path="errors" element={<ErrorDashboard />} />
           </Routes>
         </main>
       </div>

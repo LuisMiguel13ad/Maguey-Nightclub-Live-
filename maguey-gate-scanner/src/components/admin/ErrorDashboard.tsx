@@ -1,6 +1,6 @@
 /**
  * Error Dashboard Component
- * 
+ *
  * Displays error tracking dashboard with overview, error groups, and recent errors.
  */
 
@@ -11,18 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { 
-  RefreshCw, 
+import {
+  RefreshCw,
   Search,
   Filter,
   AlertTriangle,
-  CheckCircle2,
-  Clock,
-  TrendingUp,
   Users,
   Activity,
-  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ErrorStorage, ErrorGroup, ErrorStats } from '@/lib/errors/error-storage';
@@ -49,15 +44,15 @@ function getSeverityColor(severity: ErrorSeverity): string {
 
 function getCategoryColor(category: ErrorCategory): string {
   const colors: Record<ErrorCategory, string> = {
-    [ErrorCategory.VALIDATION]: 'bg-blue-100 text-blue-800',
-    [ErrorCategory.PAYMENT]: 'bg-red-100 text-red-800',
-    [ErrorCategory.INVENTORY]: 'bg-orange-100 text-orange-800',
-    [ErrorCategory.DATABASE]: 'bg-purple-100 text-purple-800',
-    [ErrorCategory.NETWORK]: 'bg-yellow-100 text-yellow-800',
-    [ErrorCategory.AUTHENTICATION]: 'bg-pink-100 text-pink-800',
-    [ErrorCategory.AUTHORIZATION]: 'bg-indigo-100 text-indigo-800',
-    [ErrorCategory.EXTERNAL_SERVICE]: 'bg-cyan-100 text-cyan-800',
-    [ErrorCategory.UNKNOWN]: 'bg-gray-100 text-gray-800',
+    [ErrorCategory.VALIDATION]: 'bg-blue-500/20 text-blue-400 border-blue-500/50',
+    [ErrorCategory.PAYMENT]: 'bg-red-500/20 text-red-400 border-red-500/50',
+    [ErrorCategory.INVENTORY]: 'bg-orange-500/20 text-orange-400 border-orange-500/50',
+    [ErrorCategory.DATABASE]: 'bg-purple-500/20 text-purple-400 border-purple-500/50',
+    [ErrorCategory.NETWORK]: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50',
+    [ErrorCategory.AUTHENTICATION]: 'bg-pink-500/20 text-pink-400 border-pink-500/50',
+    [ErrorCategory.AUTHORIZATION]: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50',
+    [ErrorCategory.EXTERNAL_SERVICE]: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/50',
+    [ErrorCategory.UNKNOWN]: 'bg-gray-500/20 text-gray-400 border-gray-500/50',
   };
   return colors[category] || colors[ErrorCategory.UNKNOWN];
 }
@@ -73,8 +68,8 @@ interface ErrorGroupCardProps {
 
 function ErrorGroupCard({ group, onSelect }: ErrorGroupCardProps) {
   return (
-    <Card 
-      className="cursor-pointer hover:shadow-md transition-all"
+    <Card
+      className="cursor-pointer hover:shadow-md transition-all bg-white/5 border-white/10"
       onClick={() => onSelect(group.fingerprint)}
     >
       <CardContent className="p-4">
@@ -87,22 +82,22 @@ function ErrorGroupCard({ group, onSelect }: ErrorGroupCardProps) {
               <Badge variant="outline" className={getCategoryColor(group.category as ErrorCategory)}>
                 {group.category}
               </Badge>
-              <Badge variant={group.status === 'open' ? 'destructive' : 'outline'}>
+              <Badge variant={group.status === 'open' ? 'destructive' : 'outline'} className={group.status === 'open' ? 'bg-red-500/20 text-red-400 border-red-500/50' : 'border-white/10 text-slate-300'}>
                 {group.status}
               </Badge>
             </div>
-            <div className="font-medium mb-2">{group.message}</div>
-            <div className="text-sm text-muted-foreground space-y-1">
+            <div className="font-medium mb-2 text-white">{group.message}</div>
+            <div className="text-sm text-slate-400 space-y-1">
               <div>Service: {group.service_name}</div>
               <div>First seen: {formatTimestamp(group.first_seen)}</div>
               <div>Last seen: {formatTimestamp(group.last_seen)}</div>
             </div>
           </div>
           <div className="text-right ml-4">
-            <div className="text-2xl font-bold">{group.occurrence_count}</div>
-            <div className="text-xs text-muted-foreground">occurrences</div>
-            <div className="text-sm font-semibold mt-2">{group.affected_users}</div>
-            <div className="text-xs text-muted-foreground">users</div>
+            <div className="text-2xl font-bold text-white">{group.occurrence_count}</div>
+            <div className="text-xs text-slate-400">occurrences</div>
+            <div className="text-sm font-semibold mt-2 text-white">{group.affected_users}</div>
+            <div className="text-xs text-slate-400">users</div>
           </div>
         </div>
       </CardContent>
@@ -120,7 +115,7 @@ export function ErrorDashboard() {
   const [errorStats, setErrorStats] = useState<ErrorStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('open');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
@@ -192,7 +187,7 @@ export function ErrorDashboard() {
   if (selectedFingerprint) {
     return (
       <div className="space-y-4">
-        <Button variant="outline" onClick={() => setSelectedFingerprint(null)}>
+        <Button variant="outline" onClick={() => setSelectedFingerprint(null)} className="border-white/10 bg-white/5 text-white hover:bg-white/10">
           ← Back to Dashboard
         </Button>
         <ErrorDetails fingerprint={selectedFingerprint} />
@@ -204,12 +199,12 @@ export function ErrorDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Error Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-white">Error Dashboard</h1>
+          <p className="text-slate-400">
             Monitor and track errors across the ticketing system
           </p>
         </div>
-        <Button onClick={fetchErrorGroups} disabled={loading} variant="outline">
+        <Button onClick={fetchErrorGroups} disabled={loading} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10">
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
@@ -217,48 +212,48 @@ export function ErrorDashboard() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-white/5 border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Errors</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-400">Total Errors</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.totalErrors}</div>
-            <div className="text-xs text-muted-foreground">All time</div>
+            <div className="text-2xl font-bold text-white">{summary.totalErrors}</div>
+            <div className="text-xs text-slate-500">All time</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-white/5 border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Open Errors</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-400">Open Errors</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{summary.openErrors}</div>
-            <div className="text-xs text-muted-foreground">Requires attention</div>
+            <div className="text-2xl font-bold text-orange-400">{summary.openErrors}</div>
+            <div className="text-xs text-slate-500">Requires attention</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-white/5 border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Critical</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-400">Critical</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{summary.criticalErrors}</div>
-            <div className="text-xs text-muted-foreground">Immediate action</div>
+            <div className="text-2xl font-bold text-red-400">{summary.criticalErrors}</div>
+            <div className="text-xs text-slate-500">Immediate action</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-white/5 border-white/10">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Affected Users</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-400">Affected Users</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary.affectedUsers}</div>
-            <div className="text-xs text-muted-foreground">Unique users</div>
+            <div className="text-2xl font-bold text-white">{summary.affectedUsers}</div>
+            <div className="text-xs text-slate-500">Unique users</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-white/5 border-white/10">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <Filter className="w-5 h-5" />
             Filters
           </CardTitle>
@@ -266,16 +261,16 @@ export function ErrorDashboard() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search errors..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-slate-400"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -286,7 +281,7 @@ export function ErrorDashboard() {
               </SelectContent>
             </Select>
             <Select value={severityFilter} onValueChange={setSeverityFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Severity" />
               </SelectTrigger>
               <SelectContent>
@@ -298,7 +293,7 @@ export function ErrorDashboard() {
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -309,7 +304,7 @@ export function ErrorDashboard() {
               </SelectContent>
             </Select>
             <Select value={serviceFilter} onValueChange={setServiceFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Service" />
               </SelectTrigger>
               <SelectContent>
@@ -324,9 +319,9 @@ export function ErrorDashboard() {
       </Card>
 
       {error && (
-        <Card className="border-red-300">
+        <Card className="border-red-500/50 bg-red-500/10">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-600">
+            <div className="flex items-center gap-2 text-red-400">
               <AlertTriangle className="w-5 h-5" />
               <span>{error}</span>
             </div>
@@ -336,27 +331,27 @@ export function ErrorDashboard() {
 
       {/* Main Content */}
       <Tabs defaultValue="groups" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="groups">Error Groups</TabsTrigger>
-          <TabsTrigger value="stats">Statistics</TabsTrigger>
+        <TabsList className="bg-white/5 border-white/10">
+          <TabsTrigger value="groups" className="data-[state=active]:bg-white/10">Error Groups</TabsTrigger>
+          <TabsTrigger value="stats" className="data-[state=active]:bg-white/10">Statistics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="groups" className="space-y-4">
-          <Card>
+          <Card className="bg-white/5 border-white/10">
             <CardHeader>
-              <CardTitle>Error Groups</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Error Groups</CardTitle>
+              <CardDescription className="text-slate-400">
                 {errorGroups.length} error group{errorGroups.length !== 1 ? 's' : ''} found
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-slate-400">
                   <Activity className="w-8 h-8 mx-auto mb-2 animate-pulse" />
                   Loading errors...
                 </div>
               ) : errorGroups.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-slate-400">
                   No errors found
                 </div>
               ) : (
@@ -375,32 +370,32 @@ export function ErrorDashboard() {
         </TabsContent>
 
         <TabsContent value="stats" className="space-y-4">
-          <Card>
+          <Card className="bg-white/5 border-white/10">
             <CardHeader>
-              <CardTitle>Error Statistics (Last 24 Hours)</CardTitle>
+              <CardTitle className="text-white">Error Statistics (Last 24 Hours)</CardTitle>
             </CardHeader>
             <CardContent>
               {errorStats.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-slate-400">
                   No statistics available
                 </div>
               ) : (
                 <div className="space-y-4">
                   {errorStats.map((stat, idx) => (
-                    <div key={idx} className="p-4 border rounded">
+                    <div key={idx} className="p-4 border border-white/10 rounded bg-white/5">
                       <div className="flex items-center justify-between mb-2">
                         <div>
-                          <div className="font-semibold">{new Date(stat.hour).toLocaleString()}</div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="font-semibold text-white">{new Date(stat.hour).toLocaleString()}</div>
+                          <div className="text-sm text-slate-400">
                             {stat.service_name} • {stat.category} • {stat.severity}
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-lg font-bold">{stat.error_count}</div>
-                          <div className="text-xs text-muted-foreground">errors</div>
+                          <div className="text-lg font-bold text-white">{stat.error_count}</div>
+                          <div className="text-xs text-slate-400">errors</div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-4 text-sm text-slate-400">
                         <div>
                           <Users className="w-4 h-4 inline mr-1" />
                           {stat.affected_users} users

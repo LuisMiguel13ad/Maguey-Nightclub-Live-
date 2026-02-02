@@ -1,6 +1,6 @@
 /**
  * Trace Dashboard Component
- * 
+ *
  * Displays distributed traces for debugging and performance monitoring.
  * Shows recent traces, filters by service/status/duration, and visualizes trace waterfalls.
  */
@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { 
-  RefreshCw, 
+import {
+  RefreshCw,
   Search,
   Filter,
   AlertTriangle,
@@ -22,7 +22,6 @@ import {
   Activity,
   ChevronRight,
   ChevronDown,
-  ExternalLink,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -112,7 +111,7 @@ interface TraceListItemProps {
 
 function TraceListItem({ trace, onSelect, isSelected }: TraceListItemProps) {
   return (
-    <Card 
+    <Card
       className={`cursor-pointer transition-all hover:shadow-md ${
         isSelected ? 'ring-2 ring-primary' : ''
       } ${trace.has_errors ? 'border-red-300' : ''}`}
@@ -171,13 +170,13 @@ interface SpanTreeItemProps {
 function SpanTreeItem({ span, level, isExpanded, onToggle, maxDuration }: SpanTreeItemProps) {
   const hasChildren = false; // Would need to check if any spans have this as parent
   const indent = level * 24;
-  const durationPercent = span.duration_ms && maxDuration > 0 
-    ? (span.duration_ms / maxDuration) * 100 
+  const durationPercent = span.duration_ms && maxDuration > 0
+    ? (span.duration_ms / maxDuration) * 100
     : 0;
 
   return (
     <div className="border-l-2 border-border/50 pl-4 py-2">
-      <div 
+      <div
         className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded"
         onClick={onToggle}
         style={{ marginLeft: `${indent}px` }}
@@ -237,7 +236,7 @@ function SpanTreeItem({ span, level, isExpanded, onToggle, maxDuration }: SpanTr
       {durationPercent > 0 && (
         <div className="ml-8 mt-1">
           <div className="h-1 bg-muted rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-primary transition-all"
               style={{ width: `${durationPercent}%` }}
             />
@@ -257,13 +256,13 @@ export function TraceDashboard() {
   const [selectedTrace, setSelectedTrace] = useState<TraceTree | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filters
   const [serviceFilter, setServiceFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [durationFilter, setDurationFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Expanded spans
   const [expandedSpans, setExpandedSpans] = useState<Set<string>>(new Set());
 
@@ -391,21 +390,21 @@ export function TraceDashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Trace Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-white">Trace Dashboard</h1>
+          <p className="text-slate-400">
             View and analyze distributed traces for debugging and performance monitoring
           </p>
         </div>
-        <Button onClick={fetchTraces} disabled={loading} variant="outline">
+        <Button onClick={fetchTraces} disabled={loading} variant="outline" className="border-white/10 bg-white/5 text-white hover:bg-white/10">
           <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-white/5 border-white/10">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <Filter className="w-5 h-5" />
             Filters
           </CardTitle>
@@ -413,16 +412,16 @@ export function TraceDashboard() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
                 placeholder="Search traces..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-slate-400"
               />
             </div>
             <Select value={serviceFilter} onValueChange={setServiceFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Service" />
               </SelectTrigger>
               <SelectContent>
@@ -433,7 +432,7 @@ export function TraceDashboard() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -443,7 +442,7 @@ export function TraceDashboard() {
               </SelectContent>
             </Select>
             <Select value={durationFilter} onValueChange={setDurationFilter}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Duration" />
               </SelectTrigger>
               <SelectContent>
@@ -457,9 +456,9 @@ export function TraceDashboard() {
       </Card>
 
       {error && (
-        <Card className="border-red-300">
+        <Card className="border-red-500/50 bg-red-500/10">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 text-red-600">
+            <div className="flex items-center gap-2 text-red-400">
               <AlertTriangle className="w-5 h-5" />
               <span>{error}</span>
             </div>
@@ -469,21 +468,21 @@ export function TraceDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Trace List */}
-        <Card>
+        <Card className="bg-white/5 border-white/10">
           <CardHeader>
-            <CardTitle>Recent Traces</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-white">Recent Traces</CardTitle>
+            <CardDescription className="text-slate-400">
               {traces.length} trace{traces.length !== 1 ? 's' : ''} found
             </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-slate-400">
                 <Activity className="w-8 h-8 mx-auto mb-2 animate-pulse" />
                 Loading traces...
               </div>
             ) : traces.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-slate-400">
                 No traces found
               </div>
             ) : (
@@ -502,18 +501,18 @@ export function TraceDashboard() {
         </Card>
 
         {/* Trace Details */}
-        <Card>
+        <Card className="bg-white/5 border-white/10">
           <CardHeader>
-            <CardTitle>Trace Details</CardTitle>
+            <CardTitle className="text-white">Trace Details</CardTitle>
             {selectedTrace && (
-              <CardDescription>
+              <CardDescription className="text-slate-400">
                 <code className="text-xs">{selectedTrace.trace_id}</code>
               </CardDescription>
             )}
           </CardHeader>
           <CardContent>
             {!selectedTrace ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-slate-400">
                 Select a trace to view details
               </div>
             ) : (
@@ -521,38 +520,38 @@ export function TraceDashboard() {
                 {/* Summary */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm text-muted-foreground">Total Duration</div>
-                    <div className="text-lg font-semibold">
+                    <div className="text-sm text-slate-400">Total Duration</div>
+                    <div className="text-lg font-semibold text-white">
                       {formatDuration(selectedTrace.summary.total_duration_ms)}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Spans</div>
-                    <div className="text-lg font-semibold">
+                    <div className="text-sm text-slate-400">Spans</div>
+                    <div className="text-lg font-semibold text-white">
                       {selectedTrace.summary.span_count}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Services</div>
-                    <div className="text-lg font-semibold">
+                    <div className="text-sm text-slate-400">Services</div>
+                    <div className="text-lg font-semibold text-white">
                       {selectedTrace.summary.service_count}
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Status</div>
+                    <div className="text-sm text-slate-400">Status</div>
                     <div>
-                      <Badge className={selectedTrace.summary.has_errors ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
+                      <Badge className={selectedTrace.summary.has_errors ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}>
                         {selectedTrace.summary.has_errors ? 'Has Errors' : 'Success'}
                       </Badge>
                     </div>
                   </div>
                 </div>
 
-                <Separator />
+                <Separator className="bg-white/10" />
 
                 {/* Span Tree */}
                 <div>
-                  <div className="text-sm font-semibold mb-2">Span Tree</div>
+                  <div className="text-sm font-semibold text-white mb-2">Span Tree</div>
                   <div className="space-y-1 max-h-[400px] overflow-y-auto">
                     {selectedTrace.spans.map(span => (
                       <SpanTreeItem

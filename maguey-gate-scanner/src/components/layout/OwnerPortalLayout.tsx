@@ -9,17 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import RoleSwitcher from "@/components/RoleSwitcher";
 import {
+  Activity,
+  AlertTriangle,
   BarChart3,
   Bell,
   Calendar,
+  Database,
   FileText,
   LayoutDashboard,
   LogOut,
   Menu,
+  Shield,
   ShoppingCart,
   Users,
   Wine,
   X,
+  Zap,
 } from "lucide-react";
 
 interface OwnerPortalLayoutProps {
@@ -63,6 +68,18 @@ const sidebarSections = [
     ownerOnly: true, // Hide settings for promoters
     items: [
       { title: "Notifications", path: "/notifications/preferences", icon: Bell, ownerOnly: true },
+    ],
+  },
+  {
+    title: "MONITORING",
+    ownerOnly: true, // Hide monitoring for non-owners
+    items: [
+      { title: "Metrics", path: "/monitoring/metrics", icon: Activity, ownerOnly: true },
+      { title: "Traces", path: "/monitoring/traces", icon: Zap, ownerOnly: true },
+      { title: "Errors", path: "/monitoring/errors", icon: AlertTriangle, ownerOnly: true },
+      { title: "Circuit Breakers", path: "/monitoring/circuit-breakers", icon: Shield, ownerOnly: true },
+      { title: "Rate Limits", path: "/monitoring/rate-limits", icon: Shield, ownerOnly: true },
+      { title: "Query Performance", path: "/monitoring/query-performance", icon: Database, ownerOnly: true },
     ],
   },
 ];

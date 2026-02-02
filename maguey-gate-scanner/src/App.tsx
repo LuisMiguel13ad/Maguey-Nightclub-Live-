@@ -37,6 +37,13 @@ import { GuestListCheckIn } from "./pages/GuestListCheckIn";
 import VipScannerPage from "./pages/VipScannerPage";
 import Orders from "./pages/Orders";
 import TestQrGenerator from "./pages/TestQrGenerator";
+// Monitoring pages
+import MetricsPage from "./pages/monitoring/MetricsPage";
+import TracesPage from "./pages/monitoring/TracesPage";
+import ErrorsPage from "./pages/monitoring/ErrorsPage";
+import CircuitBreakersPage from "./pages/monitoring/CircuitBreakersPage";
+import RateLimitsPage from "./pages/monitoring/RateLimitsPage";
+import QueryPerformancePage from "./pages/monitoring/QueryPerformancePage";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +80,13 @@ const AppContent = () => {
         <Route path="/vip-tables" element={<VipTablesManagement />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/test-qr" element={<TestQrGenerator />} />
+        {/* Monitoring Routes */}
+        <Route path="/monitoring/metrics" element={<MetricsPage />} />
+        <Route path="/monitoring/traces" element={<TracesPage />} />
+        <Route path="/monitoring/errors" element={<ErrorsPage />} />
+        <Route path="/monitoring/circuit-breakers" element={<CircuitBreakersPage />} />
+        <Route path="/monitoring/rate-limits" element={<RateLimitsPage />} />
+        <Route path="/monitoring/query-performance" element={<QueryPerformancePage />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

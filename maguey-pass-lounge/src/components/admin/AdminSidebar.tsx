@@ -9,8 +9,6 @@ const navItems = [
   { to: "/admin/guest-lists", label: "Guest Lists" },
   { to: "/admin/vip-tables", label: "🍾 VIP Tables" },
   { to: "/admin/reports", label: "Reports" },
-  { to: "/admin/traces", label: "Traces" },
-  { to: "/admin/errors", label: "Errors" },
 ];
 
 export function AdminSidebar() {
