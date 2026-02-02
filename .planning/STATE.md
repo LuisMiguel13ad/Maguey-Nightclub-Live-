@@ -376,7 +376,17 @@ Recent decisions affecting current work:
 - Set up UPSTASH_REDIS_REST_TOKEN environment variable for rate limiting (Phase 6)
 - Set up SENTRY_DSN environment variable in Supabase Dashboard for edge function error tracking (Phase 6)
 - Set up VITE_SENTRY_DSN environment variable in frontend deployments for error tracking (Phase 6)
-- Configure GitHub Secrets for E2E CI (Phase 8): VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, STRIPE_TEST_PK, STRIPE_TEST_SK, SCANNER_TEST_EMAIL, SCANNER_TEST_PASSWORD
+- **⚠️ PRIORITY: Configure GitHub Secrets for E2E CI** (workflow temporarily disabled until configured)
+  - Go to: https://github.com/LuisMiguel13ad/Maguey-Nightclub-Live-/settings/secrets/actions
+  - Add these 7 secrets:
+    1. `VITE_SUPABASE_URL` - Your Supabase project URL (from Supabase Dashboard → Settings → API)
+    2. `VITE_SUPABASE_ANON_KEY` - Supabase anon/public key (from Supabase Dashboard → Settings → API)
+    3. `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (from Supabase Dashboard → Settings → API)
+    4. `STRIPE_TEST_PK` - Stripe test publishable key (from Stripe Dashboard → Developers → API keys)
+    5. `STRIPE_TEST_SK` - Stripe test secret key (from Stripe Dashboard → Developers → API keys)
+    6. `SCANNER_TEST_EMAIL` - Test user email for scanner login (create a test user in your auth system)
+    7. `SCANNER_TEST_PASSWORD` - Test user password for scanner login
+  - After adding secrets: Edit .github/workflows/e2e.yml to uncomment push/pull_request triggers
 
 ### Blockers/Concerns
 

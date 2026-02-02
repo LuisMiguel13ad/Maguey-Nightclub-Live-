@@ -1,10 +1,14 @@
 name: E2E Tests
 
+# TEMPORARILY DISABLED - Requires GitHub Secrets configuration
+# To re-enable: uncomment push/pull_request triggers below
+# Secrets needed: See .planning/STATE.md "Pending Todos" section
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
+  workflow_dispatch:  # Manual trigger only until secrets configured
+  # push:
+  #   branches: [main, develop]
+  # pull_request:
+  #   branches: [main, develop]
 
 env:
   VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
