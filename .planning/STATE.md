@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-01-29)
+See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Core value:** Customers can buy tickets/VIP tables, receive QR codes, and get scanned at the door seamlessly — a complete end-to-end flow that rivals Ticketmaster and Eventbrite.
-**Current focus:** All phases complete — ready for milestone archive
+**Current focus:** v1.0 milestone archived — planning next milestone
 
 ## Current Position
 
 Phase: 13 of 13 (Code Cleanup & Scanner Consolidation)
 Plan: 2 of 2
-Status: COMPLETE
-Last activity: 2026-02-09 — Phase 13 executed (gap closure complete)
+Status: MILESTONE ARCHIVED (v1.0)
+Last activity: 2026-02-09 — v1.0 Production Hardening milestone archived
 
-Progress: [████████████████████████████████████████] 100% (63/63 plans)
+Progress: [████████████████████████████████████████] 100% (66/66 plans)
 
 ### Phase 13 Plans (Complete)
 
@@ -442,6 +442,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-09
-Stopped at: MILESTONE COMPLETE - All 13 phases finished (including gap closure)
-Resume file: `.planning/phases/13-code-cleanup-scanner-consolidation/13-02-SUMMARY.md`
-Next action: Archive v1.0 milestone via /gsd:complete-milestone
+Stopped at: MILESTONE ARCHIVED — v1.0 Production Hardening shipped
+Resume file: `.planning/MILESTONES.md`
+Next action: Start next milestone via `/gsd:new-milestone`
