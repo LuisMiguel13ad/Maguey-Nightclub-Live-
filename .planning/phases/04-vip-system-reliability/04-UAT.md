@@ -1,14 +1,14 @@
 ---
 phase: 04-vip-system-reliability
-status: blocked
+status: testing
 created: 2026-01-30
-updated: 2026-01-31
+updated: 2026-02-09
 tests_total: 8
-tests_passed: 2
+tests_passed: 3
 tests_failed: 0
 tests_skipped: 1
-tests_blocked: 5
-blocking_reason: Phase 4 migrations not applied to remote Supabase DB
+tests_blocked: 0
+blocking_reason: (resolved — all RPCs confirmed on remote DB)
 ---
 
 # Phase 4 UAT: VIP System Reliability
@@ -26,7 +26,7 @@ User acceptance tests for Phase 4 deliverables. Each test validates a user-obser
 | 5 | VIP re-entry shows gold "RE-ENTRY GRANTED" banner | ⛔ blocked | Requires Test 4 |
 | 6 | VIP-linked GA ticket gets re-entry privilege | ⛔ blocked | `check_vip_linked_ticket_reentry` RPC missing |
 | 7 | Regular GA ticket rejected on second scan | ⛔ blocked | `scan_ticket_atomic` fails - schema drift |
-| 8 | VIP reservation status protected (no backward transitions) | ⛔ blocked | Requires migration application |
+| 8 | VIP reservation status protected (no backward transitions) | ✅ passed | Trigger rejects `checked_in`→`confirmed` with correct error |
 
 ---
 
@@ -188,7 +188,14 @@ This is a database-level constraint. Can be verified by:
 - Check migration file exists: `20260130000000_vip_state_transition_enforcement.sql`
 - Check trigger is defined on vip_reservations table
 
-**Result:** _pending_
+**Result:** ✅ PASSED
+- Trigger `enforce_vip_status_transition` confirmed active on `vip_reservations` table
+- Used reservation `aaaaaaaa-...` (status: `checked_in`, "Test VIP Host", table 101)
+- Attempted backward transition: `checked_in` → `confirmed`
+- SQL UPDATE correctly rejected with error:
+  `Invalid VIP status transition from checked_in to confirmed. Only forward transitions are allowed.`
+- Hint returned valid transitions: `pending→confirmed, pending→cancelled, confirmed→checked_in, confirmed→cancelled, checked_in→completed`
+- Verified status remained `checked_in` after rejected update
 
 ---
 
