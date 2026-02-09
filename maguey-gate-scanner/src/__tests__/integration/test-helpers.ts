@@ -8,9 +8,6 @@
 import { supabase, type Ticket } from '../../lib/supabase';
 import { scanTicket, lookupTicketByQR, type ScanResult, type TicketWithRelations } from '../../lib/scanner-service';
 import { createLogger } from '../../lib/logger';
-import { hmac } from '@noble/hashes/hmac';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import crypto from 'crypto';
 
 const logger = createLogger({ module: 'integration-test-helpers' });
@@ -32,18 +29,25 @@ export interface TicketWithQR {
  * @param secret - Signing secret (optional, uses env var if not provided)
  * @returns HMAC signature
  */
-export function generateValidQRSignature(
+export async function generateValidQRSignature(
   qrToken: string,
   secret?: string
-): string {
-  const signingSecret = secret || 
-    process.env.VITE_QR_SIGNING_SECRET || 
-    import.meta.env?.VITE_QR_SIGNING_SECRET || 
+): Promise<string> {
+  const signingSecret = secret ||
+    process.env.VITE_QR_SIGNING_SECRET ||
+    import.meta.env?.VITE_QR_SIGNING_SECRET ||
     'test-qr-signing-secret-for-integration-tests';
-  
-  const keyBytes = utf8ToBytes(signingSecret);
-  const tokenBytes = utf8ToBytes(qrToken);
-  return bytesToHex(hmac(sha256, keyBytes, tokenBytes));
+
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(signingSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(qrToken));
+  return btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
 }
 
 /**
@@ -63,7 +67,7 @@ export async function createTestTicketWithQR(
 ): Promise<TicketWithQR> {
   const timestamp = Date.now();
   const qrToken = options.qrToken || `qr_test_${timestamp}_${Math.random().toString(36).substring(7)}`;
-  const qrSignature = generateValidQRSignature(qrToken);
+  const qrSignature = await generateValidQRSignature(qrToken);
   
   // Create order first
   const orderId = `test_order_${timestamp}`;
@@ -349,11 +353,11 @@ export async function isTicketScanned(ticketId: string): Promise<boolean> {
  * @param secret - Optional signing secret
  * @returns True if signature is valid
  */
-export function validateQRSignature(
+export async function validateQRSignature(
   qrToken: string,
   signature: string,
   secret?: string
-): boolean {
-  const expectedSignature = generateValidQRSignature(qrToken, secret);
-  return signature.toLowerCase() === expectedSignature.toLowerCase();
+): Promise<boolean> {
+  const expectedSignature = await generateValidQRSignature(qrToken, secret);
+  return signature === expectedSignature;
 }

@@ -1,6 +1,3 @@
-import { hmac } from '@noble/hashes/hmac';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import { supabase, type Ticket, type Event, type TicketType } from './supabase';
 import { updateTicketReEntryStatus, determineScanType, type ReEntryMode } from './re-entry-service';
 import { requiresIDVerification, checkIDRequirementByName, isTicketVerified } from './id-verification-service';
@@ -102,11 +99,27 @@ export const validateQRSignature = async (
   const log = logger.child({ qrToken: redact(qrToken) });
 
   try {
-    const keyBytes = utf8ToBytes(qrSigningSecret);
-    const tokenBytes = utf8ToBytes(qrToken);
-    const expectedSignature = bytesToHex(hmac(sha256, keyBytes, tokenBytes));
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(qrSigningSecret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
 
-    const isValid = timingSafeEqual(signature.toLowerCase(), expectedSignature.toLowerCase());
+    const signatureBuffer = await crypto.subtle.sign(
+      'HMAC',
+      key,
+      encoder.encode(qrToken)
+    );
+
+    // Convert to base64 — matching webhook and simple-scanner
+    const expectedSignature = btoa(
+      String.fromCharCode(...new Uint8Array(signatureBuffer))
+    );
+
+    const isValid = timingSafeEqual(signature, expectedSignature);
     
     if (!isValid) {
       log.warn('QR signature validation failed');

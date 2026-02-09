@@ -5,9 +5,6 @@
  */
 
 import { vi } from 'vitest'
-import { hmac } from '@noble/hashes/hmac'
-import { sha256 } from '@noble/hashes/sha256'
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils'
 
 // ============================================
 // TYPES
@@ -131,7 +128,7 @@ export function createMockTicket(overrides: Partial<MockTicket> = {}): MockTicke
     attendee_name: `Attendee ${ticketCounter}`,
     attendee_email: `attendee${ticketCounter}@example.com`,
     qr_token: qrToken,
-    qr_signature: generateQRSignature(qrToken),
+    qr_signature: '', // Will be set by createMockTicketAsync or overrides
     nfc_tag_id: null,
     nfc_signature: null,
     status: 'issued',
@@ -147,6 +144,17 @@ export function createMockTicket(overrides: Partial<MockTicket> = {}): MockTicke
     event_name: null,
     ...overrides,
   }
+}
+
+/**
+ * Create a mock ticket with valid async QR signature
+ */
+export async function createMockTicketAsync(overrides: Partial<MockTicket> = {}): Promise<MockTicket> {
+  const ticket = createMockTicket(overrides)
+  if (!overrides.qr_signature) {
+    ticket.qr_signature = await generateQRSignature(ticket.qr_token)
+  }
+  return ticket
 }
 
 /**
@@ -194,25 +202,32 @@ export function generateMockQRToken(): string {
 /**
  * Generate a valid QR signature for testing
  */
-export function generateQRSignature(qrToken: string, secret: string = TEST_QR_SECRET): string {
-  const keyBytes = utf8ToBytes(secret)
-  const tokenBytes = utf8ToBytes(qrToken)
-  return bytesToHex(hmac(sha256, keyBytes, tokenBytes))
+export async function generateQRSignature(qrToken: string, secret: string = TEST_QR_SECRET): Promise<string> {
+  const encoder = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(qrToken))
+  return btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)))
 }
 
 /**
  * Validate a QR signature
  */
-export function validateQRSignature(
+export async function validateQRSignature(
   qrToken: string,
   signature: string | null | undefined,
   secret: string = TEST_QR_SECRET
-): boolean {
+): Promise<boolean> {
   if (!qrToken || !signature) {
     return false
   }
-  const expected = generateQRSignature(qrToken, secret)
-  return signature.toLowerCase() === expected.toLowerCase()
+  const expected = await generateQRSignature(qrToken, secret)
+  return signature === expected
 }
 
 /**

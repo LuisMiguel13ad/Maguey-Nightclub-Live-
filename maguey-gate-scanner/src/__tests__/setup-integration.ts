@@ -7,9 +7,6 @@
 
 import { supabase, type Ticket, type Event } from '../lib/supabase';
 import { createLogger } from '../lib/logger';
-import { hmac } from '@noble/hashes/hmac';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 const logger = createLogger({ module: 'integration-test-setup' });
@@ -36,11 +33,18 @@ const getQRSigningSecret = (): string => {
 /**
  * Generate a valid QR signature for a ticket token
  */
-function generateQRSignature(qrToken: string): string {
+async function generateQRSignature(qrToken: string): Promise<string> {
   const secret = getQRSigningSecret();
-  const keyBytes = utf8ToBytes(secret);
-  const tokenBytes = utf8ToBytes(qrToken);
-  return bytesToHex(hmac(sha256, keyBytes, tokenBytes));
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(qrToken));
+  return btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
 }
 
 /**
@@ -254,7 +258,7 @@ export async function seedTestTicket(
   
   // Generate QR token if not provided
   const qrToken = options.qrToken || `qr_test_${timestamp}_${Math.random().toString(36).substring(7)}`;
-  const qrSignature = generateQRSignature(qrToken);
+  const qrSignature = await generateQRSignature(qrToken);
   
   // First create a test order
   const { data: order, error: orderError } = await supabase

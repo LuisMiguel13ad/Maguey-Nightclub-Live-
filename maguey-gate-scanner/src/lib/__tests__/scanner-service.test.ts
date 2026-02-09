@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   createMockTicket,
+  createMockTicketAsync,
   createMockEvent,
   createMockTicketType,
   createMockScanLog,
@@ -93,7 +94,7 @@ describe('scanTicket', () => {
     
     // Simulate a tampered signature
     const tamperedSignature = 'invalid-tampered-signature-abc123'
-    const isSignatureValid = validateQRSignature(ticket.qr_token, tamperedSignature)
+    const isSignatureValid = await validateQRSignature(ticket.qr_token, tamperedSignature)
 
     const scanResult = {
       success: isSignatureValid,
@@ -280,75 +281,75 @@ describe('scanTicket', () => {
 // ============================================
 
 describe('validateQRSignature', () => {
-  it('should return true for valid signature', () => {
+  it('should return true for valid signature', async () => {
     const token = generateMockQRToken()
-    const signature = generateQRSignature(token)
-    
-    const isValid = validateQRSignature(token, signature)
-    
+    const signature = await generateQRSignature(token)
+
+    const isValid = await validateQRSignature(token, signature)
+
     expect(isValid).toBe(true)
   })
 
-  it('should return false for tampered signature', () => {
+  it('should return false for tampered signature', async () => {
     const token = generateMockQRToken()
-    const validSignature = generateQRSignature(token)
-    
+    const validSignature = await generateQRSignature(token)
+
     // Tamper with the signature
-    const tamperedSignature = validSignature.replace(/[a-f]/g, '0')
-    
-    const isValid = validateQRSignature(token, tamperedSignature)
-    
+    const tamperedSignature = validSignature.replace(/[a-zA-Z]/g, '0')
+
+    const isValid = await validateQRSignature(token, tamperedSignature)
+
     expect(isValid).toBe(false)
   })
 
-  it('should handle missing signature', () => {
+  it('should handle missing signature', async () => {
     const token = generateMockQRToken()
-    
+
     // Test with empty string
-    expect(validateQRSignature(token, '')).toBe(false)
-    
+    expect(await validateQRSignature(token, '')).toBe(false)
+
     // The function should handle null/undefined gracefully
-    // In real implementation, this would return false
-    const result = validateQRSignature(token, null as any)
+    const result = await validateQRSignature(token, null as any)
     expect(result).toBe(false)
   })
 
-  it('should return false for wrong token with valid format signature', () => {
+  it('should return false for wrong token with valid format signature', async () => {
     const token1 = generateMockQRToken()
     const token2 = generateMockQRToken()
-    const signature1 = generateQRSignature(token1)
-    
+    const signature1 = await generateQRSignature(token1)
+
     // Try to validate token2 with signature from token1
-    const isValid = validateQRSignature(token2, signature1)
-    
+    const isValid = await validateQRSignature(token2, signature1)
+
     expect(isValid).toBe(false)
   })
 
-  it('should be case-insensitive for hex signatures', () => {
+  it('should produce valid base64 signatures', async () => {
     const token = generateMockQRToken()
-    const signature = generateQRSignature(token)
-    
-    expect(validateQRSignature(token, signature.toLowerCase())).toBe(true)
-    expect(validateQRSignature(token, signature.toUpperCase())).toBe(true)
+    const signature = await generateQRSignature(token)
+
+    // Verify signature contains only valid base64 characters
+    expect(signature).toMatch(/^[A-Za-z0-9+/]+=*$/)
+    expect(await validateQRSignature(token, signature)).toBe(true)
   })
 
-  it('should generate consistent signatures', () => {
+  it('should generate consistent signatures', async () => {
     const token = 'fixed-token-for-consistency-test'
-    
-    const sig1 = generateQRSignature(token)
-    const sig2 = generateQRSignature(token)
-    const sig3 = generateQRSignature(token)
-    
+
+    const sig1 = await generateQRSignature(token)
+    const sig2 = await generateQRSignature(token)
+    const sig3 = await generateQRSignature(token)
+
     expect(sig1).toBe(sig2)
     expect(sig2).toBe(sig3)
   })
 
-  it('should generate different signatures for different secrets', () => {
+  it('should generate different signatures for different secrets', async () => {
     const token = 'test-token'
-    
-    const sig1 = generateQRSignature(token, 'secret-1')
-    const sig2 = generateQRSignature(token, 'secret-2')
-    
+
+    const sig1 = await generateQRSignature(token, 'secret-1')
+    const sig2 = await generateQRSignature(token, 'secret-2')
+
     expect(sig1).not.toBe(sig2)
   })
 })
@@ -709,12 +710,12 @@ describe('Mock Data Factories', () => {
     resetCounters()
   })
 
-  it('should create ticket with valid QR signature', () => {
-    const ticket = createMockTicket()
+  it('should create ticket with valid QR signature', async () => {
+    const ticket = await createMockTicketAsync()
 
     expect(ticket.qr_token).toBeTruthy()
     expect(ticket.qr_signature).toBeTruthy()
-    expect(validateQRSignature(ticket.qr_token, ticket.qr_signature)).toBe(true)
+    expect(await validateQRSignature(ticket.qr_token, ticket.qr_signature)).toBe(true)
   })
 
   it('should create unique tickets', () => {
