@@ -37,12 +37,6 @@ Since this is a Vite project (not Next.js), API routes are implemented as Supaba
   - Updates reservation status to confirmed
   - Returns full reservation data with related tables/events
 
-- **`supabase/functions/vip/webhook/index.ts`** ✅ Created
-  - Handles Stripe webhooks specifically for VIP tables
-  - Processes `payment_intent.succeeded` events
-  - Processes `payment_intent.payment_failed` events
-  - Sends confirmation emails
-
 ### 4. Webhook Integration
 - **`supabase/functions/stripe-webhook/index.ts`** ✅ Updated
   - Added VIP table reservation handling
@@ -74,8 +68,6 @@ maguey-pass-lounge/
         │   │   └── index.ts ✅ (new)
         │   ├── confirmation/
         │   │   └── index.ts ✅ (new)
-        │   └── webhook/
-        │       └── index.ts ✅ (new)
         └── stripe-webhook/
             └── index.ts ✅ (updated)
 ```
@@ -90,7 +82,6 @@ Since this project uses **Vite + React Router** (not Next.js), the API routes ar
 |------------------|-------------------------|
 | `app/api/vip/create-payment-intent/route.ts` | `supabase/functions/vip/create-payment-intent/index.ts` |
 | `app/api/vip/confirmation/route.ts` | `supabase/functions/vip/confirmation/index.ts` |
-| `app/api/webhooks/vip/route.ts` | `supabase/functions/vip/webhook/index.ts` |
 | `app/vip/confirmation/page.tsx` | `src/pages/VipTableConfirmation.tsx` (already exists) |
 
 ---
@@ -111,7 +102,6 @@ Since this project uses **Vite + React Router** (not Next.js), the API routes ar
 ### Edge Functions:
 - ✅ VIP payment intent creation
 - ✅ VIP confirmation handler
-- ✅ VIP webhook handler
 - ✅ Stripe webhook updated for VIP tables
 
 ---
@@ -155,12 +145,10 @@ import { VIPTableMap } from '@/components/vip/VIPTableMap';
    ```bash
    supabase functions deploy vip/create-payment-intent
    supabase functions deploy vip/confirmation
-   supabase functions deploy vip/webhook
    ```
 
 2. **Update Stripe Webhook:**
-   - Add endpoint: `https://your-project.supabase.co/functions/v1/vip/webhook`
-   - Or use the main webhook which now handles VIP tables
+   - VIP webhook handling is consolidated into the main stripe-webhook function
 
 3. **Test VIP Flow:**
    - Select a table
