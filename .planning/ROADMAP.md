@@ -24,6 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 10: Load Testing & Performance** - Test all systems under production-level traffic
 - [x] **Phase 11: Error Handling & Recovery** - Validate edge cases and failure recovery across all flows
 - [x] **Phase 12: Launch Readiness Review** - Final validation checklist before production go-live
+- [ ] **Phase 13: Code Cleanup & Scanner Consolidation** - Consolidate QR signature implementations and remove dead code (gap closure)
 
 ## Phase Details
 
@@ -258,10 +259,26 @@ Plans:
 - [x] 12-02-PLAN.md — Create environment audit and backup/recovery documentation
 - [x] 12-03-PLAN.md — Execute verifications and produce go/no-go decision
 
+### Phase 13: Code Cleanup & Scanner Consolidation
+**Goal**: Eliminate tech debt from audit — consolidate QR signature implementations and remove dead code
+**Depends on**: Phase 12 (gap closure from milestone audit)
+**Requirements**: None (tech debt cleanup, no new requirements)
+**Gap Closure**: Addresses 3 tech debt items from v1.0-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. Single QR signature implementation used across scanner-service.ts, simple-scanner.ts, and batch-scan-service
+  2. Deprecated VIP webhook endpoint removed from codebase
+  3. All scanner tests pass with consolidated signature logic
+  4. No dead imports or orphaned references remain
+**Plans**: 2 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Consolidate QR signature validation (align scanner-service.ts to base64)
+- [ ] 13-02-PLAN.md — Remove deprecated VIP webhook and clean dead references
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -277,3 +294,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 10. Load Testing & Performance | 5/5 | Complete | 2026-02-01 |
 | 11. Error Handling & Recovery | 4/4 | Complete | 2026-02-01 |
 | 12. Launch Readiness Review | 3/3 | Complete | 2026-02-01 |
+| 13. Code Cleanup & Scanner Consolidation | 0/2 | Pending | — |
