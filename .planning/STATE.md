@@ -5,16 +5,27 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** Customers can buy tickets/VIP tables, receive QR codes, and get scanned at the door seamlessly — a complete end-to-end flow that rivals Ticketmaster and Eventbrite.
-**Current focus:** Gap closure phase from milestone audit
+**Current focus:** All phases complete — ready for milestone archive
 
 ## Current Position
 
 Phase: 13 of 13 (Code Cleanup & Scanner Consolidation)
-Plan: 0 of 2
-Status: PENDING (needs planning)
-Last activity: 2026-02-09 — Added gap closure phase from v1.0 milestone audit
+Plan: 2 of 2
+Status: COMPLETE
+Last activity: 2026-02-09 — Phase 13 executed (gap closure complete)
 
-Progress: [████████████████████████████████████████] 100% (61/61 plans)
+Progress: [████████████████████████████████████████] 100% (63/63 plans)
+
+### Phase 13 Plans (Complete)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 13-01 | Consolidate QR signature validation (hex → base64) | 1 | Complete |
+| 13-02 | Remove deprecated VIP webhook | 1 | Complete |
+
+### Phase 13 Complete
+
+Both gap closure plans executed in parallel. Scanner-service.ts consolidated from @noble/hashes hex to crypto.subtle base64, matching production webhook and simple-scanner. Deprecated vip/webhook endpoint removed. All 42 scanner tests pass.
 
 ### Phase 12 Plans (Complete)
 
@@ -169,9 +180,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 61
+- Total plans completed: 63
 - Average duration: 2.9 min
-- Total execution time: 3.0 hours
+- Total execution time: 3.1 hours
 
 **By Phase:**
 
@@ -430,7 +441,7 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 
 ## Session Continuity
 
-Last session: 2026-02-01
-Stopped at: MILESTONE COMPLETE - All 12 phases finished
-Resume file: `.planning/phases/12-launch-readiness-review/12-03-SUMMARY.md`
-Next action: Production deployment (GO decision approved)
+Last session: 2026-02-09
+Stopped at: MILESTONE COMPLETE - All 13 phases finished (including gap closure)
+Resume file: `.planning/phases/13-code-cleanup-scanner-consolidation/13-02-SUMMARY.md`
+Next action: Archive v1.0 milestone via /gsd:complete-milestone

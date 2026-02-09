@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 10: Load Testing & Performance** - Test all systems under production-level traffic
 - [x] **Phase 11: Error Handling & Recovery** - Validate edge cases and failure recovery across all flows
 - [x] **Phase 12: Launch Readiness Review** - Final validation checklist before production go-live
-- [ ] **Phase 13: Code Cleanup & Scanner Consolidation** - Consolidate QR signature implementations and remove dead code (gap closure)
+- [x] **Phase 13: Code Cleanup & Scanner Consolidation** - Consolidate QR signature implementations and remove dead code (gap closure)
 
 ## Phase Details
 
@@ -272,8 +272,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 13-01-PLAN.md — Consolidate QR signature validation (align scanner-service.ts to base64)
-- [ ] 13-02-PLAN.md — Remove deprecated VIP webhook and clean dead references
+- [x] 13-01-PLAN.md — Consolidate QR signature validation (align scanner-service.ts to base64)
+- [x] 13-02-PLAN.md — Remove deprecated VIP webhook and clean dead references
 
 ## Progress
 
@@ -294,4 +294,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 10. Load Testing & Performance | 5/5 | Complete | 2026-02-01 |
 | 11. Error Handling & Recovery | 4/4 | Complete | 2026-02-01 |
 | 12. Launch Readiness Review | 3/3 | Complete | 2026-02-01 |
-| 13. Code Cleanup & Scanner Consolidation | 0/2 | Pending | — |
+| 13. Code Cleanup & Scanner Consolidation | 2/2 | Complete | 2026-02-09 |
