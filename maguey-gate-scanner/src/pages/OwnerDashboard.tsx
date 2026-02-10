@@ -14,6 +14,8 @@ import {
   EmailQueueStatus
 } from "@/lib/email-status-service";
 import { getScannerStatuses, ScannerStatus } from "@/lib/scanner-status-service";
+import { CheckInProgress } from "@/components/dashboard/CheckInProgress";
+import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
 import { RecentPurchases } from "@/components/dashboard/RecentPurchases";
 import OwnerPortalLayout from "@/components/layout/OwnerPortalLayout";
 import { Button } from "@/components/ui/button";
@@ -794,9 +796,9 @@ const OwnerDashboard = () => {
             </p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Total Tickets</p>
-            <p className="mt-2 text-2xl font-semibold">{stats.totalTicketsSold.toLocaleString()}</p>
-            <p className="text-xs text-slate-400 mt-1">Lifetime sold</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Today's Revenue</p>
+            <p className="mt-2 text-2xl font-semibold">{currencyFormatter.format(stats.todayRevenue)}</p>
+            <p className="text-xs text-slate-400 mt-1">Since midnight</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Active Events</p>
@@ -827,7 +829,7 @@ const OwnerDashboard = () => {
 
   return (
     <OwnerPortalLayout
-      title={`${getGreeting()}, Felix`}
+      title={`${getGreeting()}, ${ownerName}`}
       actions={headerActions}
       hero={heroSection}
     >
@@ -1003,6 +1005,16 @@ const OwnerDashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </section>
+
+      {/* Check-In Progress - Real-time check-in bars */}
+      <section className="mt-6">
+        <CheckInProgress />
+      </section>
+
+      {/* Upcoming Events */}
+      <section className="mt-6 [&_.card]:border-white/10 [&_.card]:bg-black/40 [&_.card]:backdrop-blur-md">
+        <UpcomingEventsCard events={upcomingEvents} onManageEvents={() => navigate("/events")} />
       </section>
 
     </OwnerPortalLayout>

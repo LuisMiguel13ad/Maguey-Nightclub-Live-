@@ -71,10 +71,12 @@ export const SuccessOverlay = ({
         <CheckCircle2 className="h-32 w-32 text-white" strokeWidth={1.5} />
       </div>
 
-      {/* GA tickets: Minimal display - just checkmark (already shown above) */}
+      {/* GA tickets: Show guest name for hospitality greeting, fallback to just checkmark */}
       {ticketType === 'ga' && !isReentry && (
-        <div className="text-center">
-          {/* Intentionally minimal - checkmark is enough for GA throughput */}
+        <div className="text-center text-white">
+          {guestName && (
+            <p className="text-2xl font-bold">{guestName}</p>
+          )}
         </div>
       )}
 

@@ -272,7 +272,6 @@ const VipTablesManagement = () => {
         .from('event_vip_tables')
         .select('*')
         .eq('event_id', selectedEventId)
-        .lte('table_number', 20)
         .order('table_number', { ascending: true });
 
       if (tablesError) {
