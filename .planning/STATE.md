@@ -13,7 +13,7 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 Phase: 17 of 23 (Security Lockdown) — IN PROGRESS
 Plan: 3 of 4
 Status: IN PROGRESS
-Last activity: 2026-02-14 — Plan 17-03 complete (Removed anonymous VIP RLS access, created token-based RPC)
+Last activity: 2026-02-14 — Plan 17-01 complete (Server-side QR verification, offline signature caching, P0 blocker R01 resolved)
 
 Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 22% (8/36 plans)
 
@@ -479,6 +479,8 @@ Recent decisions affecting current work:
 - [Phase 16-02]: Employee routes allow any authenticated user (owners can access scanner via superset access)
 - [Phase 17-03]: Remove anonymous SELECT access from VIP tables - PII exposure (purchaser names, emails, phone numbers, QR tokens)
 - [Phase 17-03]: SECURITY DEFINER RPC for token-based lookup - Safe bypass of RLS when lookup is by exact token (UUID)
+- [Phase 17-01]: Edge Function verifySignature uses constant-time comparison to prevent timing attacks
+- [Phase 17-01]: verifySignatureOffline uses simple string comparison (no timing attack concern for local cache)
 
 ### Pending Todos
 
