@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 16 of 23 (Route Protection) — COMPLETE
-Plan: 2 of 2
-Status: COMPLETE
-Last activity: 2026-02-14 — Plan 16-02 complete (Applied route protection to all 33 protected routes + post-login redirect)
+Phase: 17 of 23 (Security Lockdown) — IN PROGRESS
+Plan: 3 of 4
+Status: IN PROGRESS
+Last activity: 2026-02-14 — Plan 17-03 complete (Removed anonymous VIP RLS access, created token-based RPC)
 
-Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 19% (7/36 plans)
+Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 22% (8/36 plans)
 
 ### v2.0 Phase Status
 
@@ -24,7 +24,7 @@ Progress: [█████░░░░░░░░░░░░░░░░░░
 | 14 | Auth Foundation & Account Setup | 3/3 | Complete |
 | 15 | Auth Hardening & Login Flows | 3/3 | Complete |
 | 16 | Route Protection | 2/2 | Complete |
-| 17 | Security Lockdown | 0/4 | Not Started |
+| 17 | Security Lockdown | 3/4 | In Progress |
 | 18 | Scanner Improvements | 0/4 | Not Started |
 | 19 | Dashboard Data Accuracy | 0/4 | Not Started |
 | 20 | Dashboard & UI Bloat Cleanup | 0/4 | Not Started |
@@ -50,12 +50,21 @@ Progress: [█████░░░░░░░░░░░░░░░░░░
 | 15-02 | Create employee login page at /auth/employee | 1 | Complete |
 | 15-03 | Update /auth to redirect to /auth/employee | 2 | Complete |
 
-### Phase 16 Plans (In Progress)
+### Phase 16 Plans (Complete)
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
 | 16-01 | Create ProtectedRoute wrapper and Unauthorized page | 1 | Complete |
 | 16-02 | Apply route protection to dashboard routes | 1 | Complete |
+
+### Phase 17 Plans (In Progress)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 17-01 | Move QR signing to server-side Edge Function | 1 | Not Started |
+| 17-02 | Migrate all Edge Functions to shared CORS handler | 1 | Not Started |
+| 17-03 | Remove anonymous VIP RLS access | 1 | Complete |
+| 17-04 | Enforce unsigned QR rejection in scanner | 1 | Not Started |
 
 ### Phase 16 Complete
 
@@ -237,9 +246,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 70
+- Total plans completed: 71
 - Average duration: 3.0 min
-- Total execution time: 3.7 hours
+- Total execution time: 3.8 hours
 
 **By Phase:**
 
@@ -260,16 +269,19 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 14 | 3 | 20 min | 6.7 min |
 | 15 | 3 | 5 min | 1.7 min |
 | 16 | 2 | 4 min | 2.0 min |
+| 17 | 1 | 1.9 min | 1.9 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-02 (2.7 min), 16-01 (1 min), 15-03 (2 min), 15-02 (1.5 min), 15-01 (2 min)
-- Trend: Phase 16 complete — all routes protected with role-based authorization
+- Last 5 plans: 17-03 (1.9 min), 16-02 (2.7 min), 16-01 (1 min), 15-03 (2 min), 15-02 (1.5 min)
+- Trend: Phase 17 in progress — security lockdown with RLS hardening
 
 *Updated after each plan completion*
 | Phase 15 P03 | 110 | 3 tasks | 6 files |
 | Phase 15 P03 | 2 | 3 tasks | 6 files |
 | Phase 16 P01 | 63 | 2 tasks | 2 files |
 | Phase 16 P02 | 160 | 2 tasks | 3 files |
+| Phase 17 P03 | 114 | 2 tasks | 2 files |
+| Phase 17 P01 | 163 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -465,6 +477,8 @@ Recent decisions affecting current work:
 - [Phase 16-02]: /test-qr double-gated with requireDev + owner role (invisible in production)
 - [Phase 16-02]: Post-login redirect uses replace: true to prevent back-button to login page
 - [Phase 16-02]: Employee routes allow any authenticated user (owners can access scanner via superset access)
+- [Phase 17-03]: Remove anonymous SELECT access from VIP tables - PII exposure (purchaser names, emails, phone numbers, QR tokens)
+- [Phase 17-03]: SECURITY DEFINER RPC for token-based lookup - Safe bypass of RLS when lookup is by exact token (UUID)
 
 ### Pending Todos
 
@@ -534,6 +548,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed Phase 16 (Route Protection) — all dashboard routes protected with role-based authorization
-Resume file: `.planning/phases/16-route-protection/16-02-SUMMARY.md`
-Next action: Begin Phase 17 (Security Lockdown) via `/gsd:execute-plan 17-01`
+Stopped at: Completed 17-03-PLAN.md (Remove anonymous VIP RLS access)
+Resume file: `.planning/phases/17-security-lockdown/17-03-SUMMARY.md`
+Next action: Continue Phase 17 (Security Lockdown) via `/gsd:execute-plan 17-04` OR start with `/gsd:execute-plan 17-01` for earlier plans
