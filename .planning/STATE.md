@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 14 of 23 (Auth Foundation & Account Setup) — COMPLETE
-Plan: 3 of 3
-Status: COMPLETE
-Last activity: 2026-02-13 — Phase 14 verified (10/10 must-haves passed)
+Phase: 15 of 23 (Auth Hardening & Login Flows) — IN PROGRESS
+Plan: 1 of 3
+Status: IN PROGRESS
+Last activity: 2026-02-14 — Plan 15-02 complete (employee login page)
 
-Progress: [███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 8% (3/36 plans)
+Progress: [███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 11% (4/36 plans)
 
 ### v2.0 Phase Status
 
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
 | 14 | Auth Foundation & Account Setup | 3/3 | Complete |
-| 15 | Auth Hardening & Login Flows | 0/3 | Not Started |
+| 15 | Auth Hardening & Login Flows | 1/3 | In Progress |
 | 16 | Route Protection | 0/2 | Not Started |
 | 17 | Security Lockdown | 0/4 | Not Started |
 | 18 | Scanner Improvements | 0/4 | Not Started |
@@ -41,6 +41,14 @@ Progress: [███░░░░░░░░░░░░░░░░░░░░
 | 14-01 | Create Supabase Auth accounts (owner + employee) | 1 | Complete |
 | 14-02 | Gate localStorage auth behind DEV flag | 2 | Complete |
 | 14-03 | Credential & environment verification automation | 1 | Complete |
+
+### Phase 15 Plans (In Progress)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 15-01 | Create owner login page at /auth/owner | 1 | Not Started |
+| 15-02 | Create employee login page at /auth/employee | 1 | Complete |
+| 15-03 | Update /auth to redirect to /auth/employee | 2 | Not Started |
 
 ### Phase 14 Complete
 
@@ -214,9 +222,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 65
+- Total plans completed: 66
 - Average duration: 3.0 min
-- Total execution time: 3.4 hours
+- Total execution time: 3.5 hours
 
 **By Phase:**
 
@@ -235,12 +243,14 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 11 | 4 | 11 min | 2.8 min |
 | 12 | 3 | 15 min | 5.0 min |
 | 14 | 3 | 20 min | 6.7 min |
+| 15 | 1 | 1 min | 1.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 14-02 (2 min), 14-03 (2 min), 14-01 (16 min), 12-03 (10 min), 12-02 (3 min)
-- Trend: Phase 14 includes foundation setup and credential validation
+- Last 5 plans: 15-02 (1.5 min), 14-02 (2 min), 14-03 (2 min), 14-01 (16 min), 12-03 (10 min)
+- Trend: Phase 15 focused on auth UI/UX improvements
 
 *Updated after each plan completion*
+| Phase 15 P02 | 89 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -251,6 +261,8 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-14 | 15-02 | Touch-friendly h-12 inputs and buttons for mobile scanning devices at the door | Scanner staff use mobile devices at the door, need large tap targets for quick authentication |
+| 2026-02-14 | 15-02 | Remember me stores email only (not credentials) for convenience without security compromise | Convenience feature without security risk - password still required on each login |
 | 2026-02-14 | 14-02 | Gate all localStorage auth fallbacks behind import.meta.env.DEV | Production builds must never trust localStorage for authentication — only real Supabase sessions are valid |
 | 2026-02-14 | 14-03 | Handle Resend restricted API keys as valid | Restricted send-only keys are more secure and should be recognized as valid configuration |
 | 2026-02-14 | 14-03 | Parse .env files independently without process.env pollution | Using dotenv.parse() with readFileSync ensures clean comparison without side effects |
@@ -333,7 +345,9 @@ Recent decisions affecting current work:
 | 2026-01-31 | 04-06 | Regular GA tickets remain one-time entry | Non-linked GA rejected on second scan to maintain standard policy |
 | 2026-01-31 | 04-06 | Atomic guest count updates with row locking | increment_vip_checked_in uses FOR UPDATE to prevent race conditions |
 | 2026-01-31 | 04-06 | Re-entry shows gold banner with VIP table info | Consistent with 04-05 VIP scanner re-entry UI pattern |
-| 2026-01-31 | 05-01 | $1 discrepancy threshold for logging | Per RESEARCH.md - small timing discrepancies are normal |
+| 2026-01-31 | 05-01 | ### Decisions
+
+ discrepancy threshold for logging | Per RESEARCH.md - small timing discrepancies are normal |
 | 2026-01-31 | 05-01 | Service role INSERT only for revenue_discrepancies | Prevents unauthorized discrepancy injection |
 | 2026-01-31 | 05-01 | Authenticated SELECT/UPDATE for revenue_discrepancies | Owners need to view and mark resolved |
 | 2026-01-31 | 05-02 | Pulsing green dot with animate-ping | Visual live indicator consistent with existing UI |
@@ -416,6 +430,8 @@ Recent decisions affecting current work:
 | 2026-02-01 | 12-02 | Two-phase validation (Configured vs Validated) | Existence check separate from functional verification |
 | 2026-02-01 | 12-02 | Four recovery scenarios documented | Database, Stripe webhook, email queue, complete environment |
 | 2026-02-01 | 12-02 | Quarterly PITR testing schedule | Recovery testing recommended but deferred actual test |
+- [Phase 15]: Touch-friendly h-12 inputs and buttons for mobile scanning devices at the door
+- [Phase 15]: Remember me stores email only (not credentials) for convenience without security compromise
 
 ### Pending Todos
 
@@ -484,7 +500,7 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 
 ## Session Continuity
 
-Last session: 2026-02-13
-Stopped at: Phase 14 complete — Auth Foundation verified (10/10 must-haves)
-Resume file: `.planning/phases/14-auth-foundation/14-VERIFICATION.md`
-Next action: Plan Phase 15 via `/gsd:plan-phase 15`
+Last session: 2026-02-14
+Stopped at: Completed 15-02-PLAN.md (employee login page)
+Resume file: `.planning/phases/15-auth-hardening/15-02-SUMMARY.md`
+Next action: Continue Phase 15 execution (plans 15-01 or 15-03)
