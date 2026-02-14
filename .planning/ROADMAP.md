@@ -45,7 +45,10 @@
   - [x] 17-03-PLAN.md — Remove anonymous VIP RLS access, add token-based RPC
   - [x] 17-04-PLAN.md — Reject unsigned QR codes in scanner (manual entry preserved)
 - [ ] Phase 18: Scanner Improvements (0/4 plans)
-- [ ] Phase 19: Dashboard Data Accuracy (0/4 plans)
+- [x] Phase 19: Dashboard Data Accuracy (3/3 plans) — completed 2026-02-14
+  - [x] 19-01-PLAN.md — Fix orders query with tickets join (real ticket_count/ticket_type)
+  - [x] 19-02-PLAN.md — Staff name resolution service (replace UUIDs with names)
+  - [x] 19-03-PLAN.md — Targeted real-time refresh (split loadData + useDashboardRealtime)
 - [ ] Phase 20: Dashboard & UI Bloat Cleanup (0/4 plans)
 - [ ] Phase 21: VIP & Events Polish (0/5 plans)
 - [ ] Phase 22: Code Quality & Refactoring (0/4 plans)
@@ -73,7 +76,7 @@
 | 16. Route Protection | v2.0 | 2/2 | Complete | 2026-02-13 |
 | 17. Security Lockdown | v2.0 | 4/4 | Complete | 2026-02-14 |
 | 18. Scanner Improvements | v2.0 | 0/4 | Not Started | — |
-| 19. Dashboard Data Accuracy | v2.0 | 0/4 | Not Started | — |
+| 19. Dashboard Data Accuracy | v2.0 | 3/3 | Complete | 2026-02-14 |
 | 20. Dashboard & UI Bloat Cleanup | v2.0 | 0/4 | Not Started | — |
 | 21. VIP & Events Polish | v2.0 | 0/5 | Not Started | — |
 | 22. Code Quality & Refactoring | v2.0 | 0/4 | Not Started | — |
