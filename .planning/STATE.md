@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 15 of 23 (Auth Hardening & Login Flows) — IN PROGRESS
-Plan: 1 of 3
+Plan: 2 of 3
 Status: IN PROGRESS
-Last activity: 2026-02-14 — Plan 15-02 complete (employee login page)
+Last activity: 2026-02-14 — Plan 15-01 complete (owner login page with role validation)
 
 Progress: [███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 11% (4/36 plans)
 
@@ -22,7 +22,7 @@ Progress: [███░░░░░░░░░░░░░░░░░░░░
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
 | 14 | Auth Foundation & Account Setup | 3/3 | Complete |
-| 15 | Auth Hardening & Login Flows | 1/3 | In Progress |
+| 15 | Auth Hardening & Login Flows | 2/3 | In Progress |
 | 16 | Route Protection | 0/2 | Not Started |
 | 17 | Security Lockdown | 0/4 | Not Started |
 | 18 | Scanner Improvements | 0/4 | Not Started |
@@ -46,7 +46,7 @@ Progress: [███░░░░░░░░░░░░░░░░░░░░
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
-| 15-01 | Create owner login page at /auth/owner | 1 | Not Started |
+| 15-01 | Create owner login page at /auth/owner | 1 | Complete |
 | 15-02 | Create employee login page at /auth/employee | 1 | Complete |
 | 15-03 | Update /auth to redirect to /auth/employee | 2 | Not Started |
 
@@ -222,7 +222,7 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 66
+- Total plans completed: 67
 - Average duration: 3.0 min
 - Total execution time: 3.5 hours
 
@@ -243,10 +243,10 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 11 | 4 | 11 min | 2.8 min |
 | 12 | 3 | 15 min | 5.0 min |
 | 14 | 3 | 20 min | 6.7 min |
-| 15 | 1 | 1 min | 1.5 min |
+| 15 | 2 | 3 min | 1.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 15-02 (1.5 min), 14-02 (2 min), 14-03 (2 min), 14-01 (16 min), 12-03 (10 min)
+- Last 5 plans: 15-01 (2 min), 15-02 (1.5 min), 14-02 (2 min), 14-03 (2 min), 14-01 (16 min)
 - Trend: Phase 15 focused on auth UI/UX improvements
 
 *Updated after each plan completion*
@@ -261,6 +261,9 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-14 | 15-01 | Sign out non-owner accounts during /auth/owner login | Strict role enforcement prevents confused access attempts and maintains security boundaries |
+| 2026-02-14 | 15-01 | Password reset redirectTo points to /auth/owner | User completes entire flow on specialized page for consistent UX |
+| 2026-02-14 | 15-01 | Invitation URLs route to /auth/owner | All team onboarding flows through owner portal for consistent admin experience |
 | 2026-02-14 | 15-02 | Touch-friendly h-12 inputs and buttons for mobile scanning devices at the door | Scanner staff use mobile devices at the door, need large tap targets for quick authentication |
 | 2026-02-14 | 15-02 | Remember me stores email only (not credentials) for convenience without security compromise | Convenience feature without security risk - password still required on each login |
 | 2026-02-14 | 14-02 | Gate all localStorage auth fallbacks behind import.meta.env.DEV | Production builds must never trust localStorage for authentication — only real Supabase sessions are valid |
@@ -501,6 +504,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 15-02-PLAN.md (employee login page)
-Resume file: `.planning/phases/15-auth-hardening/15-02-SUMMARY.md`
-Next action: Continue Phase 15 execution (plans 15-01 or 15-03)
+Stopped at: Completed 15-01-PLAN.md (owner login page with role validation)
+Resume file: `.planning/phases/15-auth-hardening/15-01-SUMMARY.md`
+Next action: Execute Plan 15-03 via `/gsd:execute-plan 15-03`
