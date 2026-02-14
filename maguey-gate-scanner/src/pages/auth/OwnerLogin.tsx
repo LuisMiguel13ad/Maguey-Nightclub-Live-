@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { isSupabaseConfigured } from "@/lib/supabase-config";
 import { getUserRole, setUserRole } from "@/lib/auth";
@@ -20,9 +20,13 @@ type Mode = 'login' | 'resetRequest' | 'resetConfirm' | 'signup';
 const OwnerLogin = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
   const role = useRole();
+
+  // Derive the redirect target from state.from or default to dashboard
+  const from = (location.state as any)?.from?.pathname || AUTH_ROUTES.OWNER_REDIRECT;
 
   // Form state
   const [mode, setMode] = useState<Mode>('login');
@@ -47,9 +51,9 @@ const OwnerLogin = () => {
   useEffect(() => {
     // If user is authenticated with owner/promoter role and not in a special flow, redirect to dashboard
     if (user && (role === 'owner' || role === 'promoter') && mode === 'login' && !inviteToken) {
-      navigate(AUTH_ROUTES.OWNER_REDIRECT);
+      navigate(from, { replace: true });
     }
-  }, [user, role, mode, inviteToken, navigate]);
+  }, [user, role, mode, inviteToken, navigate, from]);
 
   // Validate invitation token if present
   useEffect(() => {
@@ -137,8 +141,8 @@ const OwnerLogin = () => {
           return;
         }
 
-        // Redirect to dashboard
-        navigate(AUTH_ROUTES.OWNER_REDIRECT);
+        // Redirect to intended destination or dashboard
+        navigate(from, { replace: true });
 
         toast({
           title: "Welcome back!",
@@ -153,7 +157,7 @@ const OwnerLogin = () => {
         }).catch(() => { });
       } else {
         // Default to dashboard for non-Supabase mode
-        navigate(AUTH_ROUTES.OWNER_REDIRECT);
+        navigate(from, { replace: true });
       }
     } catch (error: any) {
       toast({

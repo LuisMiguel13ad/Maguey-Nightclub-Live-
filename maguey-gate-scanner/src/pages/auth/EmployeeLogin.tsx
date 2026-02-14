@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { isSupabaseConfigured } from "@/lib/supabase-config";
 import { getUserRole } from "@/lib/auth";
@@ -14,8 +14,12 @@ import { useToast } from "@/hooks/use-toast";
 
 const EmployeeLogin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Extract intended destination from state.from if present
+  const from = (location.state as any)?.from?.pathname;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,14 +29,18 @@ const EmployeeLogin = () => {
   // Already-authenticated redirect
   useEffect(() => {
     if (user) {
-      const userRole = getUserRole(user);
-      if (userRole === 'owner' || userRole === 'promoter') {
-        navigate("/dashboard");
+      if (from) {
+        navigate(from, { replace: true });
       } else {
-        navigate("/scanner");
+        const userRole = getUserRole(user);
+        if (userRole === 'owner' || userRole === 'promoter') {
+          navigate("/dashboard", { replace: true });
+        } else {
+          navigate("/scanner", { replace: true });
+        }
       }
     }
-  }, [user, navigate]);
+  }, [user, navigate, from]);
 
   // Remember me - load saved email on mount
   useEffect(() => {
@@ -69,14 +77,17 @@ const EmployeeLogin = () => {
         metadata: { email: data.user?.email },
       }).catch(() => {});
 
-      // Check role - if owner, redirect to dashboard (convenience)
+      // After successful login, redirect based on state.from or role
       const userRole = getUserRole(data.user);
-      if (userRole === 'owner' || userRole === 'promoter') {
+      if (from) {
+        toast({ title: "Welcome!", description: "Redirecting..." });
+        navigate(from, { replace: true });
+      } else if (userRole === 'owner' || userRole === 'promoter') {
         toast({ title: "Welcome!", description: "Redirecting to dashboard." });
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       } else {
         toast({ title: "Welcome!", description: "Ready to scan." });
-        navigate("/scanner");
+        navigate("/scanner", { replace: true });
       }
     } catch (error: any) {
       toast({
