@@ -96,10 +96,11 @@ async function createOrUpdateAccount(account: AccountConfig): Promise<boolean> {
 
         console.log(`[INFO] Found existing user: ${existingUser.id}`);
 
-        // Update user metadata
+        // Update user metadata AND password
         const { error: updateError } = await supabase.auth.admin.updateUserById(
           existingUser.id,
           {
+            password,
             user_metadata: {
               ...existingUser.user_metadata,
               role,
@@ -113,7 +114,7 @@ async function createOrUpdateAccount(account: AccountConfig): Promise<boolean> {
           return false;
         }
 
-        console.log(`[OK] Successfully updated ${email} with role: ${role}`);
+        console.log(`[OK] Successfully updated ${email} with role: ${role} and password reset`);
         return true;
       }
 
