@@ -36,9 +36,9 @@
   - [x] 15-01-PLAN.md — Owner login page at /auth/owner with password reset & invitation support
   - [x] 15-02-PLAN.md — Employee login page at /auth/employee with mobile-optimized UI & remember-me
   - [x] 15-03-PLAN.md — Replace Auth.tsx with redirect, eliminate demo code, wire sign-out targets
-- [ ] Phase 16: Route Protection (0/2 plans)
-  - [ ] 16-01-PLAN.md — Create ProtectedRoute component with role-based guards + 403 Unauthorized page
-  - [ ] 16-02-PLAN.md — Wrap all 30+ routes with ProtectedRoute in App.tsx + post-login redirect
+- [x] Phase 16: Route Protection (2/2 plans) — completed 2026-02-13
+  - [x] 16-01-PLAN.md — Create ProtectedRoute component with role-based guards + 403 Unauthorized page
+  - [x] 16-02-PLAN.md — Wrap all 30+ routes with ProtectedRoute in App.tsx + post-login redirect
 - [ ] Phase 17: Security Lockdown (0/4 plans)
 - [ ] Phase 18: Scanner Improvements (0/4 plans)
 - [ ] Phase 19: Dashboard Data Accuracy (0/4 plans)
@@ -66,7 +66,7 @@
 | 13. Code Cleanup & Scanner Consolidation | v1.0 | 2/2 | Complete | 2026-02-09 |
 | 14. Auth Foundation & Account Setup | v2.0 | 3/3 | Complete | 2026-02-13 |
 | 15. Auth Hardening & Login Flows | v2.0 | 3/3 | Complete | 2026-02-13 |
-| 16. Route Protection | v2.0 | 0/2 | Not Started | — |
+| 16. Route Protection | v2.0 | 2/2 | Complete | 2026-02-13 |
 | 17. Security Lockdown | v2.0 | 0/4 | Not Started | — |
 | 18. Scanner Improvements | v2.0 | 0/4 | Not Started | — |
 | 19. Dashboard Data Accuracy | v2.0 | 0/4 | Not Started | — |
