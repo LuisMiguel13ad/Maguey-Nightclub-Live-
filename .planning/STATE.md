@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 17 of 23 (Security Lockdown) — IN PROGRESS
-Plan: 3 of 4
-Status: IN PROGRESS
-Last activity: 2026-02-14 — Plan 17-04 complete (Unsigned QR rejection enforced, P0 blocker R23 resolved)
+Phase: 17 of 23 (Security Lockdown) — COMPLETE
+Plan: 4 of 4
+Status: COMPLETE
+Last activity: 2026-02-14 — Phase 17 complete (All 4 P0 security blockers resolved: QR secret, CORS, VIP RLS, unsigned QR)
 
-Progress: [███████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 28% (10/36 plans)
+Progress: [███████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 31% (11/36 plans)
 
 ### v2.0 Phase Status
 
@@ -24,7 +24,7 @@ Progress: [███████░░░░░░░░░░░░░░░░
 | 14 | Auth Foundation & Account Setup | 3/3 | Complete |
 | 15 | Auth Hardening & Login Flows | 3/3 | Complete |
 | 16 | Route Protection | 2/2 | Complete |
-| 17 | Security Lockdown | 3/4 | In Progress |
+| 17 | Security Lockdown | 4/4 | Complete |
 | 18 | Scanner Improvements | 0/4 | Not Started |
 | 19 | Dashboard Data Accuracy | 0/4 | Not Started |
 | 20 | Dashboard & UI Bloat Cleanup | 0/4 | Not Started |

@@ -39,7 +39,11 @@
 - [x] Phase 16: Route Protection (2/2 plans) — completed 2026-02-13
   - [x] 16-01-PLAN.md — Create ProtectedRoute component with role-based guards + 403 Unauthorized page
   - [x] 16-02-PLAN.md — Wrap all 30+ routes with ProtectedRoute in App.tsx + post-login redirect
-- [ ] Phase 17: Security Lockdown (0/4 plans)
+- [x] Phase 17: Security Lockdown (4/4 plans) — completed 2026-02-14
+  - [x] 17-01-PLAN.md — Move QR signature verification to server-side Edge Function
+  - [x] 17-02-PLAN.md — Migrate all 11 Edge Functions to shared CORS handler
+  - [x] 17-03-PLAN.md — Remove anonymous VIP RLS access, add token-based RPC
+  - [x] 17-04-PLAN.md — Reject unsigned QR codes in scanner (manual entry preserved)
 - [ ] Phase 18: Scanner Improvements (0/4 plans)
 - [ ] Phase 19: Dashboard Data Accuracy (0/4 plans)
 - [ ] Phase 20: Dashboard & UI Bloat Cleanup (0/4 plans)
@@ -67,7 +71,7 @@
 | 14. Auth Foundation & Account Setup | v2.0 | 3/3 | Complete | 2026-02-13 |
 | 15. Auth Hardening & Login Flows | v2.0 | 3/3 | Complete | 2026-02-13 |
 | 16. Route Protection | v2.0 | 2/2 | Complete | 2026-02-13 |
-| 17. Security Lockdown | v2.0 | 0/4 | Not Started | — |
+| 17. Security Lockdown | v2.0 | 4/4 | Complete | 2026-02-14 |
 | 18. Scanner Improvements | v2.0 | 0/4 | Not Started | — |
 | 19. Dashboard Data Accuracy | v2.0 | 0/4 | Not Started | — |
 | 20. Dashboard & UI Bloat Cleanup | v2.0 | 0/4 | Not Started | — |
