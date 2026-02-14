@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { addDays, format, parseISO, startOfDay, subDays } from "date-fns";
 import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
-import type { RealtimeChannel } from "@supabase/supabase-js";
 import { localStorageService } from "@/lib/localStorage";
 import { useAuth, useRole } from "@/contexts/AuthContext";
 import {
@@ -14,6 +13,7 @@ import {
   EmailQueueStatus
 } from "@/lib/email-status-service";
 import { getScannerStatuses, ScannerStatus } from "@/lib/scanner-status-service";
+import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";
 import { CheckInProgress } from "@/components/dashboard/CheckInProgress";
 import { UpcomingEventsCard } from "@/components/dashboard/UpcomingEventsCard";
 import { RecentPurchases } from "@/components/dashboard/RecentPurchases";
@@ -151,7 +151,6 @@ const OwnerDashboard = () => {
   const [emailStatusList, setEmailStatusList] = useState<EmailQueueStatus[]>([]);
   const [isRetrying, setIsRetrying] = useState<string | null>(null);
   const [scannerStatuses, setScannerStatuses] = useState<ScannerStatus[]>([]);
-  const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     if (authLoading) {
@@ -250,6 +249,365 @@ const OwnerDashboard = () => {
     }
   };
 
+  // ========== RAW DATA FETCH FUNCTIONS (COMPOUND PATTERN) ==========
+
+  const fetchTicketsData = async () => {
+    const { data, error } = await supabase
+      .from<any>("tickets")
+      .select(`
+        price,
+        created_at,
+        purchase_date,
+        scanned_at,
+        event_name,
+        ticket_type_id,
+        ticket_types (
+          name
+        )
+      `);
+    if (error) throw error;
+    return data || [];
+  };
+
+  const fetchOrdersData = async () => {
+    const { data, error } = await supabase
+      .from<any>("orders")
+      .select("id, total, created_at, status, purchaser_email, purchaser_name, customer_email, customer_first_name, customer_last_name, event_id, events(name), tickets(ticket_type_name, price)")
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (error) throw error;
+    return data || [];
+  };
+
+  const fetchEventsData = async () => {
+    const { data, error } = await (supabase as any)
+      .from("events")
+      .select("id, name, event_date, metadata")
+      .eq("is_active", true)
+      .gte("event_date", new Date().toISOString())
+      .order("event_date", { ascending: true });
+    if (error) throw error;
+    return data || [];
+  };
+
+  const fetchEventTicketTypes = async (eventIds: string[]) => {
+    if (eventIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from("ticket_types")
+      .select("event_id, capacity:total_inventory")
+      .in("event_id", eventIds);
+    if (error) {
+      console.warn("Error fetching event ticket types:", error);
+      return [];
+    }
+    return data || [];
+  };
+
+  // ========== PROCESSING FUNCTIONS (ACCEPT DATA AS PARAMETERS) ==========
+
+  const fetchRevenueAndStats = async () => {
+    try {
+      const ticketsData = await fetchTicketsData();
+      const ordersData = await fetchOrdersData();
+
+      const now = new Date();
+      const todayStart = startOfDay(now);
+      const weekStart = startOfDay(subDays(now, 6));
+      const monthStart = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
+      const fourteenDaysAgo = startOfDay(subDays(now, 13));
+
+      const parsePrice = (value: number | string | null | undefined) => {
+        if (value === null || value === undefined) return 0;
+        const parsed = typeof value === "string" ? parseFloat(value) : value;
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+
+      // Transform tickets for distribution calculation
+      const typeCounts = new Map<string, number>();
+      ticketsData.forEach((ticket: any) => {
+        const typeName = ticket.ticket_types?.name || "Unknown";
+        typeCounts.set(typeName, (typeCounts.get(typeName) || 0) + 1);
+      });
+
+      const colors = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+      const distribution = Array.from(typeCounts.entries())
+        .map(([name, value], index) => ({
+          name,
+          value,
+          color: colors[index % colors.length],
+        }))
+        .sort((a, b) => b.value - a.value);
+
+      setTicketTypeDistribution(distribution);
+
+      const revenueTickets = ticketsData.filter((ticket: any) => parsePrice(ticket.price) > 0);
+      const dailyMap = new Map<string, DailyPerformancePoint>();
+
+      revenueTickets.forEach((ticket) => {
+        const ticketDateRaw = resolveTicketDate(ticket);
+        if (!ticketDateRaw) return;
+        const ticketDate = parseISO(ticketDateRaw);
+        const dateKey = format(startOfDay(ticketDate), "yyyy-MM-dd");
+        const existing = dailyMap.get(dateKey) || {
+          date: startOfDay(ticketDate),
+          label: format(ticketDate, "MMM d"),
+          revenue: 0,
+          tickets: 0,
+        };
+        existing.revenue += parsePrice((ticket as any).price);
+        existing.tickets += 1;
+        dailyMap.set(dateKey, existing);
+      });
+
+      const completedOrders = ordersData.filter((order) => order.status === "completed");
+      const totalRevenue = revenueTickets.reduce((sum, ticket) => sum + parsePrice(ticket.price), 0);
+      const todayRevenueTickets = revenueTickets.filter((ticket) => {
+        const ticketDate = resolveTicketDate(ticket);
+        if (!ticketDate) return false;
+        return parseISO(ticketDate) >= todayStart;
+      });
+      const weekRevenueTickets = revenueTickets.filter((ticket) => {
+        const ticketDate = resolveTicketDate(ticket);
+        if (!ticketDate) return false;
+        return parseISO(ticketDate) >= weekStart;
+      });
+      const monthRevenueTickets = revenueTickets.filter((ticket) => {
+        const ticketDate = resolveTicketDate(ticket);
+        if (!ticketDate) return false;
+        return parseISO(ticketDate) >= monthStart;
+      });
+
+      const totalTicketsSold = revenueTickets.length;
+      const totalTicketsScanned = ticketsData.filter((ticket) => ticket.scanned_at !== null).length;
+      const conversionRate = totalTicketsSold > 0 ? (totalTicketsScanned / totalTicketsSold) * 100 : 0;
+      const averageOrderValue = completedOrders.length ? totalRevenue / completedOrders.length : 0;
+      const ticketsPerOrder = completedOrders.length ? totalTicketsSold / completedOrders.length : 0;
+
+      const fourteenDayPoints: DailyPerformancePoint[] = [];
+      for (let i = 0; i < 14; i += 1) {
+        const currentDate = startOfDay(addDays(fourteenDaysAgo, i));
+        const key = format(currentDate, "yyyy-MM-dd");
+        const point = dailyMap.get(key) || {
+          date: currentDate,
+          label: format(currentDate, "MMM d"),
+          revenue: 0,
+          tickets: 0,
+        };
+        fourteenDayPoints.push(point);
+      }
+
+      const lastSevenStart = startOfDay(subDays(now, 6));
+      const previousSevenStart = startOfDay(subDays(now, 13));
+      const previousSevenEnd = startOfDay(subDays(now, 6));
+
+      const lastSeven = sumRange(fourteenDayPoints, lastSevenStart, startOfDay(addDays(now, 1)));
+      const previousSeven = sumRange(fourteenDayPoints, previousSevenStart, previousSevenEnd);
+
+      const revenueTrendDelta = previousSeven.revenue > 0
+        ? ((lastSeven.revenue - previousSeven.revenue) / previousSeven.revenue) * 100
+        : 0;
+
+      // Calculate active events count
+      const activeEventsCount = await supabase
+        .from("events")
+        .select("id", { count: 'exact', head: true })
+        .eq("is_active", true)
+        .gte("event_date", new Date().toISOString());
+
+      setStats({
+        todayRevenue: todayRevenueTickets.reduce((sum, ticket) => sum + parsePrice(ticket.price), 0),
+        todayTickets: todayRevenueTickets.length,
+        weekRevenue: weekRevenueTickets.reduce((sum, ticket) => sum + parsePrice(ticket.price), 0),
+        weekTickets: weekRevenueTickets.length,
+        monthRevenue: monthRevenueTickets.reduce((sum, ticket) => sum + parsePrice(ticket.price), 0),
+        monthTickets: monthRevenueTickets.length,
+        totalRevenue,
+        totalTicketsSold,
+        totalTicketsScanned,
+        activeEvents: activeEventsCount.count || 0,
+        conversionRate,
+        averageOrderValue,
+        ticketsPerOrder,
+        vipTablesSold: distribution.find(d => d.name.toLowerCase().includes('table'))?.value || 0,
+        vipRevenue: revenueTickets
+          .filter((t: any) =>
+            t.ticket_types?.name?.toLowerCase().includes('vip')
+          )
+          .reduce((sum, t: any) => sum + parsePrice(t.price), 0),
+      });
+      setDailyPerformance(fourteenDayPoints);
+      setTrendDelta(revenueTrendDelta);
+      setWeekOverWeek(revenueTrendDelta);
+    } catch (error: any) {
+      console.error("Error fetching revenue and stats:", error);
+      toast({
+        variant: "destructive",
+        title: "Error loading revenue data",
+        description: error.message,
+      });
+    }
+  };
+
+  const fetchRecentOrders = async () => {
+    try {
+      const ordersData = await fetchOrdersData();
+      const ticketsData = await fetchTicketsData();
+
+      // Calculate peak buying times by hour
+      const hourlyOrders = new Map<number, number>();
+      ordersData.forEach((order: any) => {
+        if (!order.created_at) return;
+        const orderDate = parseISO(order.created_at);
+        const hour = orderDate.getHours();
+        hourlyOrders.set(hour, (hourlyOrders.get(hour) || 0) + 1);
+      });
+
+      const peakTimes = Array.from({ length: 24 }, (_, hour) => ({
+        hour: `${hour}:00`,
+        orders: hourlyOrders.get(hour) || 0,
+      }));
+
+      setPeakBuyingTimes(peakTimes);
+
+      // Build ticketsByEvent map for insights calculation
+      const ticketsByEvent = new Map<string, number>();
+      ticketsData.forEach((ticket) => {
+        if (ticket.event_name) {
+          ticketsByEvent.set(ticket.event_name, (ticketsByEvent.get(ticket.event_name) || 0) + 1);
+        }
+      });
+
+      const topEventEntry = Array.from(ticketsByEvent.entries()).sort((a, b) => b[1] - a[1])[0];
+      const topEventName = topEventEntry?.[0] || "No event data";
+      const topEventTickets = topEventEntry?.[1] || 0;
+
+      const parsePrice = (value: number | string | null | undefined) => {
+        if (value === null || value === undefined) return 0;
+        const parsed = typeof value === "string" ? parseFloat(value) : value;
+        return Number.isFinite(parsed) ? parsed : 0;
+      };
+
+      const completedOrders = ordersData.filter((order) => order.status === "completed");
+      const totalRevenue = ticketsData
+        .filter((ticket: any) => parsePrice(ticket.price) > 0)
+        .reduce((sum, ticket) => sum + parsePrice(ticket.price), 0);
+      const totalTicketsSold = ticketsData.filter((ticket: any) => parsePrice(ticket.price) > 0).length;
+      const averageOrderValue = completedOrders.length ? totalRevenue / completedOrders.length : 0;
+      const ticketsPerOrder = completedOrders.length ? totalTicketsSold / completedOrders.length : 0;
+
+      // Transform orders to match RecentPurchases component interface
+      const transformedOrders = ordersData.map((order: any) => {
+        const tickets = order.tickets || [];
+        const ticketCount = tickets.length;
+
+        // Find primary ticket type: most expensive ticket in the order
+        const primaryTicket = tickets.length > 0
+          ? tickets.reduce((highest: any, ticket: any) =>
+              (Number(ticket.price) || 0) > (Number(highest.price) || 0) ? ticket : highest,
+              tickets[0]
+            )
+          : null;
+
+        return {
+          id: order.id,
+          customer_email: order.purchaser_email || order.customer_email || '',
+          customer_name: order.purchaser_name || (order.customer_first_name ? `${order.customer_first_name} ${order.customer_last_name || ''}`.trim() : null),
+          event_name: (order.events as any)?.name || 'Unknown Event',
+          ticket_type: primaryTicket?.ticket_type_name || 'Unknown',
+          ticket_count: ticketCount,
+          total: Number(order.total || 0) / 100, // Convert from cents to dollars
+          status: order.status || 'pending',
+          created_at: order.created_at,
+          completed_at: order.created_at, // fallback to created_at since completed_at is not present
+        };
+      });
+
+      setRecentOrders(transformedOrders);
+      setInsights([
+        {
+          title: "Average order value",
+          value: currencyFormatter.format(averageOrderValue || 0),
+          helper: "Per completed order",
+          trendLabel: "Orders processed",
+          trendValue: `${completedOrders.length.toLocaleString()}`,
+          positive: true,
+        },
+        {
+          title: "Tickets per order",
+          value: ticketsPerOrder ? ticketsPerOrder.toFixed(1) : "0.0",
+          helper: "Avg. quantity per purchase",
+          trendLabel: "Completed tickets",
+          trendValue: `${totalTicketsSold.toLocaleString()}`,
+          positive: true,
+        },
+        {
+          title: "Top performing event",
+          value: topEventName,
+          helper: `${topEventTickets.toLocaleString()} tickets sold`,
+          positive: true,
+        },
+      ]);
+    } catch (error: any) {
+      console.error("Error fetching recent orders:", error);
+      toast({
+        variant: "destructive",
+        title: "Error loading recent orders",
+        description: error.message,
+      });
+    }
+  };
+
+  const fetchUpcomingEvents = async () => {
+    try {
+      const eventsData = await fetchEventsData();
+      const ticketsData = await fetchTicketsData();
+
+      // Build ticketsByEvent map
+      const ticketsByEvent = new Map<string, number>();
+      ticketsData.forEach((ticket) => {
+        if (ticket.event_name) {
+          ticketsByEvent.set(ticket.event_name, (ticketsByEvent.get(ticket.event_name) || 0) + 1);
+        }
+      });
+
+      // Fetch ticket types for active events to calculate capacity
+      const eventIds = eventsData.map((e: any) => e.id);
+      const eventTicketTypes = await fetchEventTicketTypes(eventIds);
+
+      const upcomingSummaries: UpcomingEventSummary[] = eventsData.slice(0, 4).map((event) => {
+        const eventDate = parseISO(event.event_date as string);
+        const ticketsSold = ticketsByEvent.get(event.name) || 0;
+        const currentEventTypes = eventTicketTypes.filter((tt: any) => tt.event_id === event.id);
+        const capacityFromTiers = currentEventTypes.reduce((sum: number, tier: any) => sum + (tier?.capacity || 0), 0);
+        const capacity = capacityFromTiers > 0 ? capacityFromTiers : 100;
+        const percentSold = capacity > 0 ? Math.min((ticketsSold / capacity) * 100, 100) : 0;
+        let status: UpcomingEventSummary["status"] = "on-track";
+        if (percentSold >= 85) status = "sellout";
+        else if (percentSold >= 60) status = "monitor";
+
+        return {
+          id: event.id,
+          name: event.name,
+          dateLabel: format(eventDate, "EEE, MMM d • h:mm a"),
+          ticketsSold,
+          capacity,
+          percentSold,
+          status,
+          location: event.metadata?.location || null,
+        };
+      });
+
+      setUpcomingEvents(upcomingSummaries);
+    } catch (error: any) {
+      console.error("Error fetching upcoming events:", error);
+      toast({
+        variant: "destructive",
+        title: "Error loading upcoming events",
+        description: error.message,
+      });
+    }
+  };
+
   const handleRetryEmail = async (emailId: string) => {
     setIsRetrying(emailId);
     try {
@@ -287,274 +645,15 @@ const OwnerDashboard = () => {
     }
 
     try {
-      // Fetch email and scanner statuses in parallel with other data
+      // Fire all fetchers in parallel
+      await Promise.all([
+        fetchRevenueAndStats(),
+        fetchRecentOrders(),
+        fetchUpcomingEvents(),
+      ]);
+      // Non-blocking: email and scanner
       fetchEmailStatuses();
       fetchScannerStatuses();
-      const now = new Date();
-      const todayStart = startOfDay(now);
-      const weekStart = startOfDay(subDays(now, 6));
-      const monthStart = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
-      const fourteenDaysAgo = startOfDay(subDays(now, 13));
-
-      const { data: ticketsData, error: ticketsError } = await supabase
-        .from<any>("tickets")
-        .select(`
-          price, 
-          created_at, 
-          purchase_date, 
-          scanned_at, 
-          event_name,
-          ticket_type_id,
-          ticket_types (
-            name
-          )
-        `);
-      if (ticketsError) throw ticketsError;
-
-      const { data: ordersData, error: ordersError } = await supabase
-        .from<any>("orders")
-        .select("id, total, created_at, status, purchaser_email, purchaser_name, customer_email, customer_first_name, customer_last_name, event_id, events(name), tickets(ticket_type_name, price)")
-        .order('created_at', { ascending: false })
-        .limit(10);
-      if (ordersError) throw ordersError;
-
-      // Transform tickets for distribution calculation
-      const typeCounts = new Map<string, number>();
-      (ticketsData || []).forEach((ticket: any) => {
-        // Handle nested ticket_types object
-        const typeName = ticket.ticket_types?.name || "Unknown";
-        typeCounts.set(typeName, (typeCounts.get(typeName) || 0) + 1);
-      });
-
-      const colors = ["#6366f1", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
-      const distribution = Array.from(typeCounts.entries())
-        .map(([name, value], index) => ({
-          name,
-          value,
-          color: colors[index % colors.length],
-        }))
-        .sort((a, b) => b.value - a.value);
-
-      setTicketTypeDistribution(distribution);
-
-      // Calculate peak buying times by hour
-      const hourlyOrders = new Map<number, number>();
-      (ordersData || []).forEach((order: any) => {
-        if (!order.created_at) return;
-        const orderDate = parseISO(order.created_at);
-        const hour = orderDate.getHours();
-        hourlyOrders.set(hour, (hourlyOrders.get(hour) || 0) + 1);
-      });
-
-      const peakTimes = Array.from({ length: 24 }, (_, hour) => ({
-        hour: `${hour}:00`,
-        orders: hourlyOrders.get(hour) || 0,
-      }));
-
-      setPeakBuyingTimes(peakTimes);
-
-      const { data: eventsData, error: eventsError } = await (supabase as any)
-        .from("events")
-        .select("id, name, event_date, metadata")
-        .eq("is_active", true)
-        .gte("event_date", new Date().toISOString())
-        .order("event_date", { ascending: true });
-      if (eventsError) throw eventsError;
-
-      // Fetch ticket types for active events to calculate capacity
-      const eventIds = (eventsData || []).map((e: any) => e.id);
-      const { data: eventTicketTypes, error: ttError } = await supabase
-        .from("ticket_types")
-        .select("event_id, capacity:total_inventory")
-        .in("event_id", eventIds);
-
-      if (ttError) console.warn("Error fetching event ticket types:", ttError);
-
-      const parsePrice = (value: number | string | null | undefined) => {
-        if (value === null || value === undefined) return 0;
-        const parsed = typeof value === "string" ? parseFloat(value) : value;
-        return Number.isFinite(parsed) ? parsed : 0;
-      };
-
-      const revenueTickets = (ticketsData || []).filter((ticket: any) => parsePrice(ticket.price) > 0);
-
-      const ticketsByEvent = new Map<string, number>();
-      const dailyMap = new Map<string, DailyPerformancePoint>();
-
-      revenueTickets.forEach((ticket) => {
-        const ticketDateRaw = resolveTicketDate(ticket);
-        if (!ticketDateRaw) return;
-        const ticketDate = parseISO(ticketDateRaw);
-        const dateKey = format(startOfDay(ticketDate), "yyyy-MM-dd");
-        const existing = dailyMap.get(dateKey) || {
-          date: startOfDay(ticketDate),
-          label: format(ticketDate, "MMM d"),
-          revenue: 0,
-          tickets: 0,
-        };
-        existing.revenue += parsePrice((ticket as any).price);
-        existing.tickets += 1;
-        dailyMap.set(dateKey, existing);
-
-        if (ticket.event_name) {
-          ticketsByEvent.set(ticket.event_name, (ticketsByEvent.get(ticket.event_name) || 0) + 1);
-        }
-      });
-
-      const completedOrders = (ordersData || []).filter((order) => order.status === "completed");
-      const totalRevenue = revenueTickets.reduce((sum, ticket) => sum + parsePrice(ticket.price), 0);
-      const todayRevenueTickets = revenueTickets.filter((ticket) => {
-        const ticketDate = resolveTicketDate(ticket);
-        if (!ticketDate) return false;
-        return parseISO(ticketDate) >= todayStart;
-      });
-      const weekRevenueTickets = revenueTickets.filter((ticket) => {
-        const ticketDate = resolveTicketDate(ticket);
-        if (!ticketDate) return false;
-        return parseISO(ticketDate) >= weekStart;
-      });
-      const monthRevenueTickets = revenueTickets.filter((ticket) => {
-        const ticketDate = resolveTicketDate(ticket);
-        if (!ticketDate) return false;
-        return parseISO(ticketDate) >= monthStart;
-      });
-
-      // ticketsData represents individual tickets; use revenueTickets length for sold count
-      const totalTicketsSold = revenueTickets.length;
-      const totalTicketsScanned = (ticketsData || []).filter((ticket) => ticket.scanned_at !== null).length;
-      const conversionRate = totalTicketsSold > 0 ? (totalTicketsScanned / totalTicketsSold) * 100 : 0;
-      const averageOrderValue = completedOrders.length ? totalRevenue / completedOrders.length : 0;
-      const ticketsPerOrder = completedOrders.length ? totalTicketsSold / completedOrders.length : 0;
-
-      const fourteenDayPoints: DailyPerformancePoint[] = [];
-      for (let i = 0; i < 14; i += 1) {
-        const currentDate = startOfDay(addDays(fourteenDaysAgo, i));
-        const key = format(currentDate, "yyyy-MM-dd");
-        const point = dailyMap.get(key) || {
-          date: currentDate,
-          label: format(currentDate, "MMM d"),
-          revenue: 0,
-          tickets: 0,
-        };
-        fourteenDayPoints.push(point);
-      }
-
-      const lastSevenStart = startOfDay(subDays(now, 6));
-      const previousSevenStart = startOfDay(subDays(now, 13));
-      const previousSevenEnd = startOfDay(subDays(now, 6));
-
-      const lastSeven = sumRange(fourteenDayPoints, lastSevenStart, startOfDay(addDays(now, 1)));
-      const previousSeven = sumRange(fourteenDayPoints, previousSevenStart, previousSevenEnd);
-
-      const revenueTrendDelta = previousSeven.revenue > 0
-        ? ((lastSeven.revenue - previousSeven.revenue) / previousSeven.revenue) * 100
-        : 0;
-
-      const upcomingSummaries: UpcomingEventSummary[] = (eventsData || []).slice(0, 4).map((event) => {
-        const eventDate = parseISO(event.event_date as string);
-        const ticketsSold = ticketsByEvent.get(event.name) || 0;
-        const currentEventTypes = (eventTicketTypes || []).filter((tt: any) => tt.event_id === event.id);
-        const capacityFromTiers = currentEventTypes.reduce((sum: number, tier: any) => sum + (tier?.capacity || 0), 0);
-        // Fallback to 100 if no capacity found to avoid division by zero visual errors
-        const capacity = capacityFromTiers > 0 ? capacityFromTiers : 100;
-        const percentSold = capacity > 0 ? Math.min((ticketsSold / capacity) * 100, 100) : 0;
-        let status: UpcomingEventSummary["status"] = "on-track";
-        if (percentSold >= 85) status = "sellout";
-        else if (percentSold >= 60) status = "monitor";
-
-        return {
-          id: event.id,
-          name: event.name,
-          dateLabel: format(eventDate, "EEE, MMM d • h:mm a"),
-          ticketsSold,
-          capacity,
-          percentSold,
-          status,
-          location: event.metadata?.location || null,
-        };
-      });
-
-      const topEventEntry = Array.from(ticketsByEvent.entries()).sort((a, b) => b[1] - a[1])[0];
-      const topEventName = topEventEntry?.[0] || "No event data";
-      const topEventTickets = topEventEntry?.[1] || 0;
-
-      setStats({
-        todayRevenue: todayRevenueTickets.reduce((sum, ticket) => sum + parsePrice(ticket.price), 0),
-        todayTickets: todayRevenueTickets.length,
-        weekRevenue: weekRevenueTickets.reduce((sum, ticket) => sum + parsePrice(ticket.price), 0),
-        weekTickets: weekRevenueTickets.length,
-        monthRevenue: monthRevenueTickets.reduce((sum, ticket) => sum + parsePrice(ticket.price), 0),
-        monthTickets: monthRevenueTickets.length,
-        totalRevenue,
-        totalTicketsSold,
-        totalTicketsScanned,
-        activeEvents: eventsData?.length || 0,
-        conversionRate,
-        averageOrderValue,
-        ticketsPerOrder,
-        vipTablesSold: distribution.find(d => d.name.toLowerCase().includes('table'))?.value || 0,
-        vipRevenue: revenueTickets
-          .filter((t: any) =>
-            t.ticket_types?.name?.toLowerCase().includes('vip')
-          )
-          .reduce((sum, t: any) => sum + parsePrice(t.price), 0),
-      });
-      setDailyPerformance(fourteenDayPoints);
-      setTrendDelta(revenueTrendDelta);
-      setWeekOverWeek(revenueTrendDelta);
-      setUpcomingEvents(upcomingSummaries);
-      // Transform orders to match RecentPurchases component interface
-      // Note: orders.total is stored in cents (like purchase site), so divide by 100 for display
-      const transformedOrders = (ordersData || []).map((order: any) => {
-        const tickets = order.tickets || [];
-        const ticketCount = tickets.length;
-
-        // Find primary ticket type: most expensive ticket in the order
-        const primaryTicket = tickets.length > 0
-          ? tickets.reduce((highest: any, ticket: any) =>
-              (Number(ticket.price) || 0) > (Number(highest.price) || 0) ? ticket : highest,
-              tickets[0]
-            )
-          : null;
-
-        return {
-          id: order.id,
-          customer_email: order.purchaser_email || order.customer_email || '',
-          customer_name: order.purchaser_name || (order.customer_first_name ? `${order.customer_first_name} ${order.customer_last_name || ''}`.trim() : null),
-          event_name: (order.events as any)?.name || 'Unknown Event',
-          ticket_type: primaryTicket?.ticket_type_name || 'Unknown',
-          ticket_count: ticketCount,
-          total: Number(order.total || 0) / 100, // Convert from cents to dollars
-          status: order.status || 'pending',
-          created_at: order.created_at,
-          completed_at: order.created_at, // fallback to created_at since completed_at is not present
-        };
-      });
-      setRecentOrders(transformedOrders);
-      setInsights([
-        {
-          title: "Average order value",
-          value: currencyFormatter.format(averageOrderValue || 0),
-          helper: "Per completed order",
-          trendLabel: "Orders processed",
-          trendValue: `${completedOrders.length.toLocaleString()}`,
-          positive: true,
-        },
-        {
-          title: "Tickets per order",
-          value: ticketsPerOrder ? ticketsPerOrder.toFixed(1) : "0.0",
-          helper: "Avg. quantity per purchase",
-          trendLabel: "Completed tickets",
-          trendValue: `${totalTicketsSold.toLocaleString()}`,
-          positive: true,
-        },
-        {
-          title: "Top performing event",
-          value: topEventName,
-          helper: `${topEventTickets.toLocaleString()} tickets sold`,
-          positive: true,
-        },
-      ]);
     } catch (error: any) {
       console.error("Error loading dashboard data:", error);
       toast({
@@ -567,85 +666,21 @@ const OwnerDashboard = () => {
     }
   };
 
-  // Real-time subscription for live dashboard updates
-  useEffect(() => {
-    if (!isSupabaseConfigured()) return;
-
-    // Set up real-time subscription for dashboard updates
-    const channel = supabase
-      .channel('dashboard-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'scan_logs',
-        },
-        () => {
-          // Refresh dashboard stats when new scan occurs
-          loadData();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tickets',
-        },
-        () => {
-          // Refresh dashboard stats when tickets change
-          loadData();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders',
-        },
-        () => {
-          // Refresh dashboard stats when new order is placed
-          loadData();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'email_queue',
-        },
-        () => {
-          // Refresh email statuses when queue changes
-          fetchEmailStatuses();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'scanner_heartbeats',
-        },
-        () => {
-          // Refresh scanner statuses when heartbeats change
-          fetchScannerStatuses();
-        }
-      )
-      .subscribe();
-
-    realtimeChannelRef.current = channel;
-
-    // Cleanup subscription on unmount
-    return () => {
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current);
-        realtimeChannelRef.current = null;
-      }
-    };
-  }, []);
+  // Real-time subscription for live dashboard updates using useDashboardRealtime hook
+  const { isLive, lastUpdate } = useDashboardRealtime({
+    tables: ['tickets', 'orders', 'scan_logs', 'email_queue', 'scanner_heartbeats', 'events'],
+    onTableUpdate: {
+      tickets: () => fetchRevenueAndStats(),
+      orders: () => {
+        fetchRevenueAndStats();
+        fetchRecentOrders();
+      },
+      scan_logs: () => fetchRevenueAndStats(),
+      events: () => fetchUpcomingEvents(),
+      email_queue: () => fetchEmailStatuses(),
+      scanner_heartbeats: () => fetchScannerStatuses(),
+    },
+  });
 
   const ownerName = useMemo(() => {
     if (!user) return "Owner";
