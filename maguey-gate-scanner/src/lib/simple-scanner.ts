@@ -119,8 +119,8 @@ async function parseQrInput(input: string): Promise<{ token: string; isVerified:
       }
 
       if (!payload.signature) {
-        console.warn('[simple-scanner] QR payload missing signature');
-        return { token: payload.token, isVerified: false, signature: payload.signature };
+        console.error('[simple-scanner] QR payload missing signature - rejecting unsigned QR code');
+        return { token: '', isVerified: false, error: 'Unsigned QR code - ticket may be forged' };
       }
 
       // Verify signature
@@ -280,6 +280,17 @@ export async function scanTicket(
       ticket: null,
       message: 'Invalid input - no ticket ID found',
       rejectionReason: 'invalid',
+    };
+  }
+
+  // Enforce signature verification for QR and NFC scans
+  // Manual entry bypasses this check (staff can type ticket IDs directly)
+  if (method !== 'manual' && !parsed.isVerified) {
+    return {
+      success: false,
+      ticket: null,
+      message: 'QR code is not signed - please use manual entry if this is a valid ticket',
+      rejectionReason: 'tampered',
     };
   }
 
@@ -599,6 +610,22 @@ export async function scanTicketOffline(
       rejectionReason: 'invalid',
       offlineValidated: true,
     };
+  }
+
+  // For offline mode, verify signature against cached value if available
+  if (parsed.signature && parsed.token) {
+    const { verifySignatureOffline } = await import('./offline-ticket-cache');
+    const signatureValid = await verifySignatureOffline(parsed.token, parsed.signature);
+    if (!signatureValid) {
+      console.error('[simple-scanner] Offline: Signature mismatch against cached value');
+      return {
+        success: false,
+        ticket: null,
+        message: 'QR code signature is invalid (offline verification)',
+        rejectionReason: 'tampered',
+        offlineValidated: true,
+      };
+    }
   }
 
   console.log('[simple-scanner] Offline scan for token:', parsed.token);
