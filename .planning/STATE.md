@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 17 of 23 (Security Lockdown) — IN PROGRESS
-Plan: 2 of 4
+Plan: 3 of 4
 Status: IN PROGRESS
-Last activity: 2026-02-14 — Plan 17-02 complete (CORS centralization, all 11 Edge Functions migrated, P0 blocker R03 resolved)
+Last activity: 2026-02-14 — Plan 17-04 complete (Unsigned QR rejection enforced, P0 blocker R23 resolved)
 
-Progress: [██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 25% (9/36 plans)
+Progress: [███████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 28% (10/36 plans)
 
 ### v2.0 Phase Status
 
@@ -24,7 +24,7 @@ Progress: [██████░░░░░░░░░░░░░░░░░
 | 14 | Auth Foundation & Account Setup | 3/3 | Complete |
 | 15 | Auth Hardening & Login Flows | 3/3 | Complete |
 | 16 | Route Protection | 2/2 | Complete |
-| 17 | Security Lockdown | 2/4 | In Progress |
+| 17 | Security Lockdown | 3/4 | In Progress |
 | 18 | Scanner Improvements | 0/4 | Not Started |
 | 19 | Dashboard Data Accuracy | 0/4 | Not Started |
 | 20 | Dashboard & UI Bloat Cleanup | 0/4 | Not Started |
@@ -61,10 +61,10 @@ Progress: [██████░░░░░░░░░░░░░░░░░
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
-| 17-01 | Move QR signing to server-side Edge Function | 1 | Not Started |
-| 17-02 | Migrate all Edge Functions to shared CORS handler | 1 | Not Started |
+| 17-01 | Move QR signing to server-side Edge Function | 1 | Complete |
+| 17-02 | Migrate all Edge Functions to shared CORS handler | 1 | Complete |
 | 17-03 | Remove anonymous VIP RLS access | 1 | Complete |
-| 17-04 | Enforce unsigned QR rejection in scanner | 1 | Not Started |
+| 17-04 | Enforce unsigned QR rejection in scanner | 1 | Complete |
 
 ### Phase 16 Complete
 
@@ -246,9 +246,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 72
-- Average duration: 3.2 min
-- Total execution time: 3.8 hours
+- Total plans completed: 73
+- Average duration: 3.1 min
+- Total execution time: 3.9 hours
 
 **By Phase:**
 
@@ -269,11 +269,11 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 14 | 3 | 20 min | 6.7 min |
 | 15 | 3 | 5 min | 1.7 min |
 | 16 | 2 | 4 min | 2.0 min |
-| 17 | 2 | 6 min | 3.0 min |
+| 17 | 3 | 7 min | 2.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 17-02 (4.9 min), 17-01 (2.7 min), 16-02 (2.7 min), 16-01 (1 min), 15-03 (2 min)
-- Trend: Phase 17 in progress — CORS centralization complete (all Edge Functions migrated)
+- Last 5 plans: 17-04 (0.9 min), 17-02 (4.9 min), 17-01 (2.7 min), 16-02 (2.7 min), 16-01 (1 min)
+- Trend: Phase 17 nearing completion — unsigned QR rejection enforced (P0 blocker R23 resolved)
 
 *Updated after each plan completion*
 | Phase 15 P03 | 110 | 3 tasks | 6 files |
@@ -283,6 +283,7 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | Phase 17 P01 | 163 | 3 tasks | 4 files |
 | Phase 17 P02 | 296 | 3 tasks | 12 files |
 | Phase 17 P02 | 296 | 3 tasks | 12 files |
+| Phase 17 P04 | 53 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -487,6 +488,8 @@ Recent decisions affecting current work:
 - [Phase 17-01]: verifySignatureOffline uses simple string comparison (no timing attack concern for local cache)
 - [Phase 17]: Extra headers parameter optional for backward compatibility with existing callers
 - [Phase 17]: stripe-signature and SVIX headers passed as extra parameters to shared CORS handler
+- [Phase 17]: Reject unsigned QR codes = return error not return true (fail-closed pattern prevents security bypass)
+- [Phase 17]: Manual entry bypasses signature check (method \!== 'manual') for staff fallback at the door
 
 ### Pending Todos
 
@@ -556,6 +559,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 17-03-PLAN.md (Remove anonymous VIP RLS access)
-Resume file: `.planning/phases/17-security-lockdown/17-03-SUMMARY.md`
-Next action: Continue Phase 17 (Security Lockdown) via `/gsd:execute-plan 17-04` OR start with `/gsd:execute-plan 17-01` for earlier plans
+Stopped at: Completed 17-04-PLAN.md (Enforce unsigned QR rejection in scanner)
+Resume file: `.planning/phases/17-security-lockdown/17-04-SUMMARY.md`
+Next action: Phase 17 complete (all 4 plans done) — Continue to Phase 18 (Scanner Improvements) via `/gsd:execute-plan 18-01`
