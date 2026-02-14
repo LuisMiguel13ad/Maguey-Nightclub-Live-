@@ -11,9 +11,9 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 19 of 23 (Dashboard Data Accuracy) — IN PROGRESS
-Plan: 2 of 4
-Status: IN PROGRESS
-Last activity: 2026-02-14 — Plan 19-02 complete (Staff name resolution service with human-readable display)
+Plan: 3 of 4 (CHECKPOINT)
+Status: CHECKPOINT - Awaiting architectural decision
+Last activity: 2026-02-14 — Plan 19-03 partial (useDashboardRealtime hook enhanced, dashboard integration incomplete)
 
 Progress: [████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 36% (13/36 plans)
 
@@ -62,9 +62,9 @@ Progress: [████████░░░░░░░░░░░░░░░
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
 | 19-01 | Calculate real revenue trend percentages and fix orders data | 1 | Complete |
-| 19-02 | Fix ticket_count and ticket_type on orders | 1 | Not Started |
-| 19-03 | Display staff names instead of UUIDs | 1 | Not Started |
-| 19-04 | Optimize real-time subscriptions (targeted updates) | 2 | Not Started |
+| 19-02 | Display staff names instead of UUIDs | 1 | Complete |
+| 19-03 | Optimize real-time subscriptions (targeted updates) | 2 | Partial (Checkpoint) |
+| 19-04 | Remove hardcoded fallback events from marketing site | 1 | Not Started |
 
 ### Phase 17 Plans (Complete)
 
@@ -299,6 +299,8 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | Phase 17 P02 | 296 | 3 tasks | 12 files |
 | Phase 17 P04 | 53 | 1 tasks | 1 files |
 | Phase 19 P01 | 267 | 1 tasks | 1 files |
+| Phase 19 P02 | 480 | 2 tasks | 2 files |
+| Phase 19 P03 | 900 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -538,6 +540,9 @@ Recent decisions affecting current work:
   - After adding secrets: Edit .github/workflows/e2e.yml to uncomment push/pull_request triggers
 
 ### Blockers/Concerns
+
+**ACTIVE CHECKPOINT (2026-02-14):**
+Plan 19-03 paused at architectural decision point. loadData() refactoring (287 lines) requires pattern choice for shared state between split functions. Options: (1) Parameters, (2) Module refs, (3) Compound fetch. Recommendation: Option 3 + 1. Hook infrastructure complete (useDashboardRealtime enhanced). Dashboard integration pending decision. See `.planning/phases/19-dashboard-accuracy/19-03-SUMMARY.md` for full context.
 
 **Launch Hardening Focus:**
 This is brownfield work — all features are built. Roadmap focuses on reliability, testing, and polish. No new features should be added during launch prep unless critical for go-live.
