@@ -28,10 +28,10 @@
 
 ### v2.0 Launch Readiness (Phases 14-23) — IN PROGRESS
 
-- [ ] Phase 14: Auth Foundation & Account Setup (0/3 plans)
-  - [ ] 14-01-PLAN.md — Create Supabase auth accounts (owner + employee) + verification script
-  - [ ] 14-02-PLAN.md — Wire AuthContext to real Supabase auth, gate localStorage behind DEV
-  - [ ] 14-03-PLAN.md — Credential verification automation (env consistency, key validation)
+- [x] Phase 14: Auth Foundation & Account Setup (3/3 plans) — completed 2026-02-13
+  - [x] 14-01-PLAN.md — Create Supabase auth accounts (owner + employee) + verification script
+  - [x] 14-02-PLAN.md — Wire AuthContext to real Supabase auth, gate localStorage behind DEV
+  - [x] 14-03-PLAN.md — Credential verification automation (env consistency, key validation)
 - [ ] Phase 15: Auth Hardening & Login Flows (0/3 plans)
 - [ ] Phase 16: Route Protection (0/2 plans)
 - [ ] Phase 17: Security Lockdown (0/4 plans)
@@ -59,7 +59,7 @@
 | 11. Error Handling & Recovery | v1.0 | 4/4 | Complete | 2026-02-01 |
 | 12. Launch Readiness Review | v1.0 | 3/3 | Complete | 2026-02-01 |
 | 13. Code Cleanup & Scanner Consolidation | v1.0 | 2/2 | Complete | 2026-02-09 |
-| 14. Auth Foundation & Account Setup | v2.0 | 0/3 | Planned | — |
+| 14. Auth Foundation & Account Setup | v2.0 | 3/3 | Complete | 2026-02-13 |
 | 15. Auth Hardening & Login Flows | v2.0 | 0/3 | Not Started | — |
 | 16. Route Protection | v2.0 | 0/2 | Not Started | — |
 | 17. Security Lockdown | v2.0 | 0/4 | Not Started | — |
