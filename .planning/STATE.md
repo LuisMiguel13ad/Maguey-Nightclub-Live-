@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 17 of 23 (Security Lockdown) — IN PROGRESS
-Plan: 3 of 4
+Plan: 2 of 4
 Status: IN PROGRESS
-Last activity: 2026-02-14 — Plan 17-01 complete (Server-side QR verification, offline signature caching, P0 blocker R01 resolved)
+Last activity: 2026-02-14 — Plan 17-02 complete (CORS centralization, all 11 Edge Functions migrated, P0 blocker R03 resolved)
 
-Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 22% (8/36 plans)
+Progress: [██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 25% (9/36 plans)
 
 ### v2.0 Phase Status
 
@@ -24,7 +24,7 @@ Progress: [█████░░░░░░░░░░░░░░░░░░
 | 14 | Auth Foundation & Account Setup | 3/3 | Complete |
 | 15 | Auth Hardening & Login Flows | 3/3 | Complete |
 | 16 | Route Protection | 2/2 | Complete |
-| 17 | Security Lockdown | 3/4 | In Progress |
+| 17 | Security Lockdown | 2/4 | In Progress |
 | 18 | Scanner Improvements | 0/4 | Not Started |
 | 19 | Dashboard Data Accuracy | 0/4 | Not Started |
 | 20 | Dashboard & UI Bloat Cleanup | 0/4 | Not Started |
@@ -246,8 +246,8 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 71
-- Average duration: 3.0 min
+- Total plans completed: 72
+- Average duration: 3.2 min
 - Total execution time: 3.8 hours
 
 **By Phase:**
@@ -269,19 +269,20 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 14 | 3 | 20 min | 6.7 min |
 | 15 | 3 | 5 min | 1.7 min |
 | 16 | 2 | 4 min | 2.0 min |
-| 17 | 1 | 1.9 min | 1.9 min |
+| 17 | 2 | 6 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 17-03 (1.9 min), 16-02 (2.7 min), 16-01 (1 min), 15-03 (2 min), 15-02 (1.5 min)
-- Trend: Phase 17 in progress — security lockdown with RLS hardening
+- Last 5 plans: 17-02 (4.9 min), 17-01 (2.7 min), 16-02 (2.7 min), 16-01 (1 min), 15-03 (2 min)
+- Trend: Phase 17 in progress — CORS centralization complete (all Edge Functions migrated)
 
 *Updated after each plan completion*
 | Phase 15 P03 | 110 | 3 tasks | 6 files |
 | Phase 15 P03 | 2 | 3 tasks | 6 files |
 | Phase 16 P01 | 63 | 2 tasks | 2 files |
 | Phase 16 P02 | 160 | 2 tasks | 3 files |
-| Phase 17 P03 | 114 | 2 tasks | 2 files |
 | Phase 17 P01 | 163 | 3 tasks | 4 files |
+| Phase 17 P02 | 296 | 3 tasks | 12 files |
+| Phase 17 P02 | 296 | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -477,10 +478,15 @@ Recent decisions affecting current work:
 - [Phase 16-02]: /test-qr double-gated with requireDev + owner role (invisible in production)
 - [Phase 16-02]: Post-login redirect uses replace: true to prevent back-button to login page
 - [Phase 16-02]: Employee routes allow any authenticated user (owners can access scanner via superset access)
+- [Phase 17-02]: Extra headers parameter optional for backward compatibility with existing callers
+- [Phase 17-02]: stripe-signature and SVIX headers passed as extra parameters to shared CORS handler
+- [Phase 17-02]: Removed 39 lines of duplicate CORS logic from stripe-webhook for centralization
 - [Phase 17-03]: Remove anonymous SELECT access from VIP tables - PII exposure (purchaser names, emails, phone numbers, QR tokens)
 - [Phase 17-03]: SECURITY DEFINER RPC for token-based lookup - Safe bypass of RLS when lookup is by exact token (UUID)
 - [Phase 17-01]: Edge Function verifySignature uses constant-time comparison to prevent timing attacks
 - [Phase 17-01]: verifySignatureOffline uses simple string comparison (no timing attack concern for local cache)
+- [Phase 17]: Extra headers parameter optional for backward compatibility with existing callers
+- [Phase 17]: stripe-signature and SVIX headers passed as extra parameters to shared CORS handler
 
 ### Pending Todos
 
