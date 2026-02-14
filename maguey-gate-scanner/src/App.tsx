@@ -10,6 +10,7 @@ import { BrandingProvider } from "./contexts/BrandingContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import EmployeeLogin from "./pages/auth/EmployeeLogin";
+import OwnerLogin from "./pages/auth/OwnerLogin";
 import Scanner from "./pages/Scanner";
 import OwnerDashboard from "./pages/OwnerDashboard";
 import Dashboard from "./pages/Dashboard";
@@ -54,6 +55,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/auth/owner" element={<OwnerLogin />} />
         <Route path="/auth/employee" element={<EmployeeLogin />} />
         <Route path="/scanner" element={<Scanner />} />
         <Route path="/guest-list" element={<GuestListCheckIn />} />
