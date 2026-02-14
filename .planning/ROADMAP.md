@@ -32,7 +32,10 @@
   - [x] 14-01-PLAN.md — Create Supabase auth accounts (owner + employee) + verification script
   - [x] 14-02-PLAN.md — Wire AuthContext to real Supabase auth, gate localStorage behind DEV
   - [x] 14-03-PLAN.md — Credential verification automation (env consistency, key validation)
-- [ ] Phase 15: Auth Hardening & Login Flows (0/3 plans)
+- [x] Phase 15: Auth Hardening & Login Flows (3/3 plans) — completed 2026-02-13
+  - [x] 15-01-PLAN.md — Owner login page at /auth/owner with password reset & invitation support
+  - [x] 15-02-PLAN.md — Employee login page at /auth/employee with mobile-optimized UI & remember-me
+  - [x] 15-03-PLAN.md — Replace Auth.tsx with redirect, eliminate demo code, wire sign-out targets
 - [ ] Phase 16: Route Protection (0/2 plans)
 - [ ] Phase 17: Security Lockdown (0/4 plans)
 - [ ] Phase 18: Scanner Improvements (0/4 plans)
@@ -60,7 +63,7 @@
 | 12. Launch Readiness Review | v1.0 | 3/3 | Complete | 2026-02-01 |
 | 13. Code Cleanup & Scanner Consolidation | v1.0 | 2/2 | Complete | 2026-02-09 |
 | 14. Auth Foundation & Account Setup | v2.0 | 3/3 | Complete | 2026-02-13 |
-| 15. Auth Hardening & Login Flows | v2.0 | 0/3 | Not Started | — |
+| 15. Auth Hardening & Login Flows | v2.0 | 3/3 | Complete | 2026-02-13 |
 | 16. Route Protection | v2.0 | 0/2 | Not Started | — |
 | 17. Security Lockdown | v2.0 | 0/4 | Not Started | — |
 | 18. Scanner Improvements | v2.0 | 0/4 | Not Started | — |
