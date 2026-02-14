@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 15 of 23 (Auth Hardening & Login Flows) — IN PROGRESS
-Plan: 2 of 3
-Status: IN PROGRESS
-Last activity: 2026-02-14 — Plan 15-01 complete (owner login page with role validation)
+Phase: 15 of 23 (Auth Hardening & Login Flows) — COMPLETE
+Plan: 3 of 3
+Status: COMPLETE
+Last activity: 2026-02-14 — Plan 15-03 complete (auth redirect & demo code elimination)
 
-Progress: [███░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 11% (4/36 plans)
+Progress: [████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 14% (5/36 plans)
 
 ### v2.0 Phase Status
 
 | Phase | Name | Plans | Status |
 |-------|------|-------|--------|
 | 14 | Auth Foundation & Account Setup | 3/3 | Complete |
-| 15 | Auth Hardening & Login Flows | 2/3 | In Progress |
+| 15 | Auth Hardening & Login Flows | 3/3 | Complete |
 | 16 | Route Protection | 0/2 | Not Started |
 | 17 | Security Lockdown | 0/4 | Not Started |
 | 18 | Scanner Improvements | 0/4 | Not Started |
@@ -42,13 +42,17 @@ Progress: [███░░░░░░░░░░░░░░░░░░░░
 | 14-02 | Gate localStorage auth behind DEV flag | 2 | Complete |
 | 14-03 | Credential & environment verification automation | 1 | Complete |
 
-### Phase 15 Plans (In Progress)
+### Phase 15 Plans (Complete)
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
 | 15-01 | Create owner login page at /auth/owner | 1 | Complete |
 | 15-02 | Create employee login page at /auth/employee | 1 | Complete |
-| 15-03 | Update /auth to redirect to /auth/employee | 2 | Not Started |
+| 15-03 | Update /auth to redirect to /auth/employee | 2 | Complete |
+
+### Phase 15 Complete
+
+All 3 plans executed across 2 waves. Created specialized login pages (/auth/owner and /auth/employee) with role validation, touch-friendly mobile UI, and remember-me functionality. Replaced 1,110-line Auth.tsx with 52-line redirect component, eliminating all demo code (handleDemoLogin, promote-to-owner, quick access buttons). Updated all sign-out handlers with role-specific navigation and gated localStorage calls behind DEV. P0 blockers R08 (demo shortcuts) and R09 (localStorage in production) RESOLVED.
 
 ### Phase 14 Complete
 
@@ -222,7 +226,7 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 67
+- Total plans completed: 68
 - Average duration: 3.0 min
 - Total execution time: 3.5 hours
 
@@ -243,14 +247,15 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 11 | 4 | 11 min | 2.8 min |
 | 12 | 3 | 15 min | 5.0 min |
 | 14 | 3 | 20 min | 6.7 min |
-| 15 | 2 | 3 min | 1.5 min |
+| 15 | 3 | 5 min | 1.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 15-01 (2 min), 15-02 (1.5 min), 14-02 (2 min), 14-03 (2 min), 14-01 (16 min)
-- Trend: Phase 15 focused on auth UI/UX improvements
+- Last 5 plans: 15-03 (2 min), 15-02 (1.5 min), 15-01 (2 min), 14-03 (2 min), 14-02 (2 min)
+- Trend: Phase 15 completed — auth hardening and demo code elimination
 
 *Updated after each plan completion*
-| Phase 15 P02 | 89 | 2 tasks | 2 files |
+| Phase 15 P03 | 110 | 3 tasks | 6 files |
+| Phase 15 P03 | 2 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -261,6 +266,10 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-14 | 15-03 | /auth redirects to /auth/employee by default | Employees are the primary users of the scanner portal — they need the quickest access path |
+| 2026-02-14 | 15-03 | Invitation and recovery flows redirect to /auth/owner | Administrative actions (team invites, password resets) are owner-only operations |
+| 2026-02-14 | 15-03 | Owner sign-out returns to /auth/owner, employee sign-out to /auth/employee | Role-specific sign-out paths maintain context and prevent confused authentication attempts |
+| 2026-02-14 | 15-03 | localStorage.clearUser() gated behind import.meta.env.DEV in all sign-out handlers | Production builds must never rely on localStorage for authentication — completes P0 requirement R09 |
 | 2026-02-14 | 15-01 | Sign out non-owner accounts during /auth/owner login | Strict role enforcement prevents confused access attempts and maintains security boundaries |
 | 2026-02-14 | 15-01 | Password reset redirectTo points to /auth/owner | User completes entire flow on specialized page for consistent UX |
 | 2026-02-14 | 15-01 | Invitation URLs route to /auth/owner | All team onboarding flows through owner portal for consistent admin experience |
@@ -504,6 +513,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 15-01-PLAN.md (owner login page with role validation)
-Resume file: `.planning/phases/15-auth-hardening/15-01-SUMMARY.md`
-Next action: Execute Plan 15-03 via `/gsd:execute-plan 15-03`
+Stopped at: Completed Phase 15 (Auth Hardening & Login Flows)
+Resume file: `.planning/phases/15-auth-hardening/15-03-SUMMARY.md`
+Next action: Begin Phase 16 (Route Protection) via `/gsd:execute-plan 16-01`
