@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 17 of 23 (Security Lockdown) — COMPLETE
-Plan: 4 of 4
-Status: COMPLETE
-Last activity: 2026-02-14 — Phase 17 complete (All 4 P0 security blockers resolved: QR secret, CORS, VIP RLS, unsigned QR)
+Phase: 19 of 23 (Dashboard Data Accuracy) — IN PROGRESS
+Plan: 1 of 4
+Status: IN PROGRESS
+Last activity: 2026-02-14 — Plan 19-01 complete (Fixed orders query with real ticket counts and types)
 
-Progress: [███████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 31% (11/36 plans)
+Progress: [████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 33% (12/36 plans)
 
 ### v2.0 Phase Status
 
@@ -26,7 +26,7 @@ Progress: [███████░░░░░░░░░░░░░░░░
 | 16 | Route Protection | 2/2 | Complete |
 | 17 | Security Lockdown | 4/4 | Complete |
 | 18 | Scanner Improvements | 0/4 | Not Started |
-| 19 | Dashboard Data Accuracy | 0/4 | Not Started |
+| 19 | Dashboard Data Accuracy | 1/4 | In Progress |
 | 20 | Dashboard & UI Bloat Cleanup | 0/4 | Not Started |
 | 21 | VIP & Events Polish | 0/5 | Not Started |
 | 22 | Code Quality & Refactoring | 0/4 | Not Started |
@@ -57,7 +57,16 @@ Progress: [███████░░░░░░░░░░░░░░░░
 | 16-01 | Create ProtectedRoute wrapper and Unauthorized page | 1 | Complete |
 | 16-02 | Apply route protection to dashboard routes | 1 | Complete |
 
-### Phase 17 Plans (In Progress)
+### Phase 19 Plans (In Progress)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 19-01 | Calculate real revenue trend percentages and fix orders data | 1 | Complete |
+| 19-02 | Fix ticket_count and ticket_type on orders | 1 | Not Started |
+| 19-03 | Display staff names instead of UUIDs | 1 | Not Started |
+| 19-04 | Optimize real-time subscriptions (targeted updates) | 2 | Not Started |
+
+### Phase 17 Plans (Complete)
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
@@ -65,6 +74,10 @@ Progress: [███████░░░░░░░░░░░░░░░░
 | 17-02 | Migrate all Edge Functions to shared CORS handler | 1 | Complete |
 | 17-03 | Remove anonymous VIP RLS access | 1 | Complete |
 | 17-04 | Enforce unsigned QR rejection in scanner | 1 | Complete |
+
+### Phase 17 Complete
+
+All 4 plans executed in wave 1. Moved QR signature verification to server-side Edge Function, centralized CORS handling across all Edge Functions, removed anonymous SELECT access from VIP tables (created lookup-by-token RPC), and enforced unsigned QR rejection in scanner. P0 blockers R21 (QR secret client-side), R22 (CORS wildcards), R23 (VIP RLS exposure), and R24 (unsigned QR acceptance) RESOLVED.
 
 ### Phase 16 Complete
 
@@ -246,9 +259,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 73
-- Average duration: 3.1 min
-- Total execution time: 3.9 hours
+- Total plans completed: 74
+- Average duration: 3.2 min
+- Total execution time: 3.97 hours
 
 **By Phase:**
 
@@ -269,11 +282,12 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 14 | 3 | 20 min | 6.7 min |
 | 15 | 3 | 5 min | 1.7 min |
 | 16 | 2 | 4 min | 2.0 min |
-| 17 | 3 | 7 min | 2.3 min |
+| 17 | 4 | 7 min | 1.8 min |
+| 19 | 1 | 4 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 17-04 (0.9 min), 17-02 (4.9 min), 17-01 (2.7 min), 16-02 (2.7 min), 16-01 (1 min)
-- Trend: Phase 17 nearing completion — unsigned QR rejection enforced (P0 blocker R23 resolved)
+- Last 5 plans: 19-01 (4.0 min), 17-04 (0.9 min), 17-02 (4.9 min), 17-01 (2.7 min), 16-02 (2.7 min)
+- Trend: Phase 19 started — dashboard data accuracy improvements (orders with real ticket data)
 
 *Updated after each plan completion*
 | Phase 15 P03 | 110 | 3 tasks | 6 files |
@@ -284,6 +298,7 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | Phase 17 P02 | 296 | 3 tasks | 12 files |
 | Phase 17 P02 | 296 | 3 tasks | 12 files |
 | Phase 17 P04 | 53 | 1 tasks | 1 files |
+| Phase 19 P01 | 267 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -294,6 +309,9 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-14 | 19-01 | Use most expensive ticket as primary type for multi-ticket orders | VIP status dominates in business logic (VIP + GA = show as VIP) — aligns with value hierarchy |
+| 2026-02-14 | 19-01 | Client-side aggregation instead of database view | Simpler implementation, no migration required, uses existing relationships, minimal performance impact (<5%) |
+| 2026-02-14 | 19-01 | Handle column name variations with fallbacks | Schema has customer_email but code expects purchaser_email — graceful handling prevents breaking changes |
 | 2026-02-14 | 15-03 | /auth redirects to /auth/employee by default | Employees are the primary users of the scanner portal — they need the quickest access path |
 | 2026-02-14 | 15-03 | Invitation and recovery flows redirect to /auth/owner | Administrative actions (team invites, password resets) are owner-only operations |
 | 2026-02-14 | 15-03 | Owner sign-out returns to /auth/owner, employee sign-out to /auth/employee | Role-specific sign-out paths maintain context and prevent confused authentication attempts |
@@ -559,6 +577,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 17-04-PLAN.md (Enforce unsigned QR rejection in scanner)
-Resume file: `.planning/phases/17-security-lockdown/17-04-SUMMARY.md`
-Next action: Phase 17 complete (all 4 plans done) — Continue to Phase 18 (Scanner Improvements) via `/gsd:execute-plan 18-01`
+Stopped at: Completed 19-01-PLAN.md (Fix orders query with real ticket data)
+Resume file: `.planning/phases/19-dashboard-accuracy/19-01-SUMMARY.md`
+Next action: Continue to 19-02 (Staff name resolution) via `/gsd:execute-plan 19-02`

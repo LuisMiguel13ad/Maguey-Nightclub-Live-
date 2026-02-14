@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { isSupabaseConfigured } from "@/integrations/supabase/client";
 import { localStorageService } from "@/lib/localStorage";
 import { useAuth, useRole } from "@/contexts/AuthContext";
+import { resolveStaffNames, getStaffDisplayName } from "@/lib/staff-name-service";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -355,7 +356,13 @@ const Dashboard = () => {
         override_used: (log as any).override_used || false,
         override_reason: (log as any).override_reason || null,
       }));
-      
+
+      // Resolve staff names for all scanned_by UUIDs
+      const scannerIds = [...new Set(logs.map(l => l.scanned_by).filter(Boolean))];
+      if (scannerIds.length > 0) {
+        await resolveStaffNames(scannerIds);
+      }
+
       setScanLogs(logs);
 
       const { data: ticketsData, error: ticketsError } = await supabase
@@ -1554,7 +1561,7 @@ const Dashboard = () => {
                             )}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {log.scanned_by || "System"}
+                            {log.scanned_by ? getStaffDisplayName(log.scanned_by) : "System"}
                           </TableCell>
                         </TableRow>
                       );
