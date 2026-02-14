@@ -37,6 +37,8 @@
   - [x] 15-02-PLAN.md — Employee login page at /auth/employee with mobile-optimized UI & remember-me
   - [x] 15-03-PLAN.md — Replace Auth.tsx with redirect, eliminate demo code, wire sign-out targets
 - [ ] Phase 16: Route Protection (0/2 plans)
+  - [ ] 16-01-PLAN.md — Create ProtectedRoute component with role-based guards + 403 Unauthorized page
+  - [ ] 16-02-PLAN.md — Wrap all 30+ routes with ProtectedRoute in App.tsx + post-login redirect
 - [ ] Phase 17: Security Lockdown (0/4 plans)
 - [ ] Phase 18: Scanner Improvements (0/4 plans)
 - [ ] Phase 19: Dashboard Data Accuracy (0/4 plans)
