@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 16 of 23 (Route Protection) — IN PROGRESS
-Plan: 1 of 2
-Status: IN PROGRESS
-Last activity: 2026-02-14 — Plan 16-01 complete (ProtectedRoute & Unauthorized page)
+Phase: 16 of 23 (Route Protection) — COMPLETE
+Plan: 2 of 2
+Status: COMPLETE
+Last activity: 2026-02-14 — Plan 16-02 complete (Applied route protection to all 33 protected routes + post-login redirect)
 
-Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 17% (6/36 plans)
+Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 19% (7/36 plans)
 
 ### v2.0 Phase Status
 
@@ -23,7 +23,7 @@ Progress: [█████░░░░░░░░░░░░░░░░░░
 |-------|------|-------|--------|
 | 14 | Auth Foundation & Account Setup | 3/3 | Complete |
 | 15 | Auth Hardening & Login Flows | 3/3 | Complete |
-| 16 | Route Protection | 1/2 | In Progress |
+| 16 | Route Protection | 2/2 | Complete |
 | 17 | Security Lockdown | 0/4 | Not Started |
 | 18 | Scanner Improvements | 0/4 | Not Started |
 | 19 | Dashboard Data Accuracy | 0/4 | Not Started |
@@ -55,7 +55,11 @@ Progress: [█████░░░░░░░░░░░░░░░░░░
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
 | 16-01 | Create ProtectedRoute wrapper and Unauthorized page | 1 | Complete |
-| 16-02 | Apply route protection to dashboard routes | 1 | Not Started |
+| 16-02 | Apply route protection to dashboard routes | 1 | Complete |
+
+### Phase 16 Complete
+
+Both plans executed in wave 1. Created ProtectedRoute wrapper component with auth, role, and DEV-mode gating. Applied route protection to all 33 protected routes (4 employee routes with auth-only, 28 owner/monitoring routes with role restriction, 1 dev route with requireDev + owner). Added post-login redirect support using location.state.from for seamless return to intended destination. P0 blocker R06 (dashboard routes not protected at route level) RESOLVED.
 
 ### Phase 15 Complete
 
@@ -233,9 +237,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 69
+- Total plans completed: 70
 - Average duration: 3.0 min
-- Total execution time: 3.6 hours
+- Total execution time: 3.7 hours
 
 **By Phase:**
 
@@ -255,16 +259,17 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 12 | 3 | 15 min | 5.0 min |
 | 14 | 3 | 20 min | 6.7 min |
 | 15 | 3 | 5 min | 1.7 min |
-| 16 | 1 | 1 min | 1.0 min |
+| 16 | 2 | 4 min | 2.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 16-01 (1 min), 15-03 (2 min), 15-02 (1.5 min), 15-01 (2 min), 14-03 (2 min)
-- Trend: Phase 16 started — route protection infrastructure
+- Last 5 plans: 16-02 (2.7 min), 16-01 (1 min), 15-03 (2 min), 15-02 (1.5 min), 15-01 (2 min)
+- Trend: Phase 16 complete — all routes protected with role-based authorization
 
 *Updated after each plan completion*
 | Phase 15 P03 | 110 | 3 tasks | 6 files |
 | Phase 15 P03 | 2 | 3 tasks | 6 files |
 | Phase 16 P01 | 63 | 2 tasks | 2 files |
+| Phase 16 P02 | 160 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -456,6 +461,10 @@ Recent decisions affecting current work:
 - [Phase 16-01]: ProtectedRoute accepts allowedRoles as optional array for flexible role combinations
 - [Phase 16-01]: requireDev check happens BEFORE auth check to hide DEV-only routes in production
 - [Phase 16-01]: Unauthorized page has role-aware navigation (owner->Dashboard, employee->Scanner)
+- [Phase 16-02]: Promoter treated as owner-equivalent for route access (simplified MVP role model)
+- [Phase 16-02]: /test-qr double-gated with requireDev + owner role (invisible in production)
+- [Phase 16-02]: Post-login redirect uses replace: true to prevent back-button to login page
+- [Phase 16-02]: Employee routes allow any authenticated user (owners can access scanner via superset access)
 
 ### Pending Todos
 
@@ -525,6 +534,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 16-01-PLAN.md (ProtectedRoute & Unauthorized page)
-Resume file: `.planning/phases/16-route-protection/16-01-SUMMARY.md`
-Next action: Continue Phase 16 via `/gsd:execute-plan 16-02`
+Stopped at: Completed Phase 16 (Route Protection) — all dashboard routes protected with role-based authorization
+Resume file: `.planning/phases/16-route-protection/16-02-SUMMARY.md`
+Next action: Begin Phase 17 (Security Lockdown) via `/gsd:execute-plan 17-01`
