@@ -313,7 +313,9 @@ const OwnerDashboard = () => {
 
       const { data: ordersData, error: ordersError } = await supabase
         .from<any>("orders")
-        .select("id, total, created_at, status, purchaser_email, purchaser_name, event_id, events(name)");
+        .select("id, total, created_at, status, purchaser_email, purchaser_name, customer_email, customer_first_name, customer_last_name, event_id, events(name), tickets(ticket_type_name, price)")
+        .order('created_at', { ascending: false })
+        .limit(10);
       if (ordersError) throw ordersError;
 
       // Transform tickets for distribution calculation
@@ -503,18 +505,31 @@ const OwnerDashboard = () => {
       setUpcomingEvents(upcomingSummaries);
       // Transform orders to match RecentPurchases component interface
       // Note: orders.total is stored in cents (like purchase site), so divide by 100 for display
-      const transformedOrders = (ordersData || []).slice(0, 10).map((order: any) => ({
-        id: order.id,
-        customer_email: order.purchaser_email || '',
-        customer_name: order.purchaser_name || null,
-        event_name: (order.events as any)?.name || 'Unknown Event',
-        ticket_type: 'General', // Default since ticket_type is not in orders table
-        ticket_count: 0, // ticket_count not stored on orders; display placeholder
-        total: Number(order.total || 0) / 100, // Convert from cents to dollars
-        status: order.status || 'pending',
-        created_at: order.created_at,
-        completed_at: order.created_at, // fallback to created_at since completed_at is not present
-      }));
+      const transformedOrders = (ordersData || []).map((order: any) => {
+        const tickets = order.tickets || [];
+        const ticketCount = tickets.length;
+
+        // Find primary ticket type: most expensive ticket in the order
+        const primaryTicket = tickets.length > 0
+          ? tickets.reduce((highest: any, ticket: any) =>
+              (Number(ticket.price) || 0) > (Number(highest.price) || 0) ? ticket : highest,
+              tickets[0]
+            )
+          : null;
+
+        return {
+          id: order.id,
+          customer_email: order.purchaser_email || order.customer_email || '',
+          customer_name: order.purchaser_name || (order.customer_first_name ? `${order.customer_first_name} ${order.customer_last_name || ''}`.trim() : null),
+          event_name: (order.events as any)?.name || 'Unknown Event',
+          ticket_type: primaryTicket?.ticket_type_name || 'Unknown',
+          ticket_count: ticketCount,
+          total: Number(order.total || 0) / 100, // Convert from cents to dollars
+          status: order.status || 'pending',
+          created_at: order.created_at,
+          completed_at: order.created_at, // fallback to created_at since completed_at is not present
+        };
+      });
       setRecentOrders(transformedOrders);
       setInsights([
         {
