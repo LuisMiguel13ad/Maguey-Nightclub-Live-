@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 19 of 23 (Dashboard Data Accuracy) — IN PROGRESS
-Plan: 1 of 4
+Plan: 2 of 4
 Status: IN PROGRESS
-Last activity: 2026-02-14 — Plan 19-01 complete (Fixed orders query with real ticket counts and types)
+Last activity: 2026-02-14 — Plan 19-02 complete (Staff name resolution service with human-readable display)
 
-Progress: [████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 33% (12/36 plans)
+Progress: [████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 36% (13/36 plans)
 
 ### v2.0 Phase Status
 
@@ -26,7 +26,7 @@ Progress: [████████░░░░░░░░░░░░░░░
 | 16 | Route Protection | 2/2 | Complete |
 | 17 | Security Lockdown | 4/4 | Complete |
 | 18 | Scanner Improvements | 0/4 | Not Started |
-| 19 | Dashboard Data Accuracy | 1/4 | In Progress |
+| 19 | Dashboard Data Accuracy | 2/4 | In Progress |
 | 20 | Dashboard & UI Bloat Cleanup | 0/4 | Not Started |
 | 21 | VIP & Events Polish | 0/5 | Not Started |
 | 22 | Code Quality & Refactoring | 0/4 | Not Started |
@@ -283,10 +283,10 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 15 | 3 | 5 min | 1.7 min |
 | 16 | 2 | 4 min | 2.0 min |
 | 17 | 4 | 7 min | 1.8 min |
-| 19 | 1 | 4 min | 4.0 min |
+| 19 | 2 | 12 min | 6.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 19-01 (4.0 min), 17-04 (0.9 min), 17-02 (4.9 min), 17-01 (2.7 min), 16-02 (2.7 min)
+- Last 5 plans: 19-02 (8.0 min), 19-01 (4.0 min), 17-04 (0.9 min), 17-02 (4.9 min), 17-01 (2.7 min)
 - Trend: Phase 19 started — dashboard data accuracy improvements (orders with real ticket data)
 
 *Updated after each plan completion*
@@ -309,6 +309,9 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-14 | 19-02 | Batch name resolution after data aggregation, not per-record | Minimize database queries - one query per unique staff ID set vs N queries |
+| 2026-02-14 | 19-02 | In-memory cache for resolved staff names | Avoid repeated queries when same staff appear in multiple views - session-lifetime cache |
+| 2026-02-14 | 19-02 | Truncated UUID fallback "Staff-{first8chars}" for unknown IDs | Better UX than 36-char UUID while maintaining uniqueness for debugging |
 | 2026-02-14 | 19-01 | Use most expensive ticket as primary type for multi-ticket orders | VIP status dominates in business logic (VIP + GA = show as VIP) — aligns with value hierarchy |
 | 2026-02-14 | 19-01 | Client-side aggregation instead of database view | Simpler implementation, no migration required, uses existing relationships, minimal performance impact (<5%) |
 | 2026-02-14 | 19-01 | Handle column name variations with fallbacks | Schema has customer_email but code expects purchaser_email — graceful handling prevents breaking changes |
@@ -577,6 +580,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 19-01-PLAN.md (Fix orders query with real ticket data)
-Resume file: `.planning/phases/19-dashboard-accuracy/19-01-SUMMARY.md`
-Next action: Continue to 19-02 (Staff name resolution) via `/gsd:execute-plan 19-02`
+Stopped at: Completed 19-02-PLAN.md (Staff name resolution service with human-readable display)
+Resume file: `.planning/phases/19-dashboard-accuracy/19-02-SUMMARY.md`
+Next action: Continue to 19-03 (Revenue trend calculations) via `/gsd:execute-plan 19-03`
