@@ -62,11 +62,11 @@
   - [x] 21-01-PLAN.md — VIP drag-and-drop floor plan positioning with @dnd-kit/core
   - [x] 21-02-PLAN.md — VIP invite link sharing (Web Share API) + cross-site sync logging
   - [x] 21-03-PLAN.md — Remove hardcoded fallback events, add sitemap/robots/JSON-LD
-- [ ] Phase 22: Code Quality & Refactoring (0/4 plans)
-  - [ ] 22-01-PLAN.md — Split orders-service.ts (2,598 lines) into 7 domain modules with barrel re-export
-  - [ ] 22-02-PLAN.md — Split AuthContext.tsx (840 lines) into 3 custom hooks composed in slim provider
-  - [ ] 22-03-PLAN.md — Organize 47 flat components into domain subdirectories (scanner, dashboard, vip, layout, shared, settings, events)
-  - [ ] 22-04-PLAN.md — Enable TypeScript strict mode on marketing site (maguey-nights)
+- [x] Phase 22: Code Quality & Refactoring (4/4 plans) — completed 2026-02-15
+  - [x] 22-01-PLAN.md — Split orders-service.ts (2,598 lines) into 7 domain modules with barrel re-export
+  - [x] 22-02-PLAN.md — Split AuthContext.tsx (840 lines) into 3 custom hooks composed in slim provider
+  - [x] 22-03-PLAN.md — Organize 47 flat components into domain subdirectories (scanner, dashboard, vip, layout, shared, settings, events)
+  - [x] 22-04-PLAN.md — Enable TypeScript strict mode on marketing site (maguey-nights)
 - [ ] Phase 23: CI/CD & Production Deployment (0/3 plans)
 
 ## Progress
@@ -94,5 +94,5 @@
 | 19. Dashboard Data Accuracy | v2.0 | 3/3 | Complete | 2026-02-14 |
 | 20. Dashboard & UI Bloat Cleanup | v2.0 | 4/4 | Complete | 2026-02-15 |
 | 21. VIP & Events Polish | v2.0 | 3/3 | Complete | 2026-02-15 |
-| 22. Code Quality & Refactoring | v2.0 | 0/4 | Not Started | — |
+| 22. Code Quality & Refactoring | v2.0 | 4/4 | Complete | 2026-02-15 |
 | 23. CI/CD & Production Deployment | v2.0 | 0/3 | Not Started | — |
