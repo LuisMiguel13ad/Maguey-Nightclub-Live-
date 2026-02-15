@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 22 of 23 (Code Quality & Refactoring) — IN PROGRESS
-Plan: 2 of 4
+Plan: 3 of 4
 Status: IN PROGRESS
-Last activity: 2026-02-15 — 22-02 complete (split AuthContext into focused hooks)
+Last activity: 2026-02-15 — 22-03 complete (organized 47 components into domain subdirectories)
 
-Progress: [█████████████████████░░░░░░░░░░░░░░░░░] 75% (27/36 plans)
+Progress: [█████████████████████░░░░░░░░░░░░░░░░░] 78% (28/36 plans)
 
 ### v2.0 Phase Status
 
@@ -29,7 +29,7 @@ Progress: [█████████████████████░░
 | 19 | Dashboard Data Accuracy | 3/3 | Complete |
 | 20 | Dashboard & UI Bloat Cleanup | 4/4 | Complete |
 | 21 | VIP & Events Polish | 3/3 | Complete |
-| 22 | Code Quality & Refactoring | 1/4 | In Progress |
+| 22 | Code Quality & Refactoring | 3/4 | In Progress |
 | 23 | CI/CD & Production Deployment | 0/3 | Not Started |
 
 ---
@@ -313,9 +313,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 80
+- Total plans completed: 81
 - Average duration: 3.2 min
-- Total execution time: 4.24 hours
+- Total execution time: 4.30 hours
 
 **By Phase:**
 
@@ -340,13 +340,14 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 19 | 3 | 15 min | 5.0 min |
 | 20 | 4 | 15 min | 3.8 min |
 | 21 | 3 | 11 min | 3.7 min |
-| 22 | 2 | 4 min | 2.0 min |
+| 22 | 3 | 10 min | 3.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 22-02 (3.0 min), 22-04 (1.3 min), 21-03 (2.2 min), 21-02 (3.5 min), 21-01 (4.0 min)
-- Trend: Phase 22 progressing — AuthContext split into focused hooks
+- Last 5 plans: 22-03 (5.7 min), 22-02 (3.0 min), 22-04 (1.3 min), 21-03 (2.2 min), 21-02 (3.5 min)
+- Trend: Phase 22 progressing — Component organization complete
 
 *Updated after each plan completion*
+| Phase 22 P03 | 343 | 2 tasks | 160 files |
 | Phase 22 P02 | 177 | 2 tasks | 4 files |
 | Phase 22 P04 | 76 | 2 tasks | 1 files |
 | Phase 21 P03 | 130 | 2 tasks | 4 files |
@@ -373,6 +374,7 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | Phase 21 P03 | 130 | 2 tasks | 4 files |
 | Phase 21 P02 | 211 | 2 tasks | 3 files |
 | Phase 22 P02 | 177 | 2 tasks | 4 files |
+| Phase 22 P03 | 343 | 2 tasks | 160 files |
 
 ## Accumulated Context
 
@@ -380,6 +382,12 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
+
+| Date | Plan | Decision | Rationale |
+|------|------|----------|-----------|
+| 2026-02-15 | 22-03 | Organized components into 8 domain subdirectories (scanner, dashboard, vip, layout, shared, settings, events, admin) | Flat 47-file directory was difficult to navigate — domain-based organization makes components discoverable by purpose |
+| 2026-02-15 | 22-03 | Created barrel index.ts files in each subdirectory for backward-compatible re-exports | Provides cleaner import statements and consistent API surface for each domain |
+| 2026-02-15 | 22-03 | Moved top-level BatteryIndicator to layout/ subdirectory (separate from scanner/BatteryIndicator) | Top-level version used only by Navigation.tsx layout component, different implementation from scanner version |
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
