@@ -3,11 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { ScrollToTop } from "./components/ScrollToTop";
+import ErrorBoundary from "./components/shared/ErrorBoundary";
+import { ScrollToTop } from "./components/shared/ScrollToTop";
 import { AuthProvider } from "./contexts/AuthContext";
 import { BrandingProvider } from "./contexts/BrandingContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { ProtectedRoute } from "./components/layout/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import EmployeeLogin from "./pages/auth/EmployeeLogin";
@@ -94,10 +94,10 @@ const AppContent = () => {
         {/* DEV-ONLY ROUTES - Blocked in production + owner role required */}
         <Route path="/test-qr" element={<ProtectedRoute requireDev allowedRoles={['owner']}><TestQrGenerator /></ProtectedRoute>} />
 
-        {/* DEV-ONLY: Monitoring Routes - Hidden in production */}
+        {/* DEV-ONLY: Monitoring Routes - Hidden in production (except /errors) */}
         <Route path="/monitoring/metrics" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><MetricsPage /></ProtectedRoute>} />
         <Route path="/monitoring/traces" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><TracesPage /></ProtectedRoute>} />
-        <Route path="/monitoring/errors" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><ErrorsPage /></ProtectedRoute>} />
+        <Route path="/monitoring/errors" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><ErrorsPage /></ProtectedRoute>} />
         <Route path="/monitoring/circuit-breakers" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><CircuitBreakersPage /></ProtectedRoute>} />
         <Route path="/monitoring/rate-limits" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><RateLimitsPage /></ProtectedRoute>} />
         <Route path="/monitoring/query-performance" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><QueryPerformancePage /></ProtectedRoute>} />

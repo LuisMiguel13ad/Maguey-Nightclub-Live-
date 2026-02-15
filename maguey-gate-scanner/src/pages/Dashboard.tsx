@@ -5,7 +5,7 @@ import { isSupabaseConfigured } from "@/integrations/supabase/client";
 import { localStorageService } from "@/lib/localStorage";
 import { useAuth, useRole } from "@/contexts/AuthContext";
 import { resolveStaffNames, getStaffDisplayName } from "@/lib/staff-name-service";
-import { Navigation } from "@/components/Navigation";
+import { Navigation } from "@/components/layout/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -70,11 +70,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { FraudAlertsWidget } from "@/components/FraudAlertsWidget";
-import { NotificationFeed } from "@/components/NotificationFeed";
-import { UnifiedCapacityDisplay } from "@/components/UnifiedCapacityDisplay";
-import { DiscrepancyAlerts } from "@/components/DiscrepancyAlerts";
-import { EntryExitFlowVisualization } from "@/components/EntryExitFlowVisualization";
+import { FraudAlertsWidget } from "@/components/dashboard/FraudAlertsWidget";
+import { NotificationFeed } from "@/components/dashboard/NotificationFeed";
+import { UnifiedCapacityDisplay } from "@/components/dashboard/UnifiedCapacityDisplay";
+import { DiscrepancyAlerts } from "@/components/dashboard/DiscrepancyAlerts";
+import { EntryExitFlowVisualization } from "@/components/dashboard/EntryExitFlowVisualization";
 import { getTicketsSoldPerEvent, getDailyWeeklySales, getCheckInRates, type TicketsSoldPerEvent, type DailyWeeklySales, type CheckInRate } from "@/lib/analytics-service";
 import { LiveIndicator } from "@/components/ui/LiveIndicator";
 import { useDashboardRealtime } from "@/hooks/useDashboardRealtime";

@@ -7,7 +7,7 @@ import { logAuditEvent } from "@/lib/audit-service";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Menu, QrCode, ListChecks, Settings, LogOut, X } from "lucide-react";
-import RoleSwitcher from "@/components/RoleSwitcher";
+import RoleSwitcher from "./RoleSwitcher";
 
 interface EmployeePortalLayoutProps {
   title?: string;

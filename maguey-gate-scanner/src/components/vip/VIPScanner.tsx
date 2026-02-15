@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { QrScanner } from '@/components/scanner/QrScanner';
-import { VipTableGuestResult } from '@/components/VipTableGuestResult';
+import { VipTableGuestResult } from './VipTableGuestResult';
 import { getGuestPassByQrToken, checkInGuestPass, verifyPassSignature, processVipScanWithReentry } from '@/services/vip-admin-service';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';

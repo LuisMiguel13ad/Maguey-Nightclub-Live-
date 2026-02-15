@@ -27,7 +27,7 @@ import {
   Crown,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { BatteryIndicator } from "@/components/BatteryIndicator";
+import { BatteryIndicator } from "./BatteryIndicator";
 import {
   DropdownMenu,
   DropdownMenuContent,
