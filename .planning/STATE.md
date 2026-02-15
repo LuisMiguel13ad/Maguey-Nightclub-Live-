@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 23 of 23 (CI/CD & Production Deployment) — IN PROGRESS
-Plan: 1 of 3
+Plan: 3 of 3
 Status: IN PROGRESS
-Last activity: 2026-02-15 — Plan 23-01 complete (CI/CD pipeline enabled with lint/test/build/e2e jobs)
+Last activity: 2026-02-15 — Plan 23-03 complete (vercel.json cleaned up, production env setup documented)
 
-Progress: [███████████████████████████████░░░░░░░] 83% (30/36 plans)
+Progress: [██████████████████████████████████░░░░] 86% (31/36 plans)
 
 ### v2.0 Phase Status
 
@@ -30,7 +30,7 @@ Progress: [███████████████████████
 | 20 | Dashboard & UI Bloat Cleanup | 4/4 | Complete |
 | 21 | VIP & Events Polish | 3/3 | Complete |
 | 22 | Code Quality & Refactoring | 4/4 | Complete |
-| 23 | CI/CD & Production Deployment | 1/3 | In Progress |
+| 23 | CI/CD & Production Deployment | 3/3 | In Progress |
 
 ---
 
@@ -54,11 +54,11 @@ All 3 plans executed across 2 waves. VIP floor plan now supports drag-and-drop t
 |------|-----------|------|--------|
 | 23-01 | GitHub Actions CI/CD pipeline setup | 1 | Complete |
 | 23-02 | Vercel deployment configuration | 1 | Not Started |
-| 23-03 | Production environment setup and secrets | 2 | Not Started |
+| 23-03 | Production environment setup and secrets | 2 | Complete |
 
 ### Phase 23 Progress
 
-Plan 23-01 complete. Enabled GitHub Actions CI/CD pipeline with sequential job dependencies (lint -> unit-test -> build -> e2e). Added lint job for all 3 workspaces, unit-test job for pass-lounge and gate-scanner, and updated build job to include maguey-nights. Fixed E2E spec duplication bug (container 1 and 2 both running happy-path). Pipeline ready to run pending GitHub secrets configuration (7 secrets required: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, STRIPE_TEST_PK, STRIPE_TEST_SK, SCANNER_TEST_EMAIL, SCANNER_TEST_PASSWORD).
+Plans 23-01 and 23-03 complete. GitHub Actions CI/CD pipeline enabled with sequential job dependencies (lint -> unit-test -> build -> e2e). All 3 workspaces included, E2E spec duplication fixed. Plan 23-03: Cleaned up maguey-pass-lounge/vercel.json (removed stale rewrites to your-backend.example.com and deprecated @ env references). Documented production environment setup: 8 Supabase Edge Function secrets (RESEND_API_KEY, QR_SIGNING_SECRET, ALLOWED_ORIGINS, etc.) and 10 Vercel environment variables across 3 projects. Tasks 1 & 3 require manual dashboard configuration - awaiting user action. Security notes: QR_SIGNING_SECRET must be rotated (old one client-exposed), ALLOWED_ORIGINS must be specific domains (not *), VITE_QR_SIGNING_SECRET must NOT be set on any frontend.
 
 ---
 
@@ -327,9 +327,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 82
+- Total plans completed: 83
 - Average duration: 3.2 min
-- Total execution time: 4.31 hours
+- Total execution time: 4.36 hours
 
 **By Phase:**
 
@@ -355,13 +355,14 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 20 | 4 | 15 min | 3.8 min |
 | 21 | 3 | 11 min | 3.7 min |
 | 22 | 4 | 11 min | 2.8 min |
-| 23 | 1 | 1 min | 1.0 min |
+| 23 | 2 | 2 min | 1.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 23-01 (1.0 min), 22-01 (7.1 min), 22-03 (5.7 min), 22-02 (3.0 min), 22-04 (1.3 min)
-- Trend: Phase 23 started — CI/CD pipeline enabled
+- Last 5 plans: 23-03 (1.4 min), 23-01 (1.0 min), 22-01 (7.1 min), 22-03 (5.7 min), 22-02 (3.0 min)
+- Trend: Phase 23 in progress — production environment setup
 
 *Updated after each plan completion*
+| Phase 23 P03 | 85 | 3 tasks | 1 files |
 | Phase 23 P01 | 62 | 1 tasks | 1 files |
 | Phase 22 P01 | 425 | 2 tasks | 10 files |
 | Phase 22 P03 | 343 | 2 tasks | 160 files |
@@ -403,6 +404,9 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-15 | 23-03 | Remove deprecated @ references from vercel.json env block | Vercel environment variables set in dashboard are auto-injected at build time for Vite apps - @ references require deprecated Vercel Secrets feature |
+| 2026-02-15 | 23-03 | Remove stale rewrites section pointing to your-backend.example.com | App uses Supabase Edge Functions directly via client SDK - no API rewrite proxy needed, prevents 404s from placeholder URL |
+| 2026-02-15 | 23-03 | Preserve all security headers during vercel.json cleanup | 10 security headers (CSP, HSTS, X-Frame-Options, etc.) are production-critical and must remain intact |
 | 2026-02-15 | 23-01 | Sequential job dependencies (lint -> unit-test -> build -> e2e) | Fail-fast approach saves CI minutes by stopping at first failure point |
 | 2026-02-15 | 23-01 | Fixed E2E spec distribution across 4 containers without duplication | Container 1 and 2 both running happy-path/**/*.cy.ts was a bug causing redundant test execution |
 | 2026-02-15 | 23-01 | Include maguey-nights in lint and build jobs | Marketing site was missing from CI pipeline despite being production-deployed |
@@ -714,6 +718,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 23-01-PLAN.md — GitHub Actions CI/CD pipeline enabled (lint -> unit-test -> build -> e2e)
-Resume file: `.planning/phases/23-cicd-deployment/23-01-SUMMARY.md`
-Next action: Continue Phase 23 — Plan 23-02 (Vercel deployment configuration)
+Stopped at: Completed 23-03-PLAN.md — vercel.json cleaned up (stale rewrites/env removed), production environment setup documented (8 Supabase secrets + 10 Vercel vars)
+Resume file: `.planning/phases/23-cicd-deployment/23-03-SUMMARY.md`
+Next action: User must complete manual Tasks 1 & 3 from plan 23-03 (configure Supabase Edge Function secrets + Vercel environment variables), then optionally proceed to plan 23-02 or phase completion
