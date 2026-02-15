@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 22 of 23 (Code Quality & Refactoring) — COMPLETE
-Plan: 4 of 4
-Status: COMPLETE
-Last activity: 2026-02-15 — Phase 22 complete (orders split, AuthContext split, component reorg, TS strict)
+Phase: 23 of 23 (CI/CD & Production Deployment) — IN PROGRESS
+Plan: 1 of 3
+Status: IN PROGRESS
+Last activity: 2026-02-15 — Plan 23-01 complete (CI/CD pipeline enabled with lint/test/build/e2e jobs)
 
-Progress: [██████████████████████████████░░░░░░░░] 81% (29/36 plans)
+Progress: [███████████████████████████████░░░░░░░] 83% (30/36 plans)
 
 ### v2.0 Phase Status
 
@@ -29,8 +29,8 @@ Progress: [███████████████████████
 | 19 | Dashboard Data Accuracy | 3/3 | Complete |
 | 20 | Dashboard & UI Bloat Cleanup | 4/4 | Complete |
 | 21 | VIP & Events Polish | 3/3 | Complete |
-| 22 | Code Quality & Refactoring | 3/4 | In Progress |
-| 23 | CI/CD & Production Deployment | 0/3 | Not Started |
+| 22 | Code Quality & Refactoring | 4/4 | Complete |
+| 23 | CI/CD & Production Deployment | 1/3 | In Progress |
 
 ---
 
@@ -48,18 +48,32 @@ All 3 plans executed across 2 waves. VIP floor plan now supports drag-and-drop t
 
 ---
 
-### Phase 22 Plans (In Progress)
+### Phase 23 Plans (In Progress)
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
-| 22-01 | Split orders-service.ts into domain modules | 1 | Not Started |
+| 23-01 | GitHub Actions CI/CD pipeline setup | 1 | Complete |
+| 23-02 | Vercel deployment configuration | 1 | Not Started |
+| 23-03 | Production environment setup and secrets | 2 | Not Started |
+
+### Phase 23 Progress
+
+Plan 23-01 complete. Enabled GitHub Actions CI/CD pipeline with sequential job dependencies (lint -> unit-test -> build -> e2e). Added lint job for all 3 workspaces, unit-test job for pass-lounge and gate-scanner, and updated build job to include maguey-nights. Fixed E2E spec duplication bug (container 1 and 2 both running happy-path). Pipeline ready to run pending GitHub secrets configuration (7 secrets required: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, STRIPE_TEST_PK, STRIPE_TEST_SK, SCANNER_TEST_EMAIL, SCANNER_TEST_PASSWORD).
+
+---
+
+### Phase 22 Plans (Complete)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 22-01 | Split orders-service.ts into domain modules | 1 | Complete |
 | 22-02 | Split AuthContext into focused hooks | 1 | Complete |
 | 22-03 | Organize scanner components into subdirectories | 1 | Complete |
 | 22-04 | Enable TypeScript strict mode on maguey-nights | 1 | Complete |
 
-### Phase 22 Progress
+### Phase 22 Complete
 
-Plan 22-02 complete. Split 840-line AuthContext.tsx into 3 domain-focused custom hooks (useAuthSession: 246 lines, useAuthMethods: 354 lines, useAuthProfile: 236 lines) composed in an 79-line provider shell. Reduced AuthContext from 840 to 79 lines (90.6% reduction). All 22 consumer files continue importing useAuth unchanged. TypeScript build passes with zero errors. Improved testability, maintainability, and cognitive load through separation of concerns (session init, OAuth/2FA, profile operations).
+All 4 code quality and refactoring plans complete. Split orders-service.ts (2,600 lines) into 6 domain modules with barrel exports. Split AuthContext.tsx (840 lines) into 3 focused hooks (useAuthSession, useAuthMethods, useAuthProfile). Organized scanner components into 8 domain subdirectories (scanner, dashboard, vip, layout, shared, settings, events, admin). Enabled TypeScript strict mode on maguey-nights with zero errors.
 
 ---
 
@@ -313,9 +327,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 81
+- Total plans completed: 82
 - Average duration: 3.2 min
-- Total execution time: 4.30 hours
+- Total execution time: 4.31 hours
 
 **By Phase:**
 
@@ -340,13 +354,16 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 19 | 3 | 15 min | 5.0 min |
 | 20 | 4 | 15 min | 3.8 min |
 | 21 | 3 | 11 min | 3.7 min |
-| 22 | 3 | 10 min | 3.3 min |
+| 22 | 4 | 11 min | 2.8 min |
+| 23 | 1 | 1 min | 1.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 22-03 (5.7 min), 22-02 (3.0 min), 22-04 (1.3 min), 21-03 (2.2 min), 21-02 (3.5 min)
-- Trend: Phase 22 progressing — Component organization complete
+- Last 5 plans: 23-01 (1.0 min), 22-01 (7.1 min), 22-03 (5.7 min), 22-02 (3.0 min), 22-04 (1.3 min)
+- Trend: Phase 23 started — CI/CD pipeline enabled
 
 *Updated after each plan completion*
+| Phase 23 P01 | 62 | 1 tasks | 1 files |
+| Phase 22 P01 | 425 | 2 tasks | 10 files |
 | Phase 22 P03 | 343 | 2 tasks | 160 files |
 | Phase 22 P02 | 177 | 2 tasks | 4 files |
 | Phase 22 P04 | 76 | 2 tasks | 1 files |
@@ -386,6 +403,9 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-15 | 23-01 | Sequential job dependencies (lint -> unit-test -> build -> e2e) | Fail-fast approach saves CI minutes by stopping at first failure point |
+| 2026-02-15 | 23-01 | Fixed E2E spec distribution across 4 containers without duplication | Container 1 and 2 both running happy-path/**/*.cy.ts was a bug causing redundant test execution |
+| 2026-02-15 | 23-01 | Include maguey-nights in lint and build jobs | Marketing site was missing from CI pipeline despite being production-deployed |
 | 2026-02-15 | 22-03 | Organized components into 8 domain subdirectories (scanner, dashboard, vip, layout, shared, settings, events, admin) | Flat 47-file directory was difficult to navigate — domain-based organization makes components discoverable by purpose |
 | 2026-02-15 | 22-03 | Created barrel index.ts files in each subdirectory for backward-compatible re-exports | Provides cleaner import statements and consistent API surface for each domain |
 | 2026-02-15 | 22-03 | Moved top-level BatteryIndicator to layout/ subdirectory (separate from scanner/BatteryIndicator) | Top-level version used only by Navigation.tsx layout component, different implementation from scanner version |
@@ -694,6 +714,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 22-02-PLAN.md — AuthContext split into focused hooks (79 lines, 3 hooks)
-Resume file: `.planning/phases/22-code-quality/22-02-SUMMARY.md`
-Next action: Continue Phase 22 — Plan 22-01 (split orders-service.ts) remaining
+Stopped at: Completed 23-01-PLAN.md — GitHub Actions CI/CD pipeline enabled (lint -> unit-test -> build -> e2e)
+Resume file: `.planning/phases/23-cicd-deployment/23-01-SUMMARY.md`
+Next action: Continue Phase 23 — Plan 23-02 (Vercel deployment configuration)
