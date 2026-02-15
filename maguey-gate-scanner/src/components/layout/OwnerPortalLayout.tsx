@@ -16,6 +16,7 @@ import {
   Calendar,
   Database,
   FileText,
+  HeartPulse,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -68,6 +69,7 @@ const sidebarSections = [
     ownerOnly: true, // Hide settings for promoters
     items: [
       { title: "Notifications", path: "/notifications/preferences", icon: Bell, ownerOnly: true },
+      { title: "System Health", path: "/monitoring/errors", icon: HeartPulse, ownerOnly: true },
     ],
   },
   {
