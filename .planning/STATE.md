@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 20 of 23 (Dashboard & UI Bloat Cleanup) — COMPLETE
-Plan: 4 of 4
-Status: COMPLETE
-Last activity: 2026-02-15 — Phase 20 complete (All 4 plans: monitoring routes, sidebar, simplified pages, NFC gating)
+Phase: 21 of 23 (VIP & Events Polish) — IN PROGRESS
+Plan: 3 of 5
+Status: IN PROGRESS
+Last activity: 2026-02-15 — Completed 21-03: Marketing site cleanup (removed fallback events, added SEO basics)
 
-Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 47% (17/36 plans)
+Progress: [██████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 61% (22/36 plans)
 
 ### v2.0 Phase Status
 
@@ -25,12 +25,28 @@ Progress: [██████████░░░░░░░░░░░░░
 | 15 | Auth Hardening & Login Flows | 3/3 | Complete |
 | 16 | Route Protection | 2/2 | Complete |
 | 17 | Security Lockdown | 4/4 | Complete |
-| 18 | Scanner Improvements | 0/4 | Not Started |
+| 18 | Scanner Improvements | 4/4 | Complete |
 | 19 | Dashboard Data Accuracy | 3/3 | Complete |
 | 20 | Dashboard & UI Bloat Cleanup | 4/4 | Complete |
-| 21 | VIP & Events Polish | 0/5 | Not Started |
+| 21 | VIP & Events Polish | 3/5 | In Progress |
 | 22 | Code Quality & Refactoring | 0/4 | Not Started |
 | 23 | CI/CD & Production Deployment | 0/3 | Not Started |
+
+---
+
+### Phase 21 Plans (In Progress)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 21-01 | VIP drag-drop table assignment UI | 1 | Not Started |
+| 21-02 | VIP sharing + cross-site event sync | 1 | Not Started |
+| 21-03 | Marketing site cleanup (remove fallback events, add SEO) | 1 | Complete |
+| 21-04 | TBD | 2 | Not Started |
+| 21-05 | TBD | 2 | Not Started |
+
+### Phase 21 Progress
+
+Plan 21-03 complete. Removed 90-line fallbackEvents object from EventPage.tsx (dead code), added sitemap.xml with 9 static routes, robots.txt Sitemap directive, and Organization/NightClub JSON-LD structured data. Requirements R29, R46, R47 RESOLVED.
 
 ---
 
@@ -77,6 +93,19 @@ Progress: [██████████░░░░░░░░░░░░░
 ### Phase 20 Complete
 
 All 4 plans executed across 2 waves. Monitoring pages (Circuit Breakers, Rate Limits, Query Performance, Traces, Scan Speed) hidden behind requireDev. Sidebar consolidated from 14 items to 8 owner-facing items with MONITORING section DEV-only. Analytics tabs renamed to Revenue/Attendance/Staff. Fraud Investigation rebranded as Security Alerts with OwnerPortalLayout. Notification Rules simplified to toggle-based UI in production (CRUD DEV-only). NFC features gated behind import.meta.env.DEV. Dashboard bloat reduced by 50% — production shows focused owner interface.
+
+### Phase 18 Plans (Complete)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 18-01 | Auto-detect tonight's event + date display in dropdown | 1 | Complete |
+| 18-02 | Offline mode: reject unknown tickets | 1 | Complete |
+| 18-03 | Log failed scans to server scan_logs | 1 | Complete |
+| 18-04 | Rate limit manual entry + display device ID | 1 | Complete |
+
+### Phase 18 Complete
+
+All 4 plans verified as already implemented in the codebase. Auto-detection of tonight's event with "TONIGHT" badge and dates in dropdown (Scanner.tsx). Offline unknown ticket rejection with "NOT IN CACHE" overlay (simple-scanner.ts, RejectionOverlay.tsx). Failed scan logging via fire-and-forget logFailedScan() at all rejection points (simple-scanner.ts). Manual entry rate limiting at 5/min per device with device ID pill in scanner header (rate-limiter.ts, Scanner.tsx). Requirements R19, R20, R21, R22, R24, R25 RESOLVED.
 
 ### Phase 17 Plans (Complete)
 
@@ -271,9 +300,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 76
-- Average duration: 3.3 min
-- Total execution time: 4.12 hours
+- Total plans completed: 77
+- Average duration: 3.2 min
+- Total execution time: 4.15 hours
 
 **By Phase:**
 
@@ -297,10 +326,11 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 17 | 4 | 7 min | 1.8 min |
 | 19 | 3 | 15 min | 5.0 min |
 | 20 | 4 | 15 min | 3.8 min |
+| 21 | 1 | 2 min | 2.2 min |
 
 **Recent Trend:**
-- Last 5 plans: 20-03 (7.0 min), 20-01 (1.3 min), 19-03 (3.0 min), 19-02 (8.0 min), 19-01 (4.0 min)
-- Trend: Phase 20 complete — dashboard bloat cleanup (simplified pages, DEV-gated features)
+- Last 5 plans: 21-03 (2.2 min), 20-03 (7.0 min), 20-01 (1.3 min), 19-03 (3.0 min), 19-02 (8.0 min)
+- Trend: Phase 21 started — marketing cleanup and VIP polish
 
 *Updated after each plan completion*
 | Phase 15 P03 | 110 | 3 tasks | 6 files |
@@ -320,6 +350,8 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | Phase 20 P03 | 424 | 2 tasks | 3 files |
 | Phase 20 P04 | 383 | 2 tasks | 2 files |
 | Phase 20 P02 | 90 | 1 tasks | 2 files |
+| Phase 21 P03 | 130 | 2 tasks | 4 files |
+| Phase 21 P03 | 130 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -542,6 +574,9 @@ Recent decisions affecting current work:
 - [Phase 20]: Use requireDev prop for monitoring routes - consistent with existing /test-qr pattern
 - [Phase 20]: Client-side devOnly filtering for sidebar sections using import.meta.env.DEV check
 - [Phase 20]: NFC feature flag pattern uses VITE_ENABLE_NFC === 'true' for fail-safe default (env var must be explicitly set to enable NFC)
+- [Phase 21-03]: Removed 90-line fallbackEvents object - dead code never referenced in component
+- [Phase 21-03]: Static sitemap covers 9 main pages - dynamic event pages deferred to Phase 23
+- [Phase 21-03]: Used NightClub schema type for JSON-LD - valid Schema.org subclass of EntertainmentBusiness
 
 ### Pending Todos
 
@@ -613,6 +648,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 20-02-PLAN.md (Simplify owner dashboard sidebar)
-Resume file: `.planning/phases/20-bloat-cleanup/20-02-SUMMARY.md`
-Next action: Phase 20 complete — all 4 plans executed. Continue to Phase 18 via `/gsd:execute-plan 18-01`
+Stopped at: Phase 18 verified complete (all scanner improvements already in codebase)
+Resume file: `.planning/phases/18-scanner-improvements/18-CONTEXT.md`
+Next action: Phase 18 complete — continue to Phase 21 (VIP & Events Polish) via `/gsd:plan-phase 21`
