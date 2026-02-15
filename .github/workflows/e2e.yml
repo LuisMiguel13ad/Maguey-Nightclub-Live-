@@ -1,0 +1,157 @@
+name: E2E Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+  VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+  VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_TEST_PK }}
+  STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SK }}
+  SCANNER_TEST_EMAIL: ${{ secrets.SCANNER_TEST_EMAIL }}
+  SCANNER_TEST_PASSWORD: ${{ secrets.SCANNER_TEST_PASSWORD }}
+
+jobs:
+  # Lint job - runs first
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Lint pass-lounge
+        run: npm run lint --workspace=maguey-pass-lounge
+      - name: Lint gate-scanner
+        run: npm run lint --workspace=maguey-gate-scanner
+      - name: Lint maguey-nights
+        run: npm run lint --workspace=maguey-nights
+
+  # Unit test job - runs after lint
+  unit-test:
+    runs-on: ubuntu-24.04
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - name: Test pass-lounge
+        run: npm run test --workspace=maguey-pass-lounge
+      - name: Test gate-scanner
+        run: npm run test --workspace=maguey-gate-scanner
+
+  # Build job - builds all 3 apps
+  build:
+    runs-on: ubuntu-24.04
+    needs: unit-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build pass-lounge
+        run: npm run build --workspace=maguey-pass-lounge
+
+      - name: Build gate-scanner
+        run: npm run build --workspace=maguey-gate-scanner
+
+      - name: Build maguey-nights
+        run: npm run build --workspace=maguey-nights
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            maguey-pass-lounge/dist
+            maguey-gate-scanner/dist
+            maguey-nights/dist
+          retention-days: 1
+
+  # E2E test job - runs in parallel containers
+  e2e:
+    runs-on: ubuntu-24.04
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        # 4 parallel workers per CONTEXT.md
+        containers: [1, 2, 3, 4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start servers
+        run: |
+          npx serve maguey-pass-lounge/dist -l 3016 &
+          npx serve maguey-gate-scanner/dist -l 3015 &
+          npx wait-on http://localhost:3016 http://localhost:3015 --timeout 120000
+
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          config-file: e2e/cypress.config.ts
+          browser: chrome
+          # Split tests across containers (no duplication)
+          # Container 1: health + smoke
+          # Container 2: happy path (3 specs)
+          # Container 3: edge cases (5 specs)
+          # Container 4: offline (2 specs)
+          spec: |
+            ${{ matrix.containers == 1 && 'e2e/specs/health-check.cy.ts,e2e/specs/smoke.cy.ts' || '' }}
+            ${{ matrix.containers == 2 && 'e2e/specs/happy-path/**/*.cy.ts' || '' }}
+            ${{ matrix.containers == 3 && 'e2e/specs/edge-cases/**/*.cy.ts' || '' }}
+            ${{ matrix.containers == 4 && 'e2e/specs/offline/**/*.cy.ts' || '' }}
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VITE_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_TEST_PK }}
+
+      - name: Upload screenshots on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots-${{ matrix.containers }}
+          path: e2e/screenshots
+          retention-days: 7
+
+      - name: Upload videos on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-videos-${{ matrix.containers }}
+          path: e2e/videos
+          retention-days: 7
