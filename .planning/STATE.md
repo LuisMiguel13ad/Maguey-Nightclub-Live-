@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 21 of 23 (VIP & Events Polish) — COMPLETE
-Plan: 3 of 3
-Status: COMPLETE
-Last activity: 2026-02-15 — Phase 21 complete (VIP drag-drop, invite sharing, marketing SEO)
+Phase: 22 of 23 (Code Quality & Refactoring) — IN PROGRESS
+Plan: 1 of 4
+Status: IN PROGRESS
+Last activity: 2026-02-15 — 22-04 complete (TypeScript strict mode on maguey-nights)
 
-Progress: [████████████████████░░░░░░░░░░░░░░░░░░░] 69% (25/36 plans)
+Progress: [████████████████████░░░░░░░░░░░░░░░░░░░] 72% (26/36 plans)
 
 ### v2.0 Phase Status
 
@@ -29,7 +29,7 @@ Progress: [████████████████████░░░
 | 19 | Dashboard Data Accuracy | 3/3 | Complete |
 | 20 | Dashboard & UI Bloat Cleanup | 4/4 | Complete |
 | 21 | VIP & Events Polish | 3/3 | Complete |
-| 22 | Code Quality & Refactoring | 0/4 | Not Started |
+| 22 | Code Quality & Refactoring | 1/4 | In Progress |
 | 23 | CI/CD & Production Deployment | 0/3 | Not Started |
 
 ---
@@ -45,6 +45,21 @@ Progress: [████████████████████░░░
 ### Phase 21 Complete
 
 All 3 plans executed across 2 waves. VIP floor plan now supports drag-and-drop table positioning with @dnd-kit/core (1000x700 logical coordinate system, database-persisted positions, optimistic updates). VIP invite sharing via Web Share API on mobile + clipboard on desktop with auto-generated invite codes. Marketing site cleaned: removed 90 lines of dead fallbackEvents code, added sitemap.xml (9 routes), robots.txt Sitemap directive, and NightClub JSON-LD structured data.
+
+---
+
+### Phase 22 Plans (In Progress)
+
+| Plan | Objective | Wave | Status |
+|------|-----------|------|--------|
+| 22-04 | Enable TypeScript strict mode on maguey-nights | 1 | Complete |
+| 22-01 | TBD | 1 | Not Started |
+| 22-02 | TBD | 1 | Not Started |
+| 22-03 | TBD | 1 | Not Started |
+
+### Phase 22 Progress
+
+Plan 22-04 complete. Enabled TypeScript strict mode on the marketing site (maguey-nights) with zero errors found across 107 TypeScript files (59 non-shadcn). The codebase already passes all strict type checks, demonstrating strong baseline code quality. Configuration changes: strict: true, noImplicitAny: true, strictNullChecks: true, noFallthroughCasesInSwitch: true. Vite build succeeds in 4.16s. 5 pre-existing 'as any' usages documented (3 CSS custom properties, 2 error handling) — all legitimate.
 
 ---
 
@@ -298,9 +313,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 78
-- Average duration: 3.3 min
-- Total execution time: 4.19 hours
+- Total plans completed: 79
+- Average duration: 3.2 min
+- Total execution time: 4.21 hours
 
 **By Phase:**
 
@@ -324,13 +339,17 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 17 | 4 | 7 min | 1.8 min |
 | 19 | 3 | 15 min | 5.0 min |
 | 20 | 4 | 15 min | 3.8 min |
-| 21 | 2 | 8 min | 4.0 min |
+| 21 | 3 | 11 min | 3.7 min |
+| 22 | 1 | 1 min | 1.3 min |
 
 **Recent Trend:**
-- Last 5 plans: 21-02 (3.5 min), 21-01 (4.0 min), 20-04 (3.8 min), 20-03 (7.0 min), 20-02 (1.5 min)
-- Trend: Phase 21 progressing — VIP sharing and sync logging complete
+- Last 5 plans: 22-04 (1.3 min), 21-03 (2.2 min), 21-02 (3.5 min), 21-01 (4.0 min), 20-04 (3.8 min)
+- Trend: Phase 22 started — TypeScript strict mode enabled on marketing site
 
 *Updated after each plan completion*
+| Phase 22 P04 | 76 | 2 tasks | 1 files |
+| Phase 21 P03 | 130 | 2 tasks | 4 files |
+| Phase 21 P02 | 211 | 2 tasks | 3 files |
 | Phase 21 P01 | 240 | 2 tasks | 5 files |
 | Phase 15 P03 | 110 | 3 tasks | 6 files |
 | Phase 15 P03 | 2 | 3 tasks | 6 files |
@@ -362,6 +381,9 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-15 | 22-04 | Enable TypeScript strict mode on marketing site first | Simplest of 3 sites (no payments/scanning) makes it ideal candidate for strict mode enablement with lowest risk |
+| 2026-02-15 | 22-04 | Keep noUnusedLocals/Parameters false for ESLint consistency | Avoids noise from intentionally unused parameters, maintains consistency with existing ESLint configuration |
+| 2026-02-15 | 22-04 | Accept pre-existing 'as any' for CSS custom properties | React CSSProperties type doesn't recognize CSS custom properties, 'as any' is legitimate pattern for style objects |
 | 2026-02-15 | 21-02 | Web Share API with clipboard fallback for invite sharing | Native mobile share sheet provides better UX than copy-paste, desktop fallback ensures universal support |
 | 2026-02-15 | 21-02 | Auto-generate invite_code on first share | Removes manual step for owner, code only generated when actually needed (lazy initialization) |
 | 2026-02-15 | 21-02 | Fire-and-forget sync logging for VIP tables | Sync log is for audit visibility, not critical path — UI shouldn't block on logging failures |
@@ -655,6 +677,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 21 complete — all 3 plans verified (11/11 must-haves)
-Resume file: `.planning/phases/21-vip-events-polish/21-VERIFICATION.md`
-Next action: Phase 21 complete — continue to Phase 22 (Code Quality & Refactoring) via `/gsd:plan-phase 22`
+Stopped at: Phase 22 plan 04 complete — TypeScript strict mode enabled on maguey-nights (0 errors)
+Resume file: `.planning/phases/22-code-quality/22-04-SUMMARY.md`
+Next action: Continue Phase 22 with remaining plans (22-01, 22-02, 22-03) via `/gsd:plan-phase 22`
