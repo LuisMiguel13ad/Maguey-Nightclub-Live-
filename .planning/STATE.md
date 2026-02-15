@@ -375,6 +375,7 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | Phase 21 P02 | 211 | 2 tasks | 3 files |
 | Phase 22 P02 | 177 | 2 tasks | 4 files |
 | Phase 22 P03 | 343 | 2 tasks | 160 files |
+| Phase 22 P01 | 425 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -620,6 +621,8 @@ Recent decisions affecting current work:
 - [Phase 21-03]: Static sitemap covers 9 main pages - dynamic event pages deferred to Phase 23
 - [Phase 21-03]: Used NightClub schema type for JSON-LD - valid Schema.org subclass of EntertainmentBusiness
 - [Phase 22-02]: Hook composition pattern over monolithic provider for auth context (session/methods/profile separation)
+- [Phase 22-01]: Split by domain concern instead of by layer - Domain-based modules (availability, order-creation, reporting) are more intuitive than layer-based modules (models, controllers, services)
+- [Phase 22-01]: Use barrel re-export pattern in orders-service.ts - Preserves backward compatibility for all 12 consumer files without requiring import changes
 
 ### Pending Todos
 
