@@ -94,13 +94,13 @@ const AppContent = () => {
         {/* DEV-ONLY ROUTES - Blocked in production + owner role required */}
         <Route path="/test-qr" element={<ProtectedRoute requireDev allowedRoles={['owner']}><TestQrGenerator /></ProtectedRoute>} />
 
-        {/* Monitoring Routes - Owner/Promoter only */}
-        <Route path="/monitoring/metrics" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><MetricsPage /></ProtectedRoute>} />
-        <Route path="/monitoring/traces" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><TracesPage /></ProtectedRoute>} />
-        <Route path="/monitoring/errors" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><ErrorsPage /></ProtectedRoute>} />
-        <Route path="/monitoring/circuit-breakers" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><CircuitBreakersPage /></ProtectedRoute>} />
-        <Route path="/monitoring/rate-limits" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><RateLimitsPage /></ProtectedRoute>} />
-        <Route path="/monitoring/query-performance" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><QueryPerformancePage /></ProtectedRoute>} />
+        {/* DEV-ONLY: Monitoring Routes - Hidden in production */}
+        <Route path="/monitoring/metrics" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><MetricsPage /></ProtectedRoute>} />
+        <Route path="/monitoring/traces" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><TracesPage /></ProtectedRoute>} />
+        <Route path="/monitoring/errors" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><ErrorsPage /></ProtectedRoute>} />
+        <Route path="/monitoring/circuit-breakers" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><CircuitBreakersPage /></ProtectedRoute>} />
+        <Route path="/monitoring/rate-limits" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><RateLimitsPage /></ProtectedRoute>} />
+        <Route path="/monitoring/query-performance" element={<ProtectedRoute requireDev allowedRoles={['owner', 'promoter']}><QueryPerformancePage /></ProtectedRoute>} />
 
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="/unauthorized" element={<Unauthorized />} />
