@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 21 of 23 (VIP & Events Polish) — IN PROGRESS
-Plan: 2 of 5
-Status: IN PROGRESS
-Last activity: 2026-02-15 — Completed 21-02: VIP invite sharing with Web Share API and sync logging
+Phase: 21 of 23 (VIP & Events Polish) — COMPLETE
+Plan: 3 of 3
+Status: COMPLETE
+Last activity: 2026-02-15 — Phase 21 complete (VIP drag-drop, invite sharing, marketing SEO)
 
-Progress: [██████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 67% (24/36 plans)
+Progress: [████████████████████░░░░░░░░░░░░░░░░░░░] 69% (25/36 plans)
 
 ### v2.0 Phase Status
 
@@ -28,27 +28,23 @@ Progress: [██████████████░░░░░░░░░
 | 18 | Scanner Improvements | 4/4 | Complete |
 | 19 | Dashboard Data Accuracy | 3/3 | Complete |
 | 20 | Dashboard & UI Bloat Cleanup | 4/4 | Complete |
-| 21 | VIP & Events Polish | 2/5 | In Progress |
+| 21 | VIP & Events Polish | 3/3 | Complete |
 | 22 | Code Quality & Refactoring | 0/4 | Not Started |
 | 23 | CI/CD & Production Deployment | 0/3 | Not Started |
 
 ---
 
-### Phase 21 Plans (In Progress)
+### Phase 21 Plans (Complete)
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
-| 21-01 | VIP drag-drop table assignment UI | 1 | Complete |
-| 21-02 | VIP sharing + cross-site event sync | 1 | Complete |
-| 21-03 | Marketing site cleanup (remove fallback events, add SEO) | 1 | Not Started |
-| 21-04 | TBD | 2 | Not Started |
-| 21-05 | TBD | 2 | Not Started |
+| 21-01 | VIP drag-drop floor plan positioning | 1 | Complete |
+| 21-02 | VIP invite sharing + cross-site sync logging | 2 | Complete |
+| 21-03 | Marketing site cleanup (remove fallback events, add SEO) | 1 | Complete |
 
-### Phase 21 Progress
+### Phase 21 Complete
 
-Plan 21-01 complete. Added drag-and-drop VIP floor plan using @dnd-kit/core with database-persisted table positions (1000x700 logical coordinate system). Created migration for position_x/position_y columns with backfill of default grid positions. Implemented optimistic updates with rollback on error. Owner can drag tables to any position, coordinates save to DB and persist across reloads.
-
-Plan 21-02 complete. Implemented one-tap VIP invite sharing with Web Share API on mobile (native share sheet) and clipboard fallback on desktop. Added auto-generation of invite codes for reservations that lack them using DB RPC with client-side UUID fallback. Created syncVipTables function in cross-site-sync.ts to log VIP table operations (create/update/delete) to cross_site_sync_log table. Fire-and-forget sync calls in handleTableEdit and handleStatusChange for audit trail without blocking UI.
+All 3 plans executed across 2 waves. VIP floor plan now supports drag-and-drop table positioning with @dnd-kit/core (1000x700 logical coordinate system, database-persisted positions, optimistic updates). VIP invite sharing via Web Share API on mobile + clipboard on desktop with auto-generated invite codes. Marketing site cleaned: removed 90 lines of dead fallbackEvents code, added sitemap.xml (9 routes), robots.txt Sitemap directive, and NightClub JSON-LD structured data.
 
 ---
 
@@ -659,6 +655,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 21-02 — VIP invite sharing with Web Share API and sync logging
-Resume file: `.planning/phases/21-vip-events-polish/21-02-SUMMARY.md`
-Next action: Continue with 21-03 (Marketing site cleanup - remove fallback events, add SEO)
+Stopped at: Phase 21 complete — all 3 plans verified (11/11 must-haves)
+Resume file: `.planning/phases/21-vip-events-polish/21-VERIFICATION.md`
+Next action: Phase 21 complete — continue to Phase 22 (Code Quality & Refactoring) via `/gsd:plan-phase 22`

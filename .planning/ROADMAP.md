@@ -58,7 +58,10 @@
   - [x] 20-02-PLAN.md — Add System Health to sidebar, finalize simplified 9-item structure
   - [x] 20-03-PLAN.md — Rename Analytics tabs, rebrand Fraud as Security Alerts, simplify Notification Rules
   - [x] 20-04-PLAN.md — Gate NFC behind VITE_ENABLE_NFC feature flag, confirm dead code status
-- [ ] Phase 21: VIP & Events Polish (0/5 plans)
+- [x] Phase 21: VIP & Events Polish (3/3 plans) — completed 2026-02-15
+  - [x] 21-01-PLAN.md — VIP drag-and-drop floor plan positioning with @dnd-kit/core
+  - [x] 21-02-PLAN.md — VIP invite link sharing (Web Share API) + cross-site sync logging
+  - [x] 21-03-PLAN.md — Remove hardcoded fallback events, add sitemap/robots/JSON-LD
 - [ ] Phase 22: Code Quality & Refactoring (0/4 plans)
 - [ ] Phase 23: CI/CD & Production Deployment (0/3 plans)
 
@@ -86,6 +89,6 @@
 | 18. Scanner Improvements | v2.0 | 4/4 | Complete | 2026-02-15 |
 | 19. Dashboard Data Accuracy | v2.0 | 3/3 | Complete | 2026-02-14 |
 | 20. Dashboard & UI Bloat Cleanup | v2.0 | 4/4 | Complete | 2026-02-15 |
-| 21. VIP & Events Polish | v2.0 | 0/5 | Not Started | — |
+| 21. VIP & Events Polish | v2.0 | 3/3 | Complete | 2026-02-15 |
 | 22. Code Quality & Refactoring | v2.0 | 0/4 | Not Started | — |
 | 23. CI/CD & Production Deployment | v2.0 | 0/3 | Not Started | — |
