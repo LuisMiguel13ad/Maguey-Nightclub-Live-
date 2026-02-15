@@ -54,6 +54,7 @@ import {
   Ticket,
   Link as LinkIcon,
   Copy,
+  Share2,
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
@@ -67,6 +68,7 @@ import {
   confirmPaymentManually,
   getEventTableStats,
   updateTablePosition,
+  generateInviteCode,
   type TableReservation,
   type VipTable,
   BOTTLE_CHOICES,
@@ -149,6 +151,7 @@ const VipTablesManagement = () => {
   }
   const [linkedTickets, setLinkedTickets] = useState<LinkedTicket[]>([]);
   const [loadingLinkedTickets, setLoadingLinkedTickets] = useState(false);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   // Fetch linked tickets when a reservation is selected
   useEffect(() => {
@@ -380,6 +383,16 @@ const VipTablesManagement = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper function for clipboard operations
+  const copyToClipboard = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: 'Invite link copied', description: 'Share this link with guests to join the VIP table' });
+    } catch {
+      toast({ title: 'Copy failed', description: url, variant: 'destructive' });
     }
   };
 
@@ -1201,26 +1214,67 @@ const VipTablesManagement = () => {
                       <Ticket className="h-4 w-4" />
                       Linked GA Tickets
                     </h4>
-                    {selectedReservation.invite_code && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => {
-                          // Use env variable with fallback for development
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs gap-1"
+                      disabled={isGeneratingCode}
+                      onClick={async () => {
+                        setIsGeneratingCode(true);
+                        try {
+                          // Ensure invite code exists
+                          let inviteCode = selectedReservation.invite_code;
+                          if (!inviteCode) {
+                            const result = await generateInviteCode(selectedReservation.id);
+                            if (result.error || !result.code) {
+                              toast({ variant: 'destructive', title: 'Error', description: result.error || 'Failed to generate invite code' });
+                              return;
+                            }
+                            inviteCode = result.code;
+                            // Update local state so the code persists in UI
+                            setSelectedReservation(prev => prev ? { ...prev, invite_code: inviteCode } : prev);
+                          }
+
                           const purchaseBaseUrl = import.meta.env.VITE_PURCHASE_SITE_URL || (import.meta.env.DEV ? 'http://localhost:3016' : 'https://tickets.maguey.club');
-                          const link = `${purchaseBaseUrl}/checkout?event=${selectedReservation.event_id}&vip=${selectedReservation.invite_code}`;
-                          navigator.clipboard.writeText(link);
-                          toast({
-                            title: 'Invite Link Copied',
-                            description: 'Share this link with guests to join the VIP table',
-                          });
-                        }}
-                      >
-                        <Copy className="h-3 w-3 mr-1" />
-                        Copy Invite Link
-                      </Button>
-                    )}
+                          const url = `${purchaseBaseUrl}/checkout?event=${selectedReservation.event_id}&vip=${inviteCode}`;
+                          const eventName = events.find(e => e.id === selectedReservation.event_id)?.name || 'Maguey VIP';
+
+                          const shareData = {
+                            title: `Join VIP Table - ${eventName}`,
+                            text: `You're invited to join Table ${selectedReservation.vip_table?.table_number || ''} at ${eventName}!`,
+                            url,
+                          };
+
+                          // Try Web Share API first (mobile native share sheet)
+                          if (navigator.canShare && navigator.canShare(shareData)) {
+                            try {
+                              await navigator.share(shareData);
+                              toast({ title: 'Shared successfully' });
+                            } catch (err: any) {
+                              if (err.name !== 'AbortError') {
+                                // Share failed, fall back to clipboard
+                                await copyToClipboard(url);
+                              }
+                              // AbortError = user cancelled, no action needed
+                            }
+                          } else {
+                            // Desktop fallback: copy to clipboard
+                            await copyToClipboard(url);
+                          }
+                        } finally {
+                          setIsGeneratingCode(false);
+                        }
+                      }}
+                    >
+                      {isGeneratingCode ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : navigator.canShare ? (
+                        <Share2 className="h-3 w-3" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                      {isGeneratingCode ? 'Generating...' : 'Share Invite'}
+                    </Button>
                   </div>
 
                   {loadingLinkedTickets ? (
@@ -1265,9 +1319,7 @@ const VipTablesManagement = () => {
                     <div className="text-center py-4 text-muted-foreground text-sm">
                       <Ticket className="h-8 w-8 mx-auto mb-2 opacity-50" />
                       <p>No linked GA tickets yet</p>
-                      {selectedReservation.invite_code && (
-                        <p className="text-xs mt-1">Share the invite link for guests to purchase</p>
-                      )}
+                      <p className="text-xs mt-1">Share the invite link for guests to purchase</p>
                     </div>
                   )}
 

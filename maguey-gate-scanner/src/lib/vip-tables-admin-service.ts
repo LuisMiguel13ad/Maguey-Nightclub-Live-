@@ -1100,6 +1100,62 @@ export const BOTTLE_CHOICES = [
 ];
 
 // ============================================================================
+// Invite Code Generation
+// ============================================================================
+
+/**
+ * Generate an invite code for a VIP reservation.
+ * Uses the database RPC generate_vip_invite_code() which creates
+ * a unique 8-char alphanumeric code.
+ */
+export async function generateInviteCode(reservationId: string): Promise<{ code: string | null; error?: string }> {
+  // First check if reservation already has a code
+  const { data: reservation, error: fetchError } = await supabase
+    .from('vip_reservations')
+    .select('invite_code')
+    .eq('id', reservationId)
+    .single();
+
+  if (fetchError) {
+    return { code: null, error: fetchError.message };
+  }
+
+  if (reservation.invite_code) {
+    return { code: reservation.invite_code };
+  }
+
+  // Generate new code via RPC
+  const { data: code, error: rpcError } = await supabase
+    .rpc('generate_vip_invite_code');
+
+  if (rpcError || !code) {
+    // Fallback: generate client-side if RPC fails
+    const fallbackCode = crypto.randomUUID().replace(/-/g, '').substring(0, 8).toUpperCase();
+    const { error: updateError } = await supabase
+      .from('vip_reservations')
+      .update({ invite_code: fallbackCode })
+      .eq('id', reservationId);
+
+    if (updateError) {
+      return { code: null, error: updateError.message };
+    }
+    return { code: fallbackCode };
+  }
+
+  // Save the generated code to the reservation
+  const { error: updateError } = await supabase
+    .from('vip_reservations')
+    .update({ invite_code: code })
+    .eq('id', reservationId);
+
+  if (updateError) {
+    return { code: null, error: updateError.message };
+  }
+
+  return { code };
+}
+
+// ============================================================================
 // Legacy Compatibility
 // ============================================================================
 
