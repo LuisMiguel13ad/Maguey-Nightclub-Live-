@@ -44,7 +44,11 @@
   - [x] 17-02-PLAN.md — Migrate all 11 Edge Functions to shared CORS handler
   - [x] 17-03-PLAN.md — Remove anonymous VIP RLS access, add token-based RPC
   - [x] 17-04-PLAN.md — Reject unsigned QR codes in scanner (manual entry preserved)
-- [ ] Phase 18: Scanner Improvements (0/4 plans)
+- [x] Phase 18: Scanner Improvements (4/4 plans) — completed 2026-02-15
+  - [x] 18-01-PLAN.md — Auto-detect tonight's event + date display in dropdown
+  - [x] 18-02-PLAN.md — Offline mode: reject unknown tickets with "NOT IN CACHE" overlay
+  - [x] 18-03-PLAN.md — Log failed scans to server scan_logs (fire-and-forget)
+  - [x] 18-04-PLAN.md — Rate limit manual entry (5/min) + display device ID in header
 - [x] Phase 19: Dashboard Data Accuracy (3/3 plans) — completed 2026-02-14
   - [x] 19-01-PLAN.md — Fix orders query with tickets join (real ticket_count/ticket_type)
   - [x] 19-02-PLAN.md — Staff name resolution service (replace UUIDs with names)
@@ -79,7 +83,7 @@
 | 15. Auth Hardening & Login Flows | v2.0 | 3/3 | Complete | 2026-02-13 |
 | 16. Route Protection | v2.0 | 2/2 | Complete | 2026-02-13 |
 | 17. Security Lockdown | v2.0 | 4/4 | Complete | 2026-02-14 |
-| 18. Scanner Improvements | v2.0 | 0/4 | Not Started | — |
+| 18. Scanner Improvements | v2.0 | 4/4 | Complete | 2026-02-15 |
 | 19. Dashboard Data Accuracy | v2.0 | 3/3 | Complete | 2026-02-14 |
 | 20. Dashboard & UI Bloat Cleanup | v2.0 | 4/4 | Complete | 2026-02-15 |
 | 21. VIP & Events Polish | v2.0 | 0/5 | Not Started | — |
