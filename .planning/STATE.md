@@ -10,10 +10,10 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 ## Current Position
 
 **Milestone:** v2.0 Launch Readiness
-Phase: 20 of 23 (Dashboard & UI Bloat Cleanup) — IN PROGRESS
+Phase: 20 of 23 (Dashboard & UI Bloat Cleanup) — COMPLETE
 Plan: 4 of 4
-Status: IN PROGRESS
-Last activity: 2026-02-15 — Completed 20-04 (Gate NFC and verify dead code)
+Status: COMPLETE
+Last activity: 2026-02-15 — Phase 20 complete (All 4 plans: monitoring routes, sidebar, simplified pages, NFC gating)
 
 Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 47% (17/36 plans)
 
@@ -71,8 +71,12 @@ Progress: [██████████░░░░░░░░░░░░░
 |------|-----------|------|--------|
 | 20-01 | Gate monitoring pages behind DEV mode | 1 | Complete |
 | 20-02 | Simplify owner dashboard sidebar | 1 | Complete |
-| 20-03 | Remove bloat candidates from production builds | 2 | Complete |
+| 20-03 | Simplify Analytics/Fraud/Notifications pages | 1 | Complete |
 | 20-04 | Gate NFC and verify dead code | 2 | Complete |
+
+### Phase 20 Complete
+
+All 4 plans executed across 2 waves. Monitoring pages (Circuit Breakers, Rate Limits, Query Performance, Traces, Scan Speed) hidden behind requireDev. Sidebar consolidated from 14 items to 8 owner-facing items with MONITORING section DEV-only. Analytics tabs renamed to Revenue/Attendance/Staff. Fraud Investigation rebranded as Security Alerts with OwnerPortalLayout. Notification Rules simplified to toggle-based UI in production (CRUD DEV-only). NFC features gated behind import.meta.env.DEV. Dashboard bloat reduced by 50% — production shows focused owner interface.
 
 ### Phase 17 Plans (Complete)
 
@@ -267,9 +271,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 75
-- Average duration: 3.2 min
-- Total execution time: 4.01 hours
+- Total plans completed: 76
+- Average duration: 3.3 min
+- Total execution time: 4.12 hours
 
 **By Phase:**
 
@@ -292,11 +296,11 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 16 | 2 | 4 min | 2.0 min |
 | 17 | 4 | 7 min | 1.8 min |
 | 19 | 3 | 15 min | 5.0 min |
-| 20 | 1 | 1 min | 1.3 min |
+| 20 | 4 | 15 min | 3.8 min |
 
 **Recent Trend:**
-- Last 5 plans: 20-01 (1.3 min), 19-03 (3.0 min), 19-02 (8.0 min), 19-01 (4.0 min), 17-04 (0.9 min)
-- Trend: Phase 20 started — dashboard bloat cleanup (monitoring pages hidden in production)
+- Last 5 plans: 20-03 (7.0 min), 20-01 (1.3 min), 19-03 (3.0 min), 19-02 (8.0 min), 19-01 (4.0 min)
+- Trend: Phase 20 complete — dashboard bloat cleanup (simplified pages, DEV-gated features)
 
 *Updated after each plan completion*
 | Phase 15 P03 | 110 | 3 tasks | 6 files |
@@ -313,6 +317,7 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | Phase 19 P03 | 3 | 2 tasks | 2 files |
 | Phase 20 P01 | 79 | 2 tasks | 2 files |
 | Phase 20 P01 | 79 | 2 tasks | 2 files |
+| Phase 20 P03 | 424 | 2 tasks | 3 files |
 | Phase 20 P04 | 383 | 2 tasks | 2 files |
 
 ## Accumulated Context
@@ -324,6 +329,9 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-15 | 20-03 | Renamed Analytics tabs to Revenue/Attendance/Staff | Generic names (Overview/Sales/Operations) don't match nightclub owner mental model — Revenue/Attendance/Staff are clear business terms |
+| 2026-02-15 | 20-03 | Changed Fraud Investigation to Security Alerts | "Investigation" sounds punitive — owners want to see "alerts" and "flags" not "investigations" |
+| 2026-02-15 | 20-03 | Gate Notification Rules CRUD behind DEV mode | v1 nightclub owner needs on/off toggles, not full rule creation — complex CRUD overwhelms and adds support burden |
 | 2026-02-15 | 20-01 | Use requireDev prop for monitoring routes - consistent with existing /test-qr pattern | Leverages existing ProtectedRoute infrastructure, no new mechanism needed |
 | 2026-02-15 | 20-01 | Client-side devOnly filtering for sidebar sections using import.meta.env.DEV check | Simple boolean check at runtime, no build-time complexity, sidebar items filtered before rendering |
 | 2026-02-14 | 19-02 | Batch name resolution after data aggregation, not per-record | Minimize database queries - one query per unique staff ID set vs N queries |
