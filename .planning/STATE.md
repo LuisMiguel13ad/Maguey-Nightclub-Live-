@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 21 of 23 (VIP & Events Polish) — IN PROGRESS
-Plan: 1 of 5
+Plan: 2 of 5
 Status: IN PROGRESS
-Last activity: 2026-02-15 — Completed 21-01: VIP drag-drop floor plan with @dnd-kit/core
+Last activity: 2026-02-15 — Completed 21-02: VIP invite sharing with Web Share API and sync logging
 
-Progress: [██████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 64% (23/36 plans)
+Progress: [██████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 67% (24/36 plans)
 
 ### v2.0 Phase Status
 
@@ -28,7 +28,7 @@ Progress: [██████████████░░░░░░░░░
 | 18 | Scanner Improvements | 4/4 | Complete |
 | 19 | Dashboard Data Accuracy | 3/3 | Complete |
 | 20 | Dashboard & UI Bloat Cleanup | 4/4 | Complete |
-| 21 | VIP & Events Polish | 1/5 | In Progress |
+| 21 | VIP & Events Polish | 2/5 | In Progress |
 | 22 | Code Quality & Refactoring | 0/4 | Not Started |
 | 23 | CI/CD & Production Deployment | 0/3 | Not Started |
 
@@ -39,7 +39,7 @@ Progress: [██████████████░░░░░░░░░
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
 | 21-01 | VIP drag-drop table assignment UI | 1 | Complete |
-| 21-02 | VIP sharing + cross-site event sync | 1 | Not Started |
+| 21-02 | VIP sharing + cross-site event sync | 1 | Complete |
 | 21-03 | Marketing site cleanup (remove fallback events, add SEO) | 1 | Not Started |
 | 21-04 | TBD | 2 | Not Started |
 | 21-05 | TBD | 2 | Not Started |
@@ -47,6 +47,8 @@ Progress: [██████████████░░░░░░░░░
 ### Phase 21 Progress
 
 Plan 21-01 complete. Added drag-and-drop VIP floor plan using @dnd-kit/core with database-persisted table positions (1000x700 logical coordinate system). Created migration for position_x/position_y columns with backfill of default grid positions. Implemented optimistic updates with rollback on error. Owner can drag tables to any position, coordinates save to DB and persist across reloads.
+
+Plan 21-02 complete. Implemented one-tap VIP invite sharing with Web Share API on mobile (native share sheet) and clipboard fallback on desktop. Added auto-generation of invite codes for reservations that lack them using DB RPC with client-side UUID fallback. Created syncVipTables function in cross-site-sync.ts to log VIP table operations (create/update/delete) to cross_site_sync_log table. Fire-and-forget sync calls in handleTableEdit and handleStatusChange for audit trail without blocking UI.
 
 ---
 
@@ -300,9 +302,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 77
-- Average duration: 3.2 min
-- Total execution time: 4.15 hours
+- Total plans completed: 78
+- Average duration: 3.3 min
+- Total execution time: 4.19 hours
 
 **By Phase:**
 
@@ -326,11 +328,11 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 17 | 4 | 7 min | 1.8 min |
 | 19 | 3 | 15 min | 5.0 min |
 | 20 | 4 | 15 min | 3.8 min |
-| 21 | 1 | 4 min | 4.0 min |
+| 21 | 2 | 8 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 21-01 (4.0 min), 20-04 (3.8 min), 20-03 (7.0 min), 20-02 (1.5 min), 20-01 (1.3 min)
-- Trend: Phase 21 started — VIP drag-drop floor plan complete
+- Last 5 plans: 21-02 (3.5 min), 21-01 (4.0 min), 20-04 (3.8 min), 20-03 (7.0 min), 20-02 (1.5 min)
+- Trend: Phase 21 progressing — VIP sharing and sync logging complete
 
 *Updated after each plan completion*
 | Phase 21 P01 | 240 | 2 tasks | 5 files |
@@ -353,6 +355,7 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | Phase 20 P02 | 90 | 1 tasks | 2 files |
 | Phase 21 P03 | 130 | 2 tasks | 4 files |
 | Phase 21 P03 | 130 | 2 tasks | 4 files |
+| Phase 21 P02 | 211 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -363,6 +366,10 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-15 | 21-02 | Web Share API with clipboard fallback for invite sharing | Native mobile share sheet provides better UX than copy-paste, desktop fallback ensures universal support |
+| 2026-02-15 | 21-02 | Auto-generate invite_code on first share | Removes manual step for owner, code only generated when actually needed (lazy initialization) |
+| 2026-02-15 | 21-02 | Fire-and-forget sync logging for VIP tables | Sync log is for audit visibility, not critical path — UI shouldn't block on logging failures |
+| 2026-02-15 | 21-02 | Client-side UUID fallback for invite code generation | If DB RPC fails, still generate valid unique code — availability over perfect uniqueness |
 | 2026-02-15 | 21-01 | 1000x700 logical coordinate system instead of pixels | Percentage-based CSS layout requires device-independent units — (x/1000)*100% maps cleanly to any container size |
 | 2026-02-15 | 21-01 | Optimistic updates with rollback on drag-drop | Instant visual feedback during drag, revert position on error — best UX with data safety |
 | 2026-02-15 | 21-01 | @dnd-kit/core only, no @dnd-kit/sortable | Free-form positioning doesn't need sortable semantics — smaller bundle, simpler API |
@@ -652,6 +659,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 21-01 — VIP drag-drop floor plan
-Resume file: `.planning/phases/21-vip-events-polish/21-01-SUMMARY.md`
-Next action: Continue with 21-02 (VIP sharing + cross-site event sync) or 21-03 (marketing site cleanup)
+Stopped at: Completed 21-02 — VIP invite sharing with Web Share API and sync logging
+Resume file: `.planning/phases/21-vip-events-polish/21-02-SUMMARY.md`
+Next action: Continue with 21-03 (Marketing site cleanup - remove fallback events, add SEO)
