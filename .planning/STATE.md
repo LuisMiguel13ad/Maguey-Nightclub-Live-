@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 20 of 23 (Dashboard & UI Bloat Cleanup) — IN PROGRESS
-Plan: 1 of 4
+Plan: 4 of 4
 Status: IN PROGRESS
-Last activity: 2026-02-15 — Completed 20-01 (Gate monitoring pages behind DEV mode)
+Last activity: 2026-02-15 — Completed 20-04 (Gate NFC and verify dead code)
 
-Progress: [█████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 42% (15/36 plans)
+Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 47% (17/36 plans)
 
 ### v2.0 Phase Status
 
@@ -27,7 +27,7 @@ Progress: [█████████░░░░░░░░░░░░░░
 | 17 | Security Lockdown | 4/4 | Complete |
 | 18 | Scanner Improvements | 0/4 | Not Started |
 | 19 | Dashboard Data Accuracy | 3/3 | Complete |
-| 20 | Dashboard & UI Bloat Cleanup | 1/4 | In Progress |
+| 20 | Dashboard & UI Bloat Cleanup | 4/4 | Complete |
 | 21 | VIP & Events Polish | 0/5 | Not Started |
 | 22 | Code Quality & Refactoring | 0/4 | Not Started |
 | 23 | CI/CD & Production Deployment | 0/3 | Not Started |
@@ -65,14 +65,14 @@ Progress: [█████████░░░░░░░░░░░░░░
 | 19-02 | Display staff names instead of UUIDs | 1 | Complete |
 | 19-03 | Optimize real-time subscriptions (targeted updates) | 2 | Complete |
 
-### Phase 20 Plans (In Progress)
+### Phase 20 Plans (Complete)
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
 | 20-01 | Gate monitoring pages behind DEV mode | 1 | Complete |
-| 20-02 | Simplify owner dashboard sidebar | 1 | Not Started |
-| 20-03 | Remove bloat candidates from production builds | 2 | Not Started |
-| 20-04 | Organize 150+ scanner components into directories | 2 | Not Started |
+| 20-02 | Simplify owner dashboard sidebar | 1 | Complete |
+| 20-03 | Remove bloat candidates from production builds | 2 | Complete |
+| 20-04 | Gate NFC and verify dead code | 2 | Complete |
 
 ### Phase 17 Plans (Complete)
 
@@ -532,6 +532,7 @@ Recent decisions affecting current work:
 - [Phase 19-03]: Compound fetch + parameters pattern for loadData refactoring to balance code reuse with clear data flow
 - [Phase 20]: Use requireDev prop for monitoring routes - consistent with existing /test-qr pattern
 - [Phase 20]: Client-side devOnly filtering for sidebar sections using import.meta.env.DEV check
+- [Phase 20]: NFC feature flag pattern uses VITE_ENABLE_NFC === 'true' for fail-safe default (env var must be explicitly set to enable NFC)
 
 ### Pending Todos
 
