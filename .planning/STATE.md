@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 21 of 23 (VIP & Events Polish) — IN PROGRESS
-Plan: 3 of 5
+Plan: 1 of 5
 Status: IN PROGRESS
-Last activity: 2026-02-15 — Completed 21-03: Marketing site cleanup (removed fallback events, added SEO basics)
+Last activity: 2026-02-15 — Completed 21-01: VIP drag-drop floor plan with @dnd-kit/core
 
-Progress: [██████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 61% (22/36 plans)
+Progress: [██████████████░░░░░░░░░░░░░░░░░░░░░░░░░] 64% (23/36 plans)
 
 ### v2.0 Phase Status
 
@@ -28,7 +28,7 @@ Progress: [██████████████░░░░░░░░░
 | 18 | Scanner Improvements | 4/4 | Complete |
 | 19 | Dashboard Data Accuracy | 3/3 | Complete |
 | 20 | Dashboard & UI Bloat Cleanup | 4/4 | Complete |
-| 21 | VIP & Events Polish | 3/5 | In Progress |
+| 21 | VIP & Events Polish | 1/5 | In Progress |
 | 22 | Code Quality & Refactoring | 0/4 | Not Started |
 | 23 | CI/CD & Production Deployment | 0/3 | Not Started |
 
@@ -38,15 +38,15 @@ Progress: [██████████████░░░░░░░░░
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
-| 21-01 | VIP drag-drop table assignment UI | 1 | Not Started |
+| 21-01 | VIP drag-drop table assignment UI | 1 | Complete |
 | 21-02 | VIP sharing + cross-site event sync | 1 | Not Started |
-| 21-03 | Marketing site cleanup (remove fallback events, add SEO) | 1 | Complete |
+| 21-03 | Marketing site cleanup (remove fallback events, add SEO) | 1 | Not Started |
 | 21-04 | TBD | 2 | Not Started |
 | 21-05 | TBD | 2 | Not Started |
 
 ### Phase 21 Progress
 
-Plan 21-03 complete. Removed 90-line fallbackEvents object from EventPage.tsx (dead code), added sitemap.xml with 9 static routes, robots.txt Sitemap directive, and Organization/NightClub JSON-LD structured data. Requirements R29, R46, R47 RESOLVED.
+Plan 21-01 complete. Added drag-and-drop VIP floor plan using @dnd-kit/core with database-persisted table positions (1000x700 logical coordinate system). Created migration for position_x/position_y columns with backfill of default grid positions. Implemented optimistic updates with rollback on error. Owner can drag tables to any position, coordinates save to DB and persist across reloads.
 
 ---
 
@@ -326,13 +326,14 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 17 | 4 | 7 min | 1.8 min |
 | 19 | 3 | 15 min | 5.0 min |
 | 20 | 4 | 15 min | 3.8 min |
-| 21 | 1 | 2 min | 2.2 min |
+| 21 | 1 | 4 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 21-03 (2.2 min), 20-03 (7.0 min), 20-01 (1.3 min), 19-03 (3.0 min), 19-02 (8.0 min)
-- Trend: Phase 21 started — marketing cleanup and VIP polish
+- Last 5 plans: 21-01 (4.0 min), 20-04 (3.8 min), 20-03 (7.0 min), 20-02 (1.5 min), 20-01 (1.3 min)
+- Trend: Phase 21 started — VIP drag-drop floor plan complete
 
 *Updated after each plan completion*
+| Phase 21 P01 | 240 | 2 tasks | 5 files |
 | Phase 15 P03 | 110 | 3 tasks | 6 files |
 | Phase 15 P03 | 2 | 3 tasks | 6 files |
 | Phase 16 P01 | 63 | 2 tasks | 2 files |
@@ -362,6 +363,9 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-15 | 21-01 | 1000x700 logical coordinate system instead of pixels | Percentage-based CSS layout requires device-independent units — (x/1000)*100% maps cleanly to any container size |
+| 2026-02-15 | 21-01 | Optimistic updates with rollback on drag-drop | Instant visual feedback during drag, revert position on error — best UX with data safety |
+| 2026-02-15 | 21-01 | @dnd-kit/core only, no @dnd-kit/sortable | Free-form positioning doesn't need sortable semantics — smaller bundle, simpler API |
 | 2026-02-15 | 20-03 | Renamed Analytics tabs to Revenue/Attendance/Staff | Generic names (Overview/Sales/Operations) don't match nightclub owner mental model — Revenue/Attendance/Staff are clear business terms |
 | 2026-02-15 | 20-03 | Changed Fraud Investigation to Security Alerts | "Investigation" sounds punitive — owners want to see "alerts" and "flags" not "investigations" |
 | 2026-02-15 | 20-03 | Gate Notification Rules CRUD behind DEV mode | v1 nightclub owner needs on/off toggles, not full rule creation — complex CRUD overwhelms and adds support burden |
@@ -648,6 +652,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 18 verified complete (all scanner improvements already in codebase)
-Resume file: `.planning/phases/18-scanner-improvements/18-CONTEXT.md`
-Next action: Phase 18 complete — continue to Phase 21 (VIP & Events Polish) via `/gsd:plan-phase 21`
+Stopped at: Completed 21-01 — VIP drag-drop floor plan
+Resume file: `.planning/phases/21-vip-events-polish/21-01-SUMMARY.md`
+Next action: Continue with 21-02 (VIP sharing + cross-site event sync) or 21-03 (marketing site cleanup)
