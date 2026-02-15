@@ -32,7 +32,7 @@ import { NFCScanner } from "@/components/NFCScanner";
 import {
   scanTicket,
   scanTicketOffline,
-  getActiveEvents,
+  getEventsFromTickets,
   debugGetSampleTickets,
 } from "@/lib/simple-scanner";
 import { ensureCacheIsFresh } from "@/lib/offline-ticket-cache";
@@ -42,8 +42,6 @@ import {
   getSyncStatus,
 } from "@/lib/offline-queue-service";
 import { sendHeartbeat } from "@/lib/scanner-status-service";
-import { manualEntryLimiter } from "@/lib/rate-limiter";
-import { getDeviceInfo } from "@/lib/battery-monitoring-service";
 import {
   hapticSuccess,
   hapticRejection,
@@ -112,8 +110,7 @@ const Scanner = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Feature flag: NFC scanning (requires hardware tags)
-  const nfcEnabled = import.meta.env.VITE_ENABLE_NFC === 'true';
+
 
   // State
   const [scanMode, setScanMode] = useState<ScanMode>("qr");
@@ -146,7 +143,7 @@ const Scanner = () => {
 
   // Event filter
   const [selectedEvent, setSelectedEvent] = useState<string>("all");
-  const [events, setEvents] = useState<{ id: string; name: string; event_date: string }[]>([]);
+  const [events, setEvents] = useState<{ id: string; name: string }[]>([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Offline state
@@ -162,9 +159,6 @@ const Scanner = () => {
   // Selected event ID for counter (separate from name for API queries)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-  // Device ID for rate limiting and display
-  const [deviceId] = useState(() => getDeviceInfo().deviceId);
-
   // Scans today counter (for heartbeat reporting)
   const [scansToday, setScansToday] = useState(() => {
     const saved = localStorage.getItem('scans_today');
@@ -174,22 +168,14 @@ const Scanner = () => {
     return 0;
   });
 
-  // Load events on mount, auto-detect tonight's event
+  // Load events on mount and debug tickets
   useEffect(() => {
     const loadEvents = async () => {
-      const eventList = await getActiveEvents(supabase);
+      const eventList = await getEventsFromTickets(supabase);
       // Guard: Only update state if component is still mounted
-      if (!mountedRef.current) return;
-      setEvents(eventList);
-
-      // Auto-detect tonight's event
-      const today = new Date().toISOString().split('T')[0];
-      const tonightEvent = eventList.find(e => e.event_date?.split('T')[0] === today);
-      if (tonightEvent) {
-        setSelectedEvent(tonightEvent.name);
-        setSelectedEventId(tonightEvent.id);
+      if (mountedRef.current) {
+        setEvents(eventList);
       }
-
       await debugGetSampleTickets(supabase);
     };
     loadEvents();
@@ -651,21 +637,9 @@ const Scanner = () => {
     setIsProcessing(false);
   };
 
-  // Handle manual form submit with rate limiting
-  const handleManualSubmit = async (e: React.FormEvent) => {
+  // Handle manual form submit
+  const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Rate limit manual entry: 5 per minute per device
-    const rateLimitResult = await manualEntryLimiter.increment(deviceId);
-    if (!rateLimitResult.allowed) {
-      toast({
-        title: "Too many attempts",
-        description: `Please wait ${rateLimitResult.retryAfter || 60} seconds before trying again.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     processScan(manualInput, "manual");
   };
 
@@ -841,16 +815,7 @@ const Scanner = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="bg-black/40 backdrop-blur-md border border-white/10 text-white rounded-full px-4 py-2 h-10 hover:bg-black/60 transition-all max-w-[140px] sm:max-w-xs">
               <span className="mr-2 truncate text-sm font-medium">
-                {selectedEvent === "all"
-                  ? "All Events"
-                  : (() => {
-                      const ev = events.find(e => e.name === selectedEvent);
-                      const date = ev?.event_date
-                        ? new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                        : '';
-                      return date ? `${selectedEvent} \u2014 ${date}` : selectedEvent;
-                    })()
-                }
+                {selectedEvent === "all" ? "All Events" : selectedEvent}
               </span>
               <ChevronDown className="h-3 w-3 opacity-70 flex-shrink-0" />
             </Button>
@@ -865,47 +830,24 @@ const Scanner = () => {
             >
               All Events
             </DropdownMenuItem>
-            {events.map((event) => {
-              const isTonight = event.event_date?.split('T')[0] === new Date().toISOString().split('T')[0];
-              const dateStr = event.event_date
-                ? new Date(event.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                : '';
-              return (
-                <DropdownMenuItem
-                  key={event.id}
-                  onClick={() => {
-                    setSelectedEvent(event.name);
-                    setSelectedEventId(event.id);
-                  }}
-                  className="focus:bg-white/10 cursor-pointer"
-                >
-                  <span className="flex items-center gap-2 w-full">
-                    <span className="truncate">{event.name}</span>
-                    <span className="text-white/50 text-xs flex-shrink-0">{dateStr}</span>
-                    {isTonight && (
-                      <span className="bg-green-500/20 text-green-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0">TONIGHT</span>
-                    )}
-                  </span>
-                </DropdownMenuItem>
-              );
-            })}
+            {events.map((event) => (
+              <DropdownMenuItem
+                key={event.id}
+                onClick={() => {
+                  setSelectedEvent(event.name);
+                  setSelectedEventId(event.id);
+                }}
+                className="focus:bg-white/10 cursor-pointer"
+              >
+                {event.name}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Device ID, Battery, and Sync Status */}
+        {/* Battery and Sync Status */}
         <div className="flex items-center gap-2">
           <BatteryIndicator />
-          <button
-            onClick={() => {
-              navigator.clipboard?.writeText(deviceId).then(() => {
-                toast({ title: "Device ID copied", description: deviceId });
-              });
-            }}
-            className="text-white/40 text-[10px] font-mono bg-black/30 px-1.5 py-0.5 rounded border border-white/5 hover:text-white/60 hover:border-white/10 transition-all"
-            title={`Device: ${deviceId}`}
-          >
-            {deviceId.slice(-6)}
-          </button>
           <div className="relative">
             <Button
               size="icon"
@@ -986,7 +928,7 @@ const Scanner = () => {
         )}
 
         {/* NFC VIEW */}
-        {nfcEnabled && scanMode === "nfc" && (
+        {scanMode === "nfc" && (
           <div className="absolute inset-0 bg-[#050505] flex items-center justify-center px-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="w-full max-w-md text-center pb-20">
               <div className="relative mb-10">
@@ -1052,20 +994,18 @@ const Scanner = () => {
           <Camera className={cn("h-8 w-8 transition-transform", scanMode === "qr" ? "scale-110" : "")} />
         </button>
 
-        {nfcEnabled && (
-          <button
-            onClick={() => handleModeChange("nfc")}
-            className={cn(
-              "flex-1 flex flex-col items-center gap-2 p-4 rounded-3xl transition-all duration-300",
-              scanMode === "nfc"
-                ? "bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-                : "text-white/40 hover:text-white/80 hover:bg-white/5"
-            )}
-          >
-            <Radio className="h-6 w-6" />
-            <span className="text-[10px] uppercase font-bold tracking-wider">NFC</span>
-          </button>
-        )}
+        <button
+          onClick={() => handleModeChange("nfc")}
+          className={cn(
+            "flex-1 flex flex-col items-center gap-2 p-4 rounded-3xl transition-all duration-300",
+            scanMode === "nfc"
+              ? "bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+              : "text-white/40 hover:text-white/80 hover:bg-white/5"
+          )}
+        >
+          <Radio className="h-6 w-6" />
+          <span className="text-[10px] uppercase font-bold tracking-wider">NFC</span>
+        </button>
       </div>
 
       {/* Success Overlay - Full screen green */}

@@ -16,7 +16,6 @@ import {
   Calendar,
   Database,
   FileText,
-  HeartPulse,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -69,13 +68,11 @@ const sidebarSections = [
     ownerOnly: true, // Hide settings for promoters
     items: [
       { title: "Notifications", path: "/notifications/preferences", icon: Bell, ownerOnly: true },
-      { title: "System Health", path: "/monitoring/errors", icon: HeartPulse, ownerOnly: true },
     ],
   },
   {
     title: "MONITORING",
     ownerOnly: true, // Hide monitoring for non-owners
-    devOnly: true, // Only show in development mode
     items: [
       { title: "Metrics", path: "/monitoring/metrics", icon: Activity, ownerOnly: true },
       { title: "Traces", path: "/monitoring/traces", icon: Zap, ownerOnly: true },
@@ -117,9 +114,8 @@ export const OwnerPortalLayout = ({ title, subtitle, description, actions, hero,
     }
   };
 
-  // Filter sections based on user role and dev mode
+  // Filter sections based on user role
   const filteredSections = sidebarSections
-    .filter((section) => !(section as any).devOnly || import.meta.env.DEV)
     .filter((section) => !section.ownerOnly || role === 'owner')
     .map((section) => ({
       ...section,

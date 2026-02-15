@@ -560,7 +560,7 @@ const AdvancedAnalytics = () => {
 
   return (
     <OwnerPortalLayout
-      title="Analytics"
+      title="Analytics Dashboard"
       description="Deep insights into revenue, attendance, and performance"
       actions={headerActions}
     >
@@ -737,24 +737,24 @@ const AdvancedAnalytics = () => {
             </div>
 
             {/* Tabbed Organization */}
-            <Tabs defaultValue="revenue" className="space-y-6">
+            <Tabs defaultValue="overview" className="space-y-6">
               <TabsList className="grid w-full grid-cols-3 lg:w-[400px] bg-indigo-500/10 border border-indigo-500/20 p-1 rounded-xl">
-                <TabsTrigger value="revenue" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
+                <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
                   <BarChart3 className="h-4 w-4" />
-                  Revenue
+                  Overview
                 </TabsTrigger>
-                <TabsTrigger value="attendance" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
+                <TabsTrigger value="sales" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
                   <ShoppingBag className="h-4 w-4" />
-                  Attendance
+                  Sales
                 </TabsTrigger>
-                <TabsTrigger value="staff" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
+                <TabsTrigger value="operations" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
                   <Settings className="h-4 w-4" />
-                  Staff
+                  Operations
                 </TabsTrigger>
               </TabsList>
 
-              {/* Tab 1: Revenue */}
-              <TabsContent value="revenue" className="space-y-6">
+              {/* Tab 1: Overview */}
+              <TabsContent value="overview" className="space-y-6">
                 {/* Enhanced Revenue Trend */}
                 <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
                   <CardHeader className="pb-2">
@@ -1158,8 +1158,8 @@ const AdvancedAnalytics = () => {
                 </div>
               </TabsContent>
 
-              {/* Tab 2: Attendance Performance */}
-              <TabsContent value="attendance" className="space-y-6">
+              {/* Tab 2: Sales Performance */}
+              <TabsContent value="sales" className="space-y-6">
                 {/* Tier Distribution */}
                 <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
                   <CardHeader>
@@ -1275,8 +1275,8 @@ const AdvancedAnalytics = () => {
             </Card>
               </TabsContent>
 
-              {/* Tab 3: Staff */}
-              <TabsContent value="staff" className="space-y-6">
+              {/* Tab 3: Operations */}
+              <TabsContent value="operations" className="space-y-6">
             {/* Staff Performance */}
                 <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
               <CardHeader>
