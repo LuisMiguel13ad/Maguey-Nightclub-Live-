@@ -73,6 +73,7 @@ import {
   type VipTable,
   BOTTLE_CHOICES,
 } from '@/lib/vip-tables-admin-service';
+import { syncVipTables } from '@/lib/cross-site-sync';
 
 interface Event {
   id: string;
@@ -469,6 +470,14 @@ const VipTablesManagement = () => {
   const handleStatusChange = async (reservationId: string, status: TableReservation['status']) => {
     try {
       await updateReservationStatus(reservationId, status);
+
+      // Log sync for purchase site visibility
+      if (selectedEventId) {
+        syncVipTables(selectedEventId, 'update').catch(err =>
+          console.warn('VIP sync log failed:', err)
+        );
+      }
+
       toast({
         title: 'Status Updated',
         description: `Reservation status changed to ${status}`,
@@ -505,6 +514,13 @@ const VipTablesManagement = () => {
       setEventVipTables(prev => prev.map(t =>
         t.id === tableId ? { ...t, ...updates } : t
       ));
+
+      // Log sync for purchase site visibility
+      if (selectedEventId) {
+        syncVipTables(selectedEventId, 'update').catch(err =>
+          console.warn('VIP sync log failed:', err)
+        );
+      }
 
       toast({
         title: 'Table Updated',
