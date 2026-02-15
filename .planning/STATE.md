@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-09)
 
 **Milestone:** v2.0 Launch Readiness
 Phase: 22 of 23 (Code Quality & Refactoring) — IN PROGRESS
-Plan: 1 of 4
+Plan: 2 of 4
 Status: IN PROGRESS
-Last activity: 2026-02-15 — 22-04 complete (TypeScript strict mode on maguey-nights)
+Last activity: 2026-02-15 — 22-02 complete (split AuthContext into focused hooks)
 
-Progress: [████████████████████░░░░░░░░░░░░░░░░░░░] 72% (26/36 plans)
+Progress: [█████████████████████░░░░░░░░░░░░░░░░░] 75% (27/36 plans)
 
 ### v2.0 Phase Status
 
@@ -52,14 +52,14 @@ All 3 plans executed across 2 waves. VIP floor plan now supports drag-and-drop t
 
 | Plan | Objective | Wave | Status |
 |------|-----------|------|--------|
+| 22-01 | Split orders-service.ts into domain modules | 1 | Not Started |
+| 22-02 | Split AuthContext into focused hooks | 1 | Complete |
+| 22-03 | Organize scanner components into subdirectories | 1 | Complete |
 | 22-04 | Enable TypeScript strict mode on maguey-nights | 1 | Complete |
-| 22-01 | TBD | 1 | Not Started |
-| 22-02 | TBD | 1 | Not Started |
-| 22-03 | TBD | 1 | Not Started |
 
 ### Phase 22 Progress
 
-Plan 22-04 complete. Enabled TypeScript strict mode on the marketing site (maguey-nights) with zero errors found across 107 TypeScript files (59 non-shadcn). The codebase already passes all strict type checks, demonstrating strong baseline code quality. Configuration changes: strict: true, noImplicitAny: true, strictNullChecks: true, noFallthroughCasesInSwitch: true. Vite build succeeds in 4.16s. 5 pre-existing 'as any' usages documented (3 CSS custom properties, 2 error handling) — all legitimate.
+Plan 22-02 complete. Split 840-line AuthContext.tsx into 3 domain-focused custom hooks (useAuthSession: 246 lines, useAuthMethods: 354 lines, useAuthProfile: 236 lines) composed in an 79-line provider shell. Reduced AuthContext from 840 to 79 lines (90.6% reduction). All 22 consumer files continue importing useAuth unchanged. TypeScript build passes with zero errors. Improved testability, maintainability, and cognitive load through separation of concerns (session init, OAuth/2FA, profile operations).
 
 ---
 
@@ -313,9 +313,9 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 79
+- Total plans completed: 80
 - Average duration: 3.2 min
-- Total execution time: 4.21 hours
+- Total execution time: 4.24 hours
 
 **By Phase:**
 
@@ -340,13 +340,14 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | 19 | 3 | 15 min | 5.0 min |
 | 20 | 4 | 15 min | 3.8 min |
 | 21 | 3 | 11 min | 3.7 min |
-| 22 | 1 | 1 min | 1.3 min |
+| 22 | 2 | 4 min | 2.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 22-04 (1.3 min), 21-03 (2.2 min), 21-02 (3.5 min), 21-01 (4.0 min), 20-04 (3.8 min)
-- Trend: Phase 22 started — TypeScript strict mode enabled on marketing site
+- Last 5 plans: 22-02 (3.0 min), 22-04 (1.3 min), 21-03 (2.2 min), 21-02 (3.5 min), 21-01 (4.0 min)
+- Trend: Phase 22 progressing — AuthContext split into focused hooks
 
 *Updated after each plan completion*
+| Phase 22 P02 | 177 | 2 tasks | 4 files |
 | Phase 22 P04 | 76 | 2 tasks | 1 files |
 | Phase 21 P03 | 130 | 2 tasks | 4 files |
 | Phase 21 P02 | 211 | 2 tasks | 3 files |
@@ -371,6 +372,7 @@ See: `.planning/phases/09-vip-end-to-end-testing/09-CONTEXT.md`
 | Phase 21 P03 | 130 | 2 tasks | 4 files |
 | Phase 21 P03 | 130 | 2 tasks | 4 files |
 | Phase 21 P02 | 211 | 2 tasks | 3 files |
+| Phase 22 P02 | 177 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -381,6 +383,9 @@ Recent decisions affecting current work:
 
 | Date | Plan | Decision | Rationale |
 |------|------|----------|-----------|
+| 2026-02-15 | 22-02 | Hook composition pattern over monolithic provider for auth context | Splits 840-line AuthContext into 3 domain hooks (session, methods, profile) for testability, maintainability, reduced cognitive load |
+| 2026-02-15 | 22-02 | Verbatim function extraction during hook split | Pure extraction with no refactoring ensures zero behavioral changes, reduces risk during large structural change |
+| 2026-02-15 | 22-02 | Preserve exact AuthContextType interface for backward compatibility | All 22 consumer files continue importing useAuth unchanged, no breaking changes to existing auth consumers |
 | 2026-02-15 | 22-04 | Enable TypeScript strict mode on marketing site first | Simplest of 3 sites (no payments/scanning) makes it ideal candidate for strict mode enablement with lowest risk |
 | 2026-02-15 | 22-04 | Keep noUnusedLocals/Parameters false for ESLint consistency | Avoids noise from intentionally unused parameters, maintains consistency with existing ESLint configuration |
 | 2026-02-15 | 22-04 | Accept pre-existing 'as any' for CSS custom properties | React CSSProperties type doesn't recognize CSS custom properties, 'as any' is legitimate pattern for style objects |
@@ -606,6 +611,7 @@ Recent decisions affecting current work:
 - [Phase 21-03]: Removed 90-line fallbackEvents object - dead code never referenced in component
 - [Phase 21-03]: Static sitemap covers 9 main pages - dynamic event pages deferred to Phase 23
 - [Phase 21-03]: Used NightClub schema type for JSON-LD - valid Schema.org subclass of EntertainmentBusiness
+- [Phase 22-02]: Hook composition pattern over monolithic provider for auth context (session/methods/profile separation)
 
 ### Pending Todos
 
@@ -677,6 +683,6 @@ After completing a milestone (set of phases), run a cleanup checkpoint:
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 22 plan 04 complete — TypeScript strict mode enabled on maguey-nights (0 errors)
-Resume file: `.planning/phases/22-code-quality/22-04-SUMMARY.md`
-Next action: Continue Phase 22 with remaining plans (22-01, 22-02, 22-03) via `/gsd:plan-phase 22`
+Stopped at: Completed 22-02-PLAN.md — AuthContext split into focused hooks (79 lines, 3 hooks)
+Resume file: `.planning/phases/22-code-quality/22-02-SUMMARY.md`
+Next action: Continue Phase 22 — Plan 22-01 (split orders-service.ts) remaining
