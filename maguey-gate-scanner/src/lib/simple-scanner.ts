@@ -35,6 +35,21 @@ export interface ScanResult {
 // UUID regex pattern
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Hash scan input for logging (don't store raw QR data for security)
+ */
+async function hashInput(input: string): Promise<string> {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+  } catch {
+    return 'hash-unavailable';
+  }
+}
+
 // VIP link check result interface
 interface VipLinkCheckResult {
   is_vip_linked: boolean;
@@ -266,6 +281,12 @@ export async function scanTicket(
     // Determine if it's a tampered/invalid signature or general invalid
     const isTampered = parsed.error.toLowerCase().includes('forged') ||
       parsed.error.toLowerCase().includes('signature');
+
+    // Log failed scan (fire-and-forget)
+    hashInput(input).then(h =>
+      logFailedScan(isTampered ? 'invalid_signature' : 'invalid_format', method, { rawInputHash: h, errorMessage: parsed.error }, userId, client)
+    );
+
     return {
       success: false,
       ticket: null,
@@ -275,6 +296,11 @@ export async function scanTicket(
   }
 
   if (!parsed.token) {
+    // Log failed scan (fire-and-forget)
+    hashInput(input).then(h =>
+      logFailedScan('invalid_input', method, { rawInputHash: h, errorMessage: 'No ticket ID found' }, userId, client)
+    );
+
     return {
       success: false,
       ticket: null,
@@ -286,6 +312,11 @@ export async function scanTicket(
   // Enforce signature verification for QR and NFC scans
   // Manual entry bypasses this check (staff can type ticket IDs directly)
   if (method !== 'manual' && !parsed.isVerified) {
+    // Log failed scan (fire-and-forget)
+    hashInput(input).then(h =>
+      logFailedScan('unsigned_qr', method, { rawInputHash: h, errorMessage: 'QR code is not signed' }, userId, client)
+    );
+
     return {
       success: false,
       ticket: null,
@@ -300,6 +331,11 @@ export async function scanTicket(
   const ticket = await findTicket(parsed.token, client);
 
   if (!ticket) {
+    // Log failed scan (fire-and-forget)
+    hashInput(parsed.token).then(h =>
+      logFailedScan('not_found', method, { rawInputHash: h, errorMessage: 'Ticket not found' }, userId, client)
+    );
+
     return {
       success: false,
       ticket: null,
@@ -342,6 +378,9 @@ export async function scanTicket(
     }
 
     // Regular GA ticket - reject re-entry
+    // Log failed scan (fire-and-forget)
+    logFailedScan('already_scanned', method, { ticketId: ticket.id, errorMessage: 'Already scanned' }, userId, client);
+
     // Format the previous scan time
     const scannedTime = ticket.scanned_at
       ? new Date(ticket.scanned_at).toLocaleTimeString('en-US', {
@@ -481,6 +520,51 @@ export async function logScan(
 
   if (error) {
     console.error('Error logging scan:', error);
+  }
+}
+
+/**
+ * Log a failed scan attempt to scan_logs for audit trail.
+ * Fire-and-forget — never blocks the scan flow.
+ */
+export async function logFailedScan(
+  scanResult: string,
+  method: 'manual' | 'qr' | 'nfc',
+  details: {
+    ticketId?: string;
+    rawInputHash?: string;
+    errorMessage?: string;
+  },
+  userId?: string,
+  client: SupabaseClient = defaultClient
+): Promise<void> {
+  try {
+    const deviceId = typeof localStorage !== 'undefined'
+      ? localStorage.getItem('scanner_device_id')
+      : null;
+
+    const { error } = await client.from('scan_logs').insert({
+      ticket_id: details.ticketId || null,
+      scanned_by: userId || null,
+      scan_result: scanResult,
+      scan_success: false,
+      device_id: deviceId,
+      scan_method: method,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        scan_method: method,
+        error_message: details.errorMessage,
+        raw_input_hash: details.rawInputHash,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      },
+    });
+
+    if (error) {
+      console.error('[simple-scanner] Error logging failed scan:', error);
+    }
+  } catch (err) {
+    // Never let logging failures interrupt the scan flow
+    console.error('[simple-scanner] Exception logging failed scan:', err);
   }
 }
 
@@ -634,16 +718,16 @@ export async function scanTicketOffline(
   const cacheResult = await validateOffline(parsed.token, eventId);
 
   if (cacheResult.status === 'not_in_cache') {
-    // Per context decision: Accept unknown tickets with warning
-    // They'll be verified when sync happens
-    console.log('[simple-scanner] Offline: Ticket not in cache, accepting with warning');
+    // Reject unknown tickets in offline mode for security
+    // Staff should connect to verify, or use manual override
+    console.log('[simple-scanner] Offline: Ticket not in cache, rejecting');
 
     return {
-      success: true,
-      ticket: null, // No ticket data available offline
-      message: 'Accepted (verify when online)',
+      success: false,
+      ticket: null,
+      message: 'Ticket not in offline cache. Connect to internet to verify.',
+      rejectionReason: 'offline_unknown',
       offlineValidated: true,
-      offlineWarning: 'Ticket not in local cache. Will verify when connection restored.',
     };
   }
 

@@ -1,0 +1,54 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+
+# Build outputs
+dist
+dist-ssr
+*.local
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.bak
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.cursor
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Supabase
+supabase/.temp
+
+# Claude
+.claude/plans
+CLAUDE.md
+
+# Large video files
+maguey-nights/public/1209.mp4
+maguey-nights/public/Maguey-nights-hero.mp4
+
+# Load test results
+load-tests/results/*.json
+
+# Binary lockfiles
+bun.lockb
+
+# Office lock files
+.~lock.*
