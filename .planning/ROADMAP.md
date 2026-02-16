@@ -26,7 +26,7 @@
 
 </details>
 
-### v2.0 Launch Readiness (Phases 14-23) — IN PROGRESS
+### v2.0 Launch Readiness (Phases 14-23) — COMPLETE (human verification pending)
 
 - [x] Phase 14: Auth Foundation & Account Setup (3/3 plans) — completed 2026-02-13
   - [x] 14-01-PLAN.md — Create Supabase auth accounts (owner + employee) + verification script
@@ -67,7 +67,10 @@
   - [x] 22-02-PLAN.md — Split AuthContext.tsx (840 lines) into 3 custom hooks composed in slim provider
   - [x] 22-03-PLAN.md — Organize 47 flat components into domain subdirectories (scanner, dashboard, vip, layout, shared, settings, events)
   - [x] 22-04-PLAN.md — Enable TypeScript strict mode on marketing site (maguey-nights)
-- [ ] Phase 23: CI/CD & Production Deployment (0/3 plans)
+- [x] Phase 23: CI/CD & Production Deployment (3/3 plans) — completed 2026-02-15
+  - [x] 23-01-PLAN.md — Fix and enable GitHub Actions CI/CD pipeline (lint, test, build, E2E)
+  - [x] 23-02-PLAN.md — Switch Stripe to production keys (manual — pending account activation)
+  - [x] 23-03-PLAN.md — Supabase secrets, Vercel env vars, clean vercel.json, deploy all 3 sites
 
 ## Progress
 
@@ -95,4 +98,4 @@
 | 20. Dashboard & UI Bloat Cleanup | v2.0 | 4/4 | Complete | 2026-02-15 |
 | 21. VIP & Events Polish | v2.0 | 3/3 | Complete | 2026-02-15 |
 | 22. Code Quality & Refactoring | v2.0 | 4/4 | Complete | 2026-02-15 |
-| 23. CI/CD & Production Deployment | v2.0 | 0/3 | Not Started | — |
+| 23. CI/CD & Production Deployment | v2.0 | 3/3 | Complete | 2026-02-15 |
