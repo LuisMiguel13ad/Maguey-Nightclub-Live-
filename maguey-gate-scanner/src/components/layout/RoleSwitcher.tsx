@@ -38,10 +38,6 @@ export const RoleSwitcher = () => {
   const navigate = useNavigate();
   const { role, refreshRole } = useAuth();
 
-  if (isSupabaseConfigured()) {
-    return null;
-  }
-
   const handleSwitch = useCallback(
     async (targetRole: UserRole) => {
       if (targetRole === role) return;
@@ -52,6 +48,10 @@ export const RoleSwitcher = () => {
     },
     [navigate, refreshRole, role],
   );
+
+  if (isSupabaseConfigured()) {
+    return null;
+  }
 
   return (
     <DropdownMenu>
@@ -85,4 +85,3 @@ export const RoleSwitcher = () => {
 };
 
 export default RoleSwitcher;
-
