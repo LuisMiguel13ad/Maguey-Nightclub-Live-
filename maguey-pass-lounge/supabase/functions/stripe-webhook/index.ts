@@ -940,7 +940,6 @@ serve(async (req) => {
                     email: customerEmail
                   });
                 });
-              }
               } catch (vipCreateError) {
               // All retries failed - notify owner
               logger.error("All VIP reservation creation retries failed", { error: vipCreateError.message, tableNumber });
