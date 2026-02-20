@@ -48,7 +48,7 @@ const reservationSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
   phone: z.string()
     .min(10, 'Phone number must be at least 10 digits')
-    .regex(/^[\d\s\-\(\)\+]+$/, 'Please enter a valid phone number'),
+    .regex(/^[\d\s\-()+]+$/, 'Please enter a valid phone number'),
   guestCount: z.number()
     .min(1, 'At least 1 guest is required'),
   bottleChoice: z.string().optional(),

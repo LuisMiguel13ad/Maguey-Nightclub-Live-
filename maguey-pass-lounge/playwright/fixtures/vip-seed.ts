@@ -28,6 +28,7 @@ export type VipFixtures = {
  * Extended test with VIP fixtures
  */
 export const test = base.extend<{}, VipFixtures>({
+  // eslint-disable-next-line no-empty-pattern
   vipTestData: [async ({}, use) => {
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
