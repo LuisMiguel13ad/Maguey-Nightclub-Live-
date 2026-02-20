@@ -30,6 +30,7 @@ export default tseslint.config(
       "no-prototype-builtins": "warn",
       "no-case-declarations": "warn",
       "no-useless-escape": "warn",
+      "no-unsafe-optional-chaining": "warn",
     },
   },
 );
