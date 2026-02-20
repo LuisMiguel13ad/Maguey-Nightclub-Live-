@@ -171,18 +171,6 @@ const EmployeeLogin = () => {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
-              Need help? Contact your manager
-            </p>
-
-            <div className="text-center">
-              <a
-                href="/auth/owner"
-                className="text-sm text-primary hover:underline"
-              >
-                Owner login →
-              </a>
-            </div>
           </form>
         </CardContent>
       </Card>
