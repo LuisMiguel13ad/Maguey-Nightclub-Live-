@@ -46,9 +46,9 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - name: Test pass-lounge
-        run: npm run test --workspace=maguey-pass-lounge
+        run: npm run test:unit --workspace=maguey-pass-lounge
       - name: Test gate-scanner
-        run: npm run test --workspace=maguey-gate-scanner
+        run: npm run test:unit --workspace=maguey-gate-scanner
 
   # Build job - builds all 3 apps
   build:
