@@ -272,7 +272,7 @@ const OwnerDashboard = () => {
   const fetchOrdersData = async () => {
     const { data, error } = await supabase
       .from<any>("orders")
-      .select("id, total, created_at, status, purchaser_email, purchaser_name, customer_email, customer_first_name, customer_last_name, event_id, events(name), tickets(ticket_type, price)")
+      .select("id, total, created_at, status, purchaser_email, purchaser_name, event_id, events(name), tickets(ticket_type, price)")
       .order('created_at', { ascending: false })
       .limit(10);
     if (error) throw error;
@@ -503,15 +503,15 @@ const OwnerDashboard = () => {
         // Find primary ticket type: most expensive ticket in the order
         const primaryTicket = tickets.length > 0
           ? tickets.reduce((highest: any, ticket: any) =>
-              (Number(ticket.price) || 0) > (Number(highest.price) || 0) ? ticket : highest,
-              tickets[0]
-            )
+            (Number(ticket.price) || 0) > (Number(highest.price) || 0) ? ticket : highest,
+            tickets[0]
+          )
           : null;
 
         return {
           id: order.id,
-          customer_email: order.purchaser_email || order.customer_email || '',
-          customer_name: order.purchaser_name || (order.customer_first_name ? `${order.customer_first_name} ${order.customer_last_name || ''}`.trim() : null),
+          customer_email: order.purchaser_email || '',
+          customer_name: order.purchaser_name || null,
           event_name: (order.events as any)?.name || 'Unknown Event',
           ticket_type: primaryTicket?.ticket_type || 'Unknown',
           ticket_count: ticketCount,
