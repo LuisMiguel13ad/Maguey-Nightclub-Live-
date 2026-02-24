@@ -272,7 +272,7 @@ const OwnerDashboard = () => {
   const fetchOrdersData = async () => {
     const { data, error } = await supabase
       .from<any>("orders")
-      .select("id, total, created_at, status, purchaser_email, purchaser_name, customer_email, customer_first_name, customer_last_name, event_id, events(name), tickets(ticket_type, price)")
+      .select("id, total, created_at, status, purchaser_email, purchaser_name, customer_email, customer_first_name, customer_last_name, event_id, events(name), tickets(ticket_type, price)") 
       .order('created_at', { ascending: false })
       .limit(10);
     if (error) throw error;
