@@ -15,10 +15,14 @@ describe('ErrorAlerter', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     mockSendEmail = vi.fn();
     mockSendSlack = vi.fn();
     mockSendWebhook = vi.fn();
+
+    // Set env vars so alert channels actually fire
+    import.meta.env.VITE_SLACK_WEBHOOK_URL = 'https://hooks.slack.com/test';
+    import.meta.env.VITE_ALERT_WEBHOOK_URL = 'https://webhook.example.com/test';
 
     // Mock fetch for Slack/webhook
     global.fetch = vi.fn().mockResolvedValue({

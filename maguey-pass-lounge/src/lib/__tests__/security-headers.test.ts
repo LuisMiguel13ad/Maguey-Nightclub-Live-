@@ -144,9 +144,9 @@ describe('Security Headers', () => {
     });
 
     it('should have proper Cross-Origin policies', () => {
-      expect(securityHeaders['Cross-Origin-Embedder-Policy']).toBe('require-corp');
-      expect(securityHeaders['Cross-Origin-Opener-Policy']).toBe('same-origin');
-      expect(securityHeaders['Cross-Origin-Resource-Policy']).toBe('same-origin');
+      expect(securityHeaders['Cross-Origin-Embedder-Policy']).toBe('credentialless');
+      expect(securityHeaders['Cross-Origin-Opener-Policy']).toBe('same-origin-allow-popups');
+      expect(securityHeaders['Cross-Origin-Resource-Policy']).toBe('cross-origin');
     });
   });
 

@@ -108,18 +108,14 @@ describe('ErrorStorage', () => {
         },
       ];
 
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            order: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue({
-                data: mockGroups,
-                error: null,
-              }),
-            }),
-          }),
-        }),
-      });
+      // Source chains: .select() → .order() → .limit() → conditionally .eq()
+      // Use a self-referencing mock so any chain order works
+      const chainMock: any = {};
+      for (const m of ['select', 'eq', 'gte', 'order', 'limit', 'single']) {
+        chainMock[m] = vi.fn().mockReturnValue(chainMock);
+      }
+      chainMock.then = (resolve: any) => resolve({ data: mockGroups, error: null });
+      mockSupabase.from.mockReturnValue(chainMock);
 
       const groups = await storage.getErrorGroups({
         status: 'open',
