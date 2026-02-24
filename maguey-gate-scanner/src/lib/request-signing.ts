@@ -171,6 +171,13 @@ class SignatureCache {
   }
 
   /**
+   * Clear cache without stopping cleanup interval
+   */
+  clear(): void {
+    this.cache.clear();
+  }
+
+  /**
    * Get cache size (for monitoring)
    */
   get size(): number {
@@ -255,6 +262,13 @@ class SecurityEventTracker {
     } else {
       this.events.set(ip, filtered);
     }
+  }
+
+  /**
+   * Clear all tracked events
+   */
+  clear(): void {
+    this.events.clear();
   }
 
   /**
@@ -661,6 +675,12 @@ export function recordSecurityEvent(event: Omit<SecurityEvent, 'timestamp'>): vo
     ...event,
     timestamp: new Date(),
   });
+}
+
+/** @internal Reset global state between tests */
+export function _resetForTesting(): void {
+  signatureCache.clear();
+  securityTracker.clear();
 }
 
 // ============================================

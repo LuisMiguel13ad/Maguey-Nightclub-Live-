@@ -5,7 +5,7 @@
  * and timestamp validation.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   createSignature,
   createSignatureHeaders,
@@ -15,6 +15,7 @@ import {
   shouldBlockIP,
   shouldAlertOnIP,
   recordSecurityEvent,
+  _resetForTesting,
   DEFAULT_MAX_AGE_SECONDS,
   DEFAULT_MAX_FUTURE_SECONDS,
   SIGNATURE_PREFIX,
@@ -26,8 +27,7 @@ describe('Request Signing', () => {
   const testBody = JSON.stringify({ ticket_id: 'TEST-001', event_name: 'Test Event' });
 
   beforeEach(() => {
-    // Clear security event tracking between tests
-    // (Note: This is a simplified reset - in production, you'd want a proper reset mechanism)
+    _resetForTesting();
   });
 
   // ============================================
@@ -47,21 +47,26 @@ describe('Request Signing', () => {
     });
 
     it('should include timestamp in signature calculation', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2025-01-01T00:00:00Z'));
+
       const signed1 = await createSignature(testBody, testSecret);
-      
-      // Wait a bit to ensure different timestamp
-      await new Promise(resolve => setTimeout(resolve, 10));
-      
+
+      // Advance by 1 second so Unix timestamp changes
+      vi.setSystemTime(new Date('2025-01-01T00:00:01Z'));
+
       const signed2 = await createSignature(testBody, testSecret);
 
       // Signatures should be different due to different timestamps
       expect(signed1.signature).not.toBe(signed2.signature);
       expect(signed1.timestamp).not.toBe(signed2.timestamp);
+
+      vi.useRealTimers();
     });
 
     it('should prefix signature with sha256=', async () => {
       const signed = await createSignature(testBody, testSecret);
-      expect(signed.signature).toStartWith(SIGNATURE_PREFIX);
+      expect(signed.signature).toMatch(/^sha256=/);
     });
 
     it('should use current Unix timestamp', async () => {
@@ -85,11 +90,16 @@ describe('Request Signing', () => {
     });
 
     it('should match signature from createSignature', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2025-01-01T00:00:00Z'));
+
       const signed = await createSignature(testBody, testSecret);
       const headers = await createSignatureHeaders(testBody, testSecret);
 
       expect(headers['X-Webhook-Signature']).toBe(signed.signature);
       expect(headers['X-Webhook-Timestamp']).toBe(signed.timestamp.toString());
+
+      vi.useRealTimers();
     });
   });
 
