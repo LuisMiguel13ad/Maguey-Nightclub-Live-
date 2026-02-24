@@ -9,7 +9,7 @@ import {
   getRecentEmailStatuses,
   retryFailedEmail,
   getEmailStatusColor,
-  getEmailStatusLabel,
+  getEmailStatusLabel
   EmailQueueStatus
 } from "@/lib/email-status-service";
 import { getScannerStatuses, ScannerStatus } from "@/lib/scanner-status-service";
@@ -272,7 +272,7 @@ const OwnerDashboard = () => {
   const fetchOrdersData = async () => {
     const { data, error } = await supabase
       .from<any>("orders")
-      .select("id, total, created_at, status, purchaser_email, purchaser_name, customer_email, customer_first_name, customer_last_name, event_id, events(name), tickets(ticket_type_name, price)")
+      .select("id, total, created_at, status, purchaser_email, purchaser_name, customer_email, customer_first_name, customer_last_name, event_id, events(name), tickets(ticket_type, price)")
       .order('created_at', { ascending: false })
       .limit(10);
     if (error) throw error;
@@ -513,7 +513,7 @@ const OwnerDashboard = () => {
           customer_email: order.purchaser_email || order.customer_email || '',
           customer_name: order.purchaser_name || (order.customer_first_name ? `${order.customer_first_name} ${order.customer_last_name || ''}`.trim() : null),
           event_name: (order.events as any)?.name || 'Unknown Event',
-          ticket_type: primaryTicket?.ticket_type_name || 'Unknown',
+          ticket_type: primaryTicket?.ticket_type || 'Unknown',
           ticket_count: ticketCount,
           total: Number(order.total || 0) / 100, // Convert from cents to dollars
           status: order.status || 'pending',
