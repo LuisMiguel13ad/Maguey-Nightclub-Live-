@@ -9,7 +9,7 @@ import {
   getRecentEmailStatuses,
   retryFailedEmail,
   getEmailStatusColor,
-  getEmailStatusLabel
+  getEmailStatusLabel,
   EmailQueueStatus
 } from "@/lib/email-status-service";
 import { getScannerStatuses, ScannerStatus } from "@/lib/scanner-status-service";
