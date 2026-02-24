@@ -1,3 +1,4 @@
+import React from 'react';
 import { toast } from "sonner";
 
 // Error message catalog - professional/formal tone (per context decision)
@@ -50,18 +51,18 @@ export function showError(
   const message = ERROR_MESSAGES[type as ErrorType] || ERROR_MESSAGES.generic;
   const { onRetry, supportEmail = "support@maguey.com" } = options;
 
-  toast.error(message, {
+  toast.error(React.createElement('span', { 'data-cy': type.includes('payment') ? "payment-error" : "error" }, message), {
     duration: Infinity, // Persist until dismissed (per context decision)
     closeButton: true,
     action: onRetry
       ? {
-          label: "Try Again",
-          onClick: onRetry,
-        }
+        label: "Try Again",
+        onClick: onRetry,
+      }
       : {
-          label: "Contact Support",
-          onClick: () => window.location.href = `mailto:${supportEmail}`,
-        },
+        label: "Contact Support",
+        onClick: () => window.location.href = `mailto:${supportEmail}`,
+      },
   });
 }
 

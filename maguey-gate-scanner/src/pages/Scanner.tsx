@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, useRole } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { isSupabaseConfigured } from "@/lib/supabase-config";
+import { localStorageService } from "@/lib/localStorage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -808,10 +810,14 @@ const Scanner = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      if (isSupabaseConfigured()) {
+        await supabase.auth.signOut();
+      }
+      if (import.meta.env.DEV) {
+        localStorageService.clearUser();
+      }
     } catch (error) {
       console.error('Error during sign out:', error);
-      // Continue to login page even if signOut fails
     } finally {
       navigate("/auth/employee");
     }
@@ -825,7 +831,7 @@ const Scanner = () => {
   ];
 
   return (
-    <div className="min-h-[100dvh] w-full bg-black text-white relative overflow-hidden flex flex-col font-sans">
+    <div data-cy="scanner-container" className="min-h-[100dvh] w-full bg-black text-white relative overflow-hidden flex flex-col font-sans">
 
       {/* Offline Banner - very top, above everything */}
       <OfflineBanner className="fixed top-0 left-0 right-0 z-[70]" />
@@ -913,12 +919,12 @@ const Scanner = () => {
                 {selectedEvent === "all"
                   ? "All Events"
                   : (() => {
-                      const ev = events.find(e => e.name === selectedEvent);
-                      const date = ev?.event_date
-                        ? new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                        : '';
-                      return date ? `${selectedEvent} \u2014 ${date}` : selectedEvent;
-                    })()
+                    const ev = events.find(e => e.name === selectedEvent);
+                    const date = ev?.event_date
+                      ? new Date(ev.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      : '';
+                    return date ? `${selectedEvent} \u2014 ${date}` : selectedEvent;
+                  })()
                 }
               </span>
               <ChevronDown className="h-3 w-3 opacity-70 flex-shrink-0" />
@@ -1034,6 +1040,7 @@ const Scanner = () => {
                 <div className="relative">
                   <Input
                     type="text"
+                    data-cy="manual-entry"
                     placeholder="MAGUEY-XXXX"
                     value={manualInput}
                     onChange={(e) => setManualInput(e.target.value)}
@@ -1044,6 +1051,7 @@ const Scanner = () => {
                 </div>
                 <Button
                   type="submit"
+                  data-cy="lookup-button"
                   disabled={!manualInput.trim() || isProcessing}
                   className="w-full h-14 text-lg font-bold rounded-2xl bg-purple-600 hover:bg-purple-500 shadow-lg shadow-purple-900/20"
                 >
@@ -1098,6 +1106,7 @@ const Scanner = () => {
       <div className="pt-2 pb-8 px-8 bg-black/80 backdrop-blur-2xl border-t border-white/5 z-50 flex items-end justify-between gap-6 fixed bottom-0 left-0 right-0">
         <button
           onClick={() => handleModeChange("manual")}
+          data-cy="manual-toggle"
           className={cn(
             "flex-1 flex flex-col items-center gap-2 p-4 rounded-3xl transition-all duration-300",
             scanMode === "manual"

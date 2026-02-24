@@ -605,159 +605,68 @@ const VipTablesManagement = () => {
         </Button>
       }
     >
-      <div className="space-y-6">
-        {/* Event Selector */}
-        <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <Label htmlFor="event-select" className="text-sm font-medium text-slate-300">Select Event</Label>
-                <Select
-                  value={selectedEventId || ''}
-                  onValueChange={setSelectedEventId}
-                >
-                  <SelectTrigger id="event-select" className="bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
-                    <SelectValue placeholder="Select an event" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0b132f] border-indigo-500/30">
-                    {events.map((event) => (
-                      <SelectItem key={event.id} value={event.id} className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
-                        {event.name} - {format(new Date(event.event_date), 'MMM d, yyyy')}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1">
-                <Label htmlFor="search" className="text-sm font-medium text-slate-300">Search Reservations</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="search"
-                    placeholder="Name, phone, or reservation #"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
-                  />
+      <div className="space-y-3">
+        {/* Consolidated toolbar: event dropdown + inline stats + tabs + edit button */}
+        <Tabs defaultValue="floor-plan" className="space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            {/* Left: event dropdown + inline stats */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <Select
+                value={selectedEventId || ''}
+                onValueChange={setSelectedEventId}
+              >
+                <SelectTrigger className="w-[220px] h-9 text-sm bg-indigo-500/20 border-indigo-500/30 text-white hover:bg-indigo-500/30 focus:ring-indigo-500/50">
+                  <SelectValue placeholder="Select event" />
+                </SelectTrigger>
+                <SelectContent className="bg-[#0b132f] border-indigo-500/30">
+                  {events.map((event) => (
+                    <SelectItem key={event.id} value={event.id} className="text-white hover:bg-indigo-500/20 focus:bg-indigo-500/20">
+                      {event.name} - {format(new Date(event.event_date), 'MMM d')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {stats && (
+                <div className="flex items-center gap-3 text-xs text-zinc-400">
+                  <span><Crown className="inline w-3.5 h-3.5 text-yellow-500 mr-1" /><strong className="text-white">{stats.reservedTables}/{stats.totalTables}</strong> reserved</span>
+                  <span><DollarSign className="inline w-3.5 h-3.5 text-green-500 mr-1" /><strong className="text-white">${stats.totalRevenue.toLocaleString()}</strong></span>
+                  <span><Users className="inline w-3.5 h-3.5 text-blue-500 mr-1" /><strong className="text-white">{stats.totalGuests}</strong> guests</span>
+                  <span><UserCheck className="inline w-3.5 h-3.5 text-purple-500 mr-1" /><strong className="text-white">{stats.checkedInGuests}/{stats.totalGuests}</strong> in</span>
                 </div>
-              </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Stats Cards */}
-        {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Crown className="h-5 w-5 text-yellow-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Reserved</p>
-                    <p className="text-2xl font-bold">{stats.reservedTables}/{stats.totalTables}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Right: tabs + edit button */}
+            <div className="flex items-center gap-2">
+              <TabsList className="bg-indigo-500/10 border border-indigo-500/20 p-1 rounded-xl">
+                <TabsTrigger value="floor-plan" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
+                  <Map className="w-4 h-4" />
+                  Floor Plan
+                </TabsTrigger>
+                <TabsTrigger value="reservations" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
+                  <List className="w-4 h-4" />
+                  Reservations ({filteredReservations.length})
+                </TabsTrigger>
+              </TabsList>
 
-            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-green-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Revenue</p>
-                    <p className="text-2xl font-bold">${stats.totalRevenue.toLocaleString()}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-blue-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Guests</p>
-                    <p className="text-2xl font-bold">{stats.totalGuests}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <UserCheck className="h-5 w-5 text-purple-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Checked In</p>
-                    <p className="text-2xl font-bold">{stats.checkedInGuests}/{stats.totalGuests}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Available</p>
-                    <p className="text-2xl font-bold">{stats.availableTables}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              <Button
+                variant={isEditMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setIsEditMode(!isEditMode);
+                  setEditingTableId(null);
+                }}
+                className={`gap-1.5 ${isEditMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10'}`}
+              >
+                <Edit className="h-3.5 w-3.5" />
+                {isEditMode ? 'Done' : 'Edit'}
+              </Button>
+            </div>
           </div>
-        )}
 
-        {/* Main Content with Tabs */}
-        <Tabs defaultValue="floor-plan" className="space-y-4">
-          <TabsList className="bg-indigo-500/10 border border-indigo-500/20 p-1 rounded-xl">
-            <TabsTrigger value="floor-plan" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
-              <Map className="w-4 h-4" />
-              Floor Plan
-            </TabsTrigger>
-            <TabsTrigger value="reservations" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
-              <List className="w-4 h-4" />
-              Reservations ({filteredReservations.length})
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Floor Plan Tab */}
-          <TabsContent value="floor-plan">
-            <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
-              <CardHeader className="pb-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Map className="h-5 w-5 text-emerald-500" />
-                      VIP Table Layout
-                      {selectedEvent && (
-                        <Badge variant="outline" className="ml-2">
-                          {selectedEvent.name}
-                        </Badge>
-                      )}
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      {isEditMode 
-                        ? 'Click on a table to edit pricing, capacity & services.'
-                        : 'Click on a table to view details or reservation info.'}
-                    </CardDescription>
-                  </div>
-                  <Button
-                    variant={isEditMode ? "default" : "outline"}
-                    onClick={() => {
-                      setIsEditMode(!isEditMode);
-                      setEditingTableId(null);
-                    }}
-                    className={`gap-2 ${isEditMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10'}`}
-                  >
-                    <Edit className="h-4 w-4" />
-                    {isEditMode ? 'Done Editing' : 'Edit Map & Pricing'}
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
+          {/* Floor Plan Tab — rendered directly, no card wrapper */}
+          <TabsContent value="floor-plan" className="mt-0">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -998,27 +907,38 @@ const VipTablesManagement = () => {
                     )}
                   </div>
                 )}
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Reservations Tab */}
           <TabsContent value="reservations">
             <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Crown className="h-5 w-5 text-yellow-500" />
-                  Reservations
-                  {selectedEvent && (
-                    <Badge variant="outline" className="ml-2">
-                      {selectedEvent.name}
-                    </Badge>
-                  )}
-                </CardTitle>
-                <CardDescription>
-                  {filteredReservations.length} reservation{filteredReservations.length !== 1 ? 's' : ''}
-                  {searchQuery && ` matching "${searchQuery}"`}
-                </CardDescription>
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Crown className="h-5 w-5 text-yellow-500" />
+                      Reservations
+                      {selectedEvent && (
+                        <Badge variant="outline" className="ml-2">
+                          {selectedEvent.name}
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {filteredReservations.length} reservation{filteredReservations.length !== 1 ? 's' : ''}
+                      {searchQuery && ` matching "${searchQuery}"`}
+                    </CardDescription>
+                  </div>
+                  <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="Name, phone, or reservation #"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 h-9 text-sm bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
+                    />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
             {isLoading ? (

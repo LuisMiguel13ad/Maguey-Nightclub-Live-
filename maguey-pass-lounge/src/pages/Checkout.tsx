@@ -169,7 +169,7 @@ const Checkout = () => {
           .from('vip_reservations')
           .select('id, purchaser_name, table_number, invite_code, event_vip_tables(capacity, tier)')
           .eq('invite_code', inviteCode)
-          .single();
+          .single() as any;
 
         if (!error && reservation) {
           setVipReservation(reservation);
@@ -178,7 +178,7 @@ const Checkout = () => {
           const { count } = await supabase
             .from('vip_linked_tickets')
             .select('*', { count: 'exact', head: true })
-            .eq('vip_reservation_id', reservation.id);
+            .eq('vip_reservation_id', (reservation as any).id);
 
           setVipLinkedCount(count || 0);
         }
@@ -345,12 +345,12 @@ const Checkout = () => {
   const updateQuantity = (ticketId: string, delta: number) => {
     const ticket = event?.ticketTypes.find(t => t.id === ticketId);
     if (!ticket) return;
-    
+
     const currentTicket = selectedTickets[ticketId];
     const currentQuantity = currentTicket?.quantity || 0;
     const max = ticket.limit_per_order ?? 10;
     const newQuantity = Math.max(0, Math.min(currentQuantity + delta, max));
-    
+
     if (newQuantity === 0) {
       // Remove ticket from selection if quantity becomes 0
       const updated = { ...selectedTickets };
@@ -380,7 +380,7 @@ const Checkout = () => {
   const selectTicket = (ticketId: string) => {
     const ticket = event?.ticketTypes.find(t => t.id === ticketId);
     if (!ticket) return;
-    
+
     const currentQuantity = selectedTickets[ticketId]?.quantity || 0;
     setSelectedTickets({
       ...selectedTickets,
@@ -607,13 +607,13 @@ const Checkout = () => {
   return (
     <div className="min-h-screen bg-forest-950 text-stone-300 overflow-x-hidden">
       <h1 className="sr-only">Checkout</h1>
-      
+
       {/* Custom Cursor */}
       <CustomCursor />
-      
+
       {/* Noise Overlay */}
       <div className="noise-overlay" />
-      
+
       {/* Grid Background */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0">
         <svg width="100%" height="100%">
@@ -691,244 +691,244 @@ const Checkout = () => {
         <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
           {/* Step 1 & 2 Content */}
           <FadeTransition show={checkoutStep === 1 || checkoutStep === 2}>
-          <div className="grid lg:grid-cols-[42%_58%] gap-8 lg:gap-12 items-start">
-            {/* Event Poster - Left Side (~42% width) */}
-            <div className="relative">
-              <div className="aspect-[3/4] relative overflow-hidden rounded-sm glass-panel p-2">
-                <img
-                  src={eventImageUrl}
-                  alt={event.name}
-                  className="w-full h-full object-contain rounded-sm"
-                />
-              </div>
-            </div>
-
-            {/* Event Details and Ticket Selection - Right Side */}
-            <div className="space-y-6">
-              {/* Event Header */}
-              <div>
-                <h1 className="font-serif text-4xl lg:text-5xl mb-4 text-stone-100">
-                  {event.name.toUpperCase()}
-                </h1>
-                <p className="text-lg text-copper-400 mb-2">
-                  {dateInfo.full}
-                </p>
-                <p className="text-stone-400">
-                  at {eventVenue}
-                </p>
+            <div className="grid lg:grid-cols-[42%_58%] gap-8 lg:gap-12 items-start">
+              {/* Event Poster - Left Side (~42% width) */}
+              <div className="relative">
+                <div className="aspect-[3/4] relative overflow-hidden rounded-sm glass-panel p-2">
+                  <img
+                    src={eventImageUrl}
+                    alt={event.name}
+                    className="w-full h-full object-contain rounded-sm"
+                  />
+                </div>
               </div>
 
-              {/* Ticket Selection Card - Glass Panel Style */}
-              <div className="glass-panel rounded-sm p-4 space-y-0">
-                {(() => {
-                  // Group tickets by category
-                  const groupedTickets = event.ticketTypes.reduce((acc, ticket) => {
-                    const category = ticket.category || 'general';
-                    if (!acc[category]) {
-                      acc[category] = [];
-                    }
-                    acc[category].push(ticket);
-                    return acc;
-                  }, {} as Record<string, typeof event.ticketTypes>);
+              {/* Event Details and Ticket Selection - Right Side */}
+              <div className="space-y-6">
+                {/* Event Header */}
+                <div>
+                  <h1 className="font-serif text-4xl lg:text-5xl mb-4 text-stone-100">
+                    {event.name.toUpperCase()}
+                  </h1>
+                  <p className="text-lg text-copper-400 mb-2">
+                    {dateInfo.full}
+                  </p>
+                  <p className="text-stone-400">
+                    at {eventVenue}
+                  </p>
+                </div>
 
-                  // Category order and badge styles
-                  const categoryConfig: Record<string, { label: string; badgeClass: string }> = {
-                    vip: { label: 'VIP', badgeClass: 'bg-copper-400/20 text-copper-400 border-copper-400/30' },
-                    service: { label: 'Service', badgeClass: 'bg-purple-400/20 text-purple-400 border-purple-400/30' },
-                    section: { label: 'Section', badgeClass: 'bg-blue-400/20 text-blue-400 border-blue-400/30' },
-                    general: { label: 'General', badgeClass: 'bg-stone-400/20 text-stone-400 border-stone-400/30' },
-                  };
+                {/* Ticket Selection Card - Glass Panel Style */}
+                <div className="glass-panel rounded-sm p-4 space-y-0">
+                  {(() => {
+                    // Group tickets by category
+                    const groupedTickets = event.ticketTypes.reduce((acc, ticket) => {
+                      const category = ticket.category || 'general';
+                      if (!acc[category]) {
+                        acc[category] = [];
+                      }
+                      acc[category].push(ticket);
+                      return acc;
+                    }, {} as Record<string, typeof event.ticketTypes>);
 
-                  const categoryOrder = ['vip', 'service', 'section', 'general'];
+                    // Category order and badge styles
+                    const categoryConfig: Record<string, { label: string; badgeClass: string }> = {
+                      vip: { label: 'VIP', badgeClass: 'bg-copper-400/20 text-copper-400 border-copper-400/30' },
+                      service: { label: 'Service', badgeClass: 'bg-purple-400/20 text-purple-400 border-purple-400/30' },
+                      section: { label: 'Section', badgeClass: 'bg-blue-400/20 text-blue-400 border-blue-400/30' },
+                      general: { label: 'General', badgeClass: 'bg-stone-400/20 text-stone-400 border-stone-400/30' },
+                    };
 
-                  return categoryOrder.map((categoryKey) => {
-                    const tickets = groupedTickets[categoryKey];
-                    if (!tickets || tickets.length === 0) return null;
+                    const categoryOrder = ['vip', 'service', 'section', 'general'];
 
-                    // Filter out VIP ticket types - they're handled by VIP Table reservations
-                    const regularTickets = tickets.filter(ticket => {
-                      const nameLower = ticket.name.toLowerCase();
-                      const isVipTicket = nameLower.includes('vip') && !nameLower.includes('expedited');
-                      return !isVipTicket;
-                    });
+                    return categoryOrder.map((categoryKey) => {
+                      const tickets = groupedTickets[categoryKey];
+                      if (!tickets || tickets.length === 0) return null;
 
-                    if (regularTickets.length === 0) return null;
+                      // Filter out VIP ticket types - they're handled by VIP Table reservations
+                      const regularTickets = tickets.filter(ticket => {
+                        const nameLower = ticket.name.toLowerCase();
+                        const isVipTicket = nameLower.includes('vip') && !nameLower.includes('expedited');
+                        return !isVipTicket;
+                      });
 
-                    const categoryInfo = categoryConfig[categoryKey];
-                    const sortedTickets = [...regularTickets].sort((a, b) => 
-                      (a.display_order || 0) - (b.display_order || 0)
-                    );
+                      if (regularTickets.length === 0) return null;
 
-                    return (
-                      <div key={categoryKey} className="mb-4 last:mb-0">
-                        {categoryKey !== 'general' && (
-                          <div className="mb-2 px-2">
-                            <Badge className={categoryInfo.badgeClass + ' text-xs'}>
-                              {categoryInfo.label}
-                            </Badge>
-                          </div>
-                        )}
-                        {sortedTickets.map((ticket, index) => {
-                  const ticketQuantity = getTicketQuantity(ticket.id);
-                  const isSelected = ticketQuantity > 0;
-                  const totalPrice = ticket.price + ticket.fee;
-                  const maxQuantity = ticket.limit_per_order ?? 10;
-                          const ticketAvail = getTicketAvailability(ticket.code);
-                          const isSoldOut = ticketAvail ? ticketAvail.available <= 0 : false;
-                          const isLowStock = ticketAvail ? ticketAvail.available > 0 && ticketAvail.available <= 5 : false;
-                          const effectiveMaxQuantity = ticketAvail 
-                            ? Math.min(maxQuantity, ticketAvail.available)
-                            : maxQuantity;
-                  
-                  const isHighlighted = highlightedTicketId === ticket.id && !isSelected;
-                  return (
-                    <div key={ticket.id}>
-                      {/* Ticket Row */}
-                              <div className={`flex items-center justify-between py-3 transition-colors ${isHighlighted ? "bg-copper-400/10 rounded-sm px-2 -mx-2" : ""} ${isSoldOut ? 'opacity-60' : ''}`}>
-                        <div className="flex-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm font-medium text-stone-100">
-                              {getTicketDisplayName(ticket.name)}
-                            </h3>
-                                    {ticket.section_name && (
-                                      <Badge variant="outline" className="text-xs border-white/20 text-stone-300">
-                                        {ticket.section_name}
-                                      </Badge>
-                                    )}
-                                    {isSoldOut && (
-                                      <Badge className="bg-red-500/20 text-red-400 border-red-500/50 text-xs">
-                                        Sold Out
-                                      </Badge>
-                                    )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="w-4 h-4 text-stone-500 hover:text-stone-300 p-0"
-                            >
-                              <Info className="w-3 h-3" />
-                            </Button>
-                          </div>
-                                  {ticket.section_description && (
-                                    <p className="text-xs text-stone-400 mt-0.5">
-                                      {ticket.section_description}
-                                    </p>
-                                  )}
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <p className="text-xs text-stone-500">
-                            (Includes fees & taxes)
-                          </p>
-                                    {ticketAvail && ticketAvail.total > 0 && (
-                                      <p className="text-xs text-stone-500">
-                                        • {ticketAvail.sold}/{ticketAvail.total} sold
-                                      </p>
-                                    )}
-                                  </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="text-base font-semibold text-stone-100">
-                              ${totalPrice.toFixed(0)}
-                            </p>
-                          </div>
-                          {!isSelected && (
-                            <Button
-                              type="button"
-                              size="icon"
-                              className="w-9 h-9 rounded-full bg-copper-400 hover:bg-copper-500 text-forest-950 p-0 flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                              onClick={() => selectTicket(ticket.id)}
-                              disabled={isSoldOut}
-                              aria-label={`Add ${getTicketDisplayName(ticket.name)}`}
-                            >
-                              <Plus className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {isSelected && (
-                            <div className="flex items-center gap-1.5">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="w-7 h-7 border-white/20 hover:bg-white/10"
-                                onClick={() => updateQuantity(ticket.id, -1)}
-                                aria-label={`Remove ${getTicketDisplayName(ticket.name)}`}
-                                disabled={ticketQuantity <= 0}
-                              >
-                                <Minus className="w-3.5 h-3.5 text-stone-300" />
-                              </Button>
-                              <span className="text-stone-100 font-semibold w-5 text-center text-sm">{ticketQuantity}</span>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="w-7 h-7 border-white/20 hover:bg-white/10"
-                                onClick={() => updateQuantity(ticket.id, 1)}
-                                aria-label={`Add ${getTicketDisplayName(ticket.name)}`}
-                                disabled={ticketQuantity >= effectiveMaxQuantity || isSoldOut}
-                              >
-                                <Plus className="w-3.5 h-3.5 text-stone-300" />
-                              </Button>
+                      const categoryInfo = categoryConfig[categoryKey];
+                      const sortedTickets = [...regularTickets].sort((a, b) =>
+                        (a.display_order || 0) - (b.display_order || 0)
+                      );
+
+                      return (
+                        <div key={categoryKey} className="mb-4 last:mb-0">
+                          {categoryKey !== 'general' && (
+                            <div className="mb-2 px-2">
+                              <Badge className={categoryInfo.badgeClass + ' text-xs'}>
+                                {categoryInfo.label}
+                              </Badge>
                             </div>
                           )}
-                        </div>
-                      </div>
-                      {/* Separator line between tickets */}
-                              {index < sortedTickets.length - 1 && (
-                        <div className="border-t border-white/10"></div>
-                      )}
-                    </div>
-                  );
-                })}
-                      </div>
-                    );
-                  });
-                })()}
+                          {sortedTickets.map((ticket, index) => {
+                            const ticketQuantity = getTicketQuantity(ticket.id);
+                            const isSelected = ticketQuantity > 0;
+                            const totalPrice = ticket.price + ticket.fee;
+                            const maxQuantity = ticket.limit_per_order ?? 10;
+                            const ticketAvail = getTicketAvailability(ticket.code);
+                            const isSoldOut = ticketAvail ? ticketAvail.available <= 0 : false;
+                            const isLowStock = ticketAvail ? ticketAvail.available > 0 && ticketAvail.available <= 5 : false;
+                            const effectiveMaxQuantity = ticketAvail
+                              ? Math.min(maxQuantity, ticketAvail.available)
+                              : maxQuantity;
 
-                {/* VIP Table Reservation CTA */}
-                {event?.id && (
-                  <div className="mt-6 relative overflow-hidden rounded-sm glass-panel border border-copper-400/20">
-                    {/* Subtle shimmer accent */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-copper-400/5 via-transparent to-copper-400/5" />
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-copper-400/50 to-transparent" />
-                    
-                    <div className="relative p-6">
-                      <div className="flex items-start gap-4">
-                        {/* Icon container */}
-                        <div className="flex-shrink-0 w-12 h-12 rounded-sm bg-copper-400/10 border border-copper-400/20 flex items-center justify-center">
-                          <Crown className="w-6 h-6 text-copper-400" />
+                            const isHighlighted = highlightedTicketId === ticket.id && !isSelected;
+                            return (
+                              <div key={ticket.id}>
+                                {/* Ticket Row */}
+                                <div className={`flex items-center justify-between py-3 transition-colors ${isHighlighted ? "bg-copper-400/10 rounded-sm px-2 -mx-2" : ""} ${isSoldOut ? 'opacity-60' : ''}`}>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h3 className="text-sm font-medium text-stone-100">
+                                        {getTicketDisplayName(ticket.name)}
+                                      </h3>
+                                      {ticket.section_name && (
+                                        <Badge variant="outline" className="text-xs border-white/20 text-stone-300">
+                                          {ticket.section_name}
+                                        </Badge>
+                                      )}
+                                      {isSoldOut && (
+                                        <Badge className="bg-red-500/20 text-red-400 border-red-500/50 text-xs">
+                                          Sold Out
+                                        </Badge>
+                                      )}
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="w-4 h-4 text-stone-500 hover:text-stone-300 p-0"
+                                      >
+                                        <Info className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                    {ticket.section_description && (
+                                      <p className="text-xs text-stone-400 mt-0.5">
+                                        {ticket.section_description}
+                                      </p>
+                                    )}
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <p className="text-xs text-stone-500">
+                                        (Includes fees & taxes)
+                                      </p>
+                                      {ticketAvail && ticketAvail.total > 0 && (
+                                        <p className="text-xs text-stone-500">
+                                          • {ticketAvail.sold}/{ticketAvail.total} sold
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                      <p className="text-base font-semibold text-stone-100">
+                                        ${totalPrice.toFixed(0)}
+                                      </p>
+                                    </div>
+                                    {!isSelected && (
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        className="w-9 h-9 rounded-full bg-copper-400 hover:bg-copper-500 text-forest-950 p-0 flex items-center justify-center shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        onClick={() => selectTicket(ticket.id)}
+                                        disabled={isSoldOut}
+                                        aria-label={`Add ${getTicketDisplayName(ticket.name)}`}
+                                      >
+                                        <Plus className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                    {isSelected && (
+                                      <div className="flex items-center gap-1.5">
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="icon"
+                                          className="w-7 h-7 border-white/20 hover:bg-white/10"
+                                          onClick={() => updateQuantity(ticket.id, -1)}
+                                          aria-label={`Remove ${getTicketDisplayName(ticket.name)}`}
+                                          disabled={ticketQuantity <= 0}
+                                        >
+                                          <Minus className="w-3.5 h-3.5 text-stone-300" />
+                                        </Button>
+                                        <span data-cy="ticket-quantity" className="text-stone-100 font-semibold w-5 text-center text-sm">{ticketQuantity}</span>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="icon"
+                                          className="w-7 h-7 border-white/20 hover:bg-white/10"
+                                          onClick={() => updateQuantity(ticket.id, 1)}
+                                          aria-label={`Add ${getTicketDisplayName(ticket.name)}`}
+                                          disabled={ticketQuantity >= effectiveMaxQuantity || isSoldOut}
+                                        >
+                                          <Plus className="w-3.5 h-3.5 text-stone-300" />
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                {/* Separator line between tickets */}
+                                {index < sortedTickets.length - 1 && (
+                                  <div className="border-t border-white/10"></div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                        
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-serif text-lg text-stone-100">VIP Experience</h3>
-                            <span className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-copper-400/20 text-copper-400 rounded-full border border-copper-400/30">
-                              Premium
-                            </span>
+                      );
+                    });
+                  })()}
+
+                  {/* VIP Table Reservation CTA */}
+                  {event?.id && (
+                    <div className="mt-6 relative overflow-hidden rounded-sm glass-panel border border-copper-400/20">
+                      {/* Subtle shimmer accent */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-copper-400/5 via-transparent to-copper-400/5" />
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-copper-400/50 to-transparent" />
+
+                      <div className="relative p-6">
+                        <div className="flex items-start gap-4">
+                          {/* Icon container */}
+                          <div className="flex-shrink-0 w-12 h-12 rounded-sm bg-copper-400/10 border border-copper-400/20 flex items-center justify-center">
+                            <Crown className="w-6 h-6 text-copper-400" />
                           </div>
-                          <p className="text-stone-400 text-sm mb-4">
-                            Elevate your night with bottle service • Tables from $600
-                          </p>
-                          
-                          <Link 
-                            to={`/events/${event.id}/vip-tables`}
-                            className="inline-flex items-center justify-center gap-2 w-full py-3 px-6 bg-copper-400 hover:bg-copper-500 text-forest-950 font-semibold rounded-sm transition-all duration-200 group"
-                          >
-                            <span>Reserve Your Table</span>
-                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                          </Link>
+
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-serif text-lg text-stone-100">VIP Experience</h3>
+                              <span className="px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider bg-copper-400/20 text-copper-400 rounded-full border border-copper-400/30">
+                                Premium
+                              </span>
+                            </div>
+                            <p className="text-stone-400 text-sm mb-4">
+                              Elevate your night with bottle service • Tables from $600
+                            </p>
+
+                            <Link
+                              to={`/events/${event.id}/vip-tables`}
+                              className="inline-flex items-center justify-center gap-2 w-full py-3 px-6 bg-copper-400 hover:bg-copper-500 text-forest-950 font-semibold rounded-sm transition-all duration-200 group"
+                            >
+                              <span>Reserve Your Table</span>
+                              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                            </Link>
+                          </div>
                         </div>
+
+                        <p className="mt-4 text-stone-500 text-xs text-center border-t border-white/5 pt-4">
+                          Table reservation does not include event entry. All guests must purchase GA tickets.
+                        </p>
                       </div>
-                      
-                      <p className="mt-4 text-stone-500 text-xs text-center border-t border-white/5 pt-4">
-                        Table reservation does not include event entry. All guests must purchase GA tickets.
-                      </p>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+
               </div>
-              
             </div>
-          </div>
           </FadeTransition>
 
           {/* Step 2: Customer Details Form */}
@@ -1062,7 +1062,7 @@ const Checkout = () => {
                     <p className="text-2xl font-semibold text-stone-100">${total.toFixed(2)}</p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2 text-sm text-stone-400">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
@@ -1114,6 +1114,7 @@ const Checkout = () => {
 
                 <Button
                   type="button"
+                  data-cy="checkout-button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();

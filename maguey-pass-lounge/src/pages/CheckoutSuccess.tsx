@@ -50,7 +50,7 @@ const CheckoutSuccess = () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
         const response = await fetch(`${apiUrl}/verify-payment?session_id=${sessionId}`);
-        
+
         if (response.ok) {
           const data = await response.json();
           setOrderId(data.orderId);
@@ -80,10 +80,10 @@ const CheckoutSuccess = () => {
     <div className="min-h-screen bg-forest-950 text-stone-300 overflow-x-hidden">
       {/* Custom Cursor */}
       <CustomCursor />
-      
+
       {/* Noise Overlay */}
       <div className="noise-overlay" />
-      
+
       {/* Grid Background */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0">
         <svg width="100%" height="100%">
@@ -108,7 +108,7 @@ const CheckoutSuccess = () => {
           <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 ring-4 ring-emerald-500/30">
             <CheckCircle2 className="w-10 h-10 text-emerald-400" />
           </div>
-          <h1 className="font-serif text-4xl text-stone-100 mb-2">
+          <h1 data-cy="order-confirmation" className="font-serif text-4xl text-stone-100 mb-2">
             Payment <span className="italic text-copper-400">Successful</span>
           </h1>
           <p className="text-stone-400">Your tickets have been confirmed and sent to your email</p>

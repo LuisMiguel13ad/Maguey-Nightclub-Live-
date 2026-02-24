@@ -239,10 +239,10 @@ const Payment = () => {
     <div className="min-h-screen bg-forest-950 text-stone-300 overflow-x-hidden">
       {/* Custom Cursor */}
       <CustomCursor />
-      
+
       {/* Noise Overlay */}
       <div className="noise-overlay" />
-      
+
       {/* Grid Background */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0">
         <svg width="100%" height="100%">
@@ -252,7 +252,7 @@ const Payment = () => {
           <rect width="100%" height="100%" fill="url(#payment-grid)" />
         </svg>
       </div>
-      
+
       <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
         <div className="max-w-5xl w-full flex flex-col lg:flex-row gap-6 items-stretch">
           {/* Event Card - Left Side (Full Image) */}
@@ -318,27 +318,28 @@ const Payment = () => {
                 <h3 className="font-serif text-lg text-stone-100">Payment Details</h3>
                 <div className="text-sm text-stone-400">Amount: <span className="text-copper-400 font-medium">${fees.total.toFixed(2)}</span></div>
               </div>
-              
+
               <p className="text-stone-500 text-sm mb-4">Complete your purchase with our secure payment processing system.</p>
 
               <Button
                 type="button"
+                data-cy="pay-button"
                 disabled={isLoading}
                 className="w-full px-4 py-3 bg-copper-400 hover:bg-copper-500 text-forest-950 rounded-sm transition flex items-center justify-center font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleCheckout}
               >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Redirecting...
-                </>
-              ) : (
-                <>
-                  Pay ${fees.total.toFixed(2)}
-                </>
-              )}
-            </Button>
-            
+                {isLoading ? (
+                  <div data-cy="loading" className="flex items-center">
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Redirecting...
+                  </div>
+                ) : (
+                  <>
+                    Pay ${fees.total.toFixed(2)}
+                  </>
+                )}
+              </Button>
+
               <div className="mt-4 pt-4 border-t border-white/10">
                 <div className="flex justify-between items-center">
                   <p className="text-xs text-stone-500">

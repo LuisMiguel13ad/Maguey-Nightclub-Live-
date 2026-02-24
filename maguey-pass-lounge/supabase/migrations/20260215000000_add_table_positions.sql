@@ -95,6 +95,31 @@ UPDATE event_vip_tables
 SET position_x = 950, position_y = 500
 WHERE table_number = 20 AND (position_x IS NULL OR position_y IS NULL);
 
+-- Tables 21-26 (standard bottom row 4)
+UPDATE event_vip_tables
+SET position_x = 200, position_y = 600
+WHERE table_number = 21 AND (position_x IS NULL OR position_y IS NULL);
+
+UPDATE event_vip_tables
+SET position_x = 350, position_y = 600
+WHERE table_number = 22 AND (position_x IS NULL OR position_y IS NULL);
+
+UPDATE event_vip_tables
+SET position_x = 500, position_y = 600
+WHERE table_number = 23 AND (position_x IS NULL OR position_y IS NULL);
+
+UPDATE event_vip_tables
+SET position_x = 650, position_y = 600
+WHERE table_number = 24 AND (position_x IS NULL OR position_y IS NULL);
+
+UPDATE event_vip_tables
+SET position_x = 800, position_y = 600
+WHERE table_number = 25 AND (position_x IS NULL OR position_y IS NULL);
+
+UPDATE event_vip_tables
+SET position_x = 950, position_y = 600
+WHERE table_number = 26 AND (position_x IS NULL OR position_y IS NULL);
+
 -- Add comment for documentation
 COMMENT ON COLUMN event_vip_tables.position_x IS 'Logical X coordinate (0-1000) for floor plan positioning';
 COMMENT ON COLUMN event_vip_tables.position_y IS 'Logical Y coordinate (0-700) for floor plan positioning';

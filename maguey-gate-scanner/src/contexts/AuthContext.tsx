@@ -150,6 +150,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (!mounted) return;
 
         try {
+          // On explicit sign-out, clear all auth state including localStorage
+          if (event === 'SIGNED_OUT') {
+            if (import.meta.env.DEV) {
+              localStorageService.clearUser();
+            }
+            setUser(null);
+            setRole('employee');
+            return;
+          }
+
           if (session?.user) {
             setUser(session.user);
             const userRole = getUserRole(session.user);

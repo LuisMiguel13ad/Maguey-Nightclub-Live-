@@ -55,7 +55,7 @@ export const SuccessOverlay = ({
   }, [onDismiss, ticketType]);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-green-500 flex flex-col items-center justify-center animate-in fade-in duration-200">
+    <div data-cy="scan-result" className="fixed inset-0 z-[100] bg-green-500 flex flex-col items-center justify-center animate-in fade-in duration-200">
       {/* Re-entry banner - gold banner at top for VIP-linked re-entry */}
       {isReentry && (
         <div className="absolute top-0 left-0 right-0 bg-yellow-500 text-black py-4 px-6 text-center">

@@ -17,7 +17,8 @@ export type RejectionReason =
   | 'expired'
   | 'tampered'
   | 'not_found'
-  | 'offline_unknown';
+  | 'offline_unknown'
+  | 'reentry';
 
 export interface RejectionOverlayProps {
   reason: RejectionReason;
@@ -111,7 +112,7 @@ export const RejectionOverlay = ({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-red-600 flex flex-col items-center justify-center animate-in fade-in duration-200">
+    <div data-cy="rejection-overlay" className="fixed inset-0 z-[100] bg-red-600 flex flex-col items-center justify-center animate-in fade-in duration-200">
       {/* Large X icon */}
       <div className="mb-8">
         <XCircle className="h-32 w-32 text-white" strokeWidth={1.5} />
@@ -126,6 +127,7 @@ export const RejectionOverlay = ({
       {/* Manual dismiss button - staff must acknowledge */}
       <Button
         onClick={onDismiss}
+        data-cy="dismiss"
         className="bg-white/20 hover:bg-white/30 text-white text-lg font-bold px-8 py-6 h-auto rounded-2xl border border-white/30"
       >
         Scan Next
