@@ -1,32 +1,38 @@
 /**
  * Shared CORS configuration for Edge Functions
  *
- * In production, set the ALLOWED_ORIGINS env var (comma-separated) to
- * restrict cross-origin requests to known domains.
- *
- * Example: ALLOWED_ORIGINS=https://tickets.maguey.club,https://www.magueynightclub.com
- *
- * When ALLOWED_ORIGINS is not set, all origins are allowed (dev mode).
+ * Override with ALLOWED_ORIGINS env var (comma-separated) if needed.
+ * When ALLOWED_ORIGINS is not set, production domains are used as default.
+ * For local dev, set ALLOWED_ORIGINS=* to allow all origins.
  */
+
+const PRODUCTION_ORIGINS = [
+  "https://tickets.magueynightclub.com",
+  "https://staff.magueynightclub.com",
+  "https://magueynightclub.com",
+  "https://www.magueynightclub.com",
+];
 
 export function getAllowedOrigin(requestOrigin: string | null): string {
   const allowedOriginsEnv = Deno.env.get("ALLOWED_ORIGINS");
 
-  // If no allowed origins configured, allow all (dev mode)
-  if (!allowedOriginsEnv) {
-    return "*";
+  // If env var is explicitly set, use it (set ALLOWED_ORIGINS=* for dev)
+  if (allowedOriginsEnv) {
+    if (allowedOriginsEnv.trim() === "*") {
+      return "*";
+    }
+    const allowedOrigins = allowedOriginsEnv.split(",").map((o) => o.trim());
+    if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+      return requestOrigin;
+    }
+    return allowedOrigins[0] || PRODUCTION_ORIGINS[0];
   }
 
-  // Parse allowed origins (comma-separated)
-  const allowedOrigins = allowedOriginsEnv.split(",").map((o) => o.trim());
-
-  // Check if request origin is in allowed list
-  if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
+  // Default: production origins (secure by default)
+  if (requestOrigin && PRODUCTION_ORIGINS.includes(requestOrigin)) {
     return requestOrigin;
   }
-
-  // Return first allowed origin as default
-  return allowedOrigins[0] || "*";
+  return PRODUCTION_ORIGINS[0];
 }
 
 /**

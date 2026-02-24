@@ -7,11 +7,15 @@ const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../maguey-gate-scanner/.env') });
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
-// Use Service Role Key hardcoded for verification (same as verifying script)
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqYnpqYXNkcnd2YnNvaWZ4cXpkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjgwMDk4MCwiZXhwIjoyMDc4Mzc2OTgwfQ.EyrW9yk_q3VOP8AQ-f8nskDF7O-K83jg433NeEOmHwE";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing Supabase credentials');
+if (!supabaseUrl) {
+    console.error('❌ Error: VITE_SUPABASE_URL environment variable is not set');
+    process.exit(1);
+}
+
+if (!supabaseKey) {
+    console.error('❌ Error: SUPABASE_SERVICE_ROLE_KEY environment variable is not set');
     process.exit(1);
 }
 

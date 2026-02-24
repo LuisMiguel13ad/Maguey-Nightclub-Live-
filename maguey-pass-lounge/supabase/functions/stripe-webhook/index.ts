@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+
 import QRCode from "https://esm.sh/qrcode@1.5.3";
 import { createLogger, getRequestId } from "../_shared/logger.ts";
 import { initSentry, captureError, setRequestContext } from "../_shared/sentry.ts";
@@ -88,24 +88,26 @@ async function notifyPaymentFailure(data: PaymentFailureData): Promise<void> {
 }
 
 // ============================================
-// QR Code Signing (HMAC-SHA256)
+// QR Code Signing (via database RPC — secret stored in Supabase Vault)
 // ============================================
 
-async function generateQrSignature(token: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  const signatureBuffer = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    encoder.encode(token)
-  );
-  return base64Encode(signatureBuffer);
+/**
+ * Sign a QR token using the server-side secret stored in Supabase Vault.
+ * Calls the sign_qr_token RPC which reads the HMAC key from vault.secrets.
+ * The secret never leaves the database.
+ */
+async function signQrToken(
+  supabase: ReturnType<typeof createClient>,
+  token: string
+): Promise<string> {
+  const { data, error } = await supabase.rpc("sign_qr_token", {
+    p_token: token,
+  });
+  if (error) {
+    console.error("[stripe-webhook] Failed to sign QR token via RPC:", error.message);
+    return "";
+  }
+  return data as string;
 }
 
 /**
@@ -732,7 +734,6 @@ serve(async (req) => {
             .eq("id", eventId)
             .single();
 
-          const qrSigningSecret = Deno.env.get("QR_SIGNING_SECRET") || Deno.env.get("VITE_QR_SIGNING_SECRET") || "";
           const createdTickets: TicketEmailData[] = [];
 
           for (const ticket of tickets) {
@@ -842,20 +843,12 @@ serve(async (req) => {
                 for (let i = 1; i <= guestCount; i++) {
                   const passToken = `VIP-PASS-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
 
-                  // Generate HMAC-SHA256 signature for VIP guest pass
-                  // Format: HMAC-SHA256(token|reservation_id|guest_number, secret) in hex
+                  // Sign VIP guest pass via database RPC (secret in Supabase Vault)
                   const signatureData = `${passToken}|${reservation.id}|${i}`;
-                  const encoder = new TextEncoder();
-                  const hmacKey = await crypto.subtle.importKey(
-                    "raw",
-                    encoder.encode(qrSigningSecret),
-                    { name: "HMAC", hash: "SHA-256" },
-                    false,
-                    ["sign"]
-                  );
-                  const hashBuffer = await crypto.subtle.sign("HMAC", hmacKey, encoder.encode(signatureData));
-                  const hashArray = Array.from(new Uint8Array(hashBuffer));
-                  const passSignature = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+                  const { data: passSignature, error: signError } = await supabase.rpc("sign_vip_pass", { p_data: signatureData });
+                  if (signError) {
+                    logger.error("Failed to sign VIP pass via RPC", { error: signError.message });
+                  }
 
                   guestPasses.push({
                     reservation_id: reservation.id,
@@ -972,11 +965,8 @@ serve(async (req) => {
               const ticketId = `MGY-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
               const qrToken = crypto.randomUUID();
 
-              // Generate HMAC signature for QR token (required for scanner verification)
-              let qrSignature = "";
-              if (qrSigningSecret) {
-                qrSignature = await generateQrSignature(qrToken, qrSigningSecret);
-              }
+              // Sign QR token via database RPC (secret in Supabase Vault)
+              const qrSignature = await signQrToken(supabase, qrToken);
 
               const ticketData = {
                 order_id: orderId,
@@ -1271,19 +1261,13 @@ serve(async (req) => {
         } else {
           console.log("GA order created:", gaOrder.id);
 
-          // Get QR signing secret
-          const qrSigningSecret = Deno.env.get("QR_SIGNING_SECRET") || Deno.env.get("VITE_QR_SIGNING_SECRET") || "";
-
           // Create individual GA tickets with retry
           for (let i = 0; i < gaTicketCount; i++) {
             const ticketId = `MGY-VIP-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
             const qrToken = crypto.randomUUID();
 
-            // Generate HMAC signature for QR token
-            let qrSignature = "";
-            if (qrSigningSecret) {
-              qrSignature = await generateQrSignature(qrToken, qrSigningSecret);
-            }
+            // Sign QR token via database RPC (secret in Supabase Vault)
+            const qrSignature = await signQrToken(supabase, qrToken);
 
             const ticketData = {
               order_id: gaOrder.id,

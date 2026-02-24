@@ -1,9 +1,4 @@
-// Core scanner components
-export { FullScreenScanner } from "./FullScreenScanner";
-export { ScanResultOverlay } from "./ScanResultOverlay";
-export { ScannerSettingsPanel } from "./ScannerSettingsPanel";
-
-// Scanner UI components (existing in scanner/)
+// Scanner UI components
 export { BatteryIndicator } from "./BatteryIndicator";
 export { CheckInCounter } from "./CheckInCounter";
 export { OfflineAcknowledgeModal } from "./OfflineAcknowledgeModal";
@@ -11,16 +6,17 @@ export { OfflineBanner } from "./OfflineBanner";
 export { RejectionOverlay } from "./RejectionOverlay";
 export { ScanHistory } from "./ScanHistory";
 export { SuccessOverlay } from "./SuccessOverlay";
+export { VipSuccessOverlay } from "./VipSuccessOverlay";
 
-// Newly moved scanner components
+// Scanner input components
 export { ManualEntry } from "./ManualEntry";
-export { ScannerInput } from "./ScannerInput";
 export { BatchQueue } from "./BatchQueue";
 export { QrScanner } from "./QrScanner";
 export { NFCScanner } from "./NFCScanner";
 export { ScanErrorDisplay } from "./ScanErrorDisplay";
-export { TicketResult } from "./TicketResult";
 export { RiskIndicatorBadge } from "./RiskIndicatorBadge";
+
+// Modal components (built, to be wired)
 export { IDVerificationModal } from "./IDVerificationModal";
 export { LowBatteryModal } from "./LowBatteryModal";
 export { OverrideActivationModal } from "./OverrideActivationModal";

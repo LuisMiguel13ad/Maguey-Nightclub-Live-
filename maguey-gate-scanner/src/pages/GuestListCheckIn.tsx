@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,11 +24,12 @@ import {
 import { isOk } from '@/lib/result';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { Users, CheckCircle2, Clock, Download, Loader2 } from 'lucide-react';
+import { Users, CheckCircle2, Clock, Download, Loader2, ArrowLeft } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 
 export function GuestListCheckIn() {
+  const navigate = useNavigate();
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState('');
   const [checkingInId, setCheckingInId] = useState<string | null>(null);
@@ -193,6 +195,15 @@ export function GuestListCheckIn() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/scanner')}
+            className="text-muted-foreground hover:text-foreground mb-2"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Scanner
+          </Button>
           <h1 className="text-3xl font-bold mb-2">Guest List Check-In</h1>
           <p className="text-muted-foreground">
             Search by name and check in guests quickly

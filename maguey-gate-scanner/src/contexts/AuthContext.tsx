@@ -1,14 +1,18 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { isSupabaseConfigured } from '@/lib/supabase-config';
 import { getUserRole, type UserRole } from '@/lib/auth';
 import { localStorageService } from '@/lib/localStorage';
+import { getSecuritySettings } from '@/lib/security-service';
+import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import { IdleWarningDialog } from '@/components/shared/IdleWarningDialog';
 
 interface AuthContextType {
   user: any;
   role: UserRole;
   loading: boolean;
   refreshRole: () => Promise<void>;
+  resetIdleTimer?: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,6 +38,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<UserRole>('employee');
   const [loading, setLoading] = useState(true);
+  const [timeoutMinutes, setTimeoutMinutes] = useState(30);
+
+  // Load session timeout from security settings
+  useEffect(() => {
+    if (user && isSupabaseConfigured()) {
+      getSecuritySettings().then((settings) => {
+        if (settings?.session_timeout_minutes) {
+          setTimeoutMinutes(settings.session_timeout_minutes);
+        }
+      });
+    }
+  }, [user]);
+
+  const handleIdleLogout = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // signOut may fail if offline — auth state listener handles cleanup
+    }
+  }, []);
+
+  const { resetTimer, dismissWarning, isWarningShown, remainingSeconds } = useIdleTimeout({
+    timeoutMinutes,
+    warningMinutes: 5,
+    enabled: !!user && isSupabaseConfigured(),
+    onIdle: handleIdleLogout,
+  });
 
   const refreshRole = async () => {
     if (!isSupabaseConfigured()) {
@@ -159,8 +190,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, loading, refreshRole }}>
+    <AuthContext.Provider value={{ user, role, loading, refreshRole, resetIdleTimer: resetTimer }}>
       {children}
+      <IdleWarningDialog
+        open={isWarningShown}
+        remainingSeconds={remainingSeconds}
+        onContinue={dismissWarning}
+        onLogout={handleIdleLogout}
+      />
     </AuthContext.Provider>
   );
 };

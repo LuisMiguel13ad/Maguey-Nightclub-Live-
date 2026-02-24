@@ -21,6 +21,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { SuccessOverlay } from "@/components/scanner/SuccessOverlay";
+import { VipSuccessOverlay } from "@/components/scanner/VipSuccessOverlay";
 import { RejectionOverlay, RejectionReason } from "@/components/scanner/RejectionOverlay";
 import { ScanHistory, ScanHistoryEntry } from "@/components/scanner/ScanHistory";
 import { CheckInCounter } from "@/components/scanner/CheckInCounter";
@@ -34,6 +35,7 @@ import {
   scanTicketOffline,
   getActiveEvents,
   debugGetSampleTickets,
+  type ScanResult,
 } from "@/lib/simple-scanner";
 import { ensureCacheIsFresh } from "@/lib/offline-ticket-cache";
 import {
@@ -70,7 +72,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 type ScanMode = "manual" | "qr" | "nfc";
 
 interface ScanState {
-  status: "idle" | "scanning" | "success" | "error" | "already_scanned" | "reentry";
+  status: "idle" | "scanning" | "success" | "error" | "already_scanned" | "reentry" | "vip_success";
   ticket: TicketType | null;
   message: string;
   rejectionReason?: RejectionReason;
@@ -83,6 +85,9 @@ interface ScanState {
     tableNumber: string;
     reservationId: string;
   };
+  // Unified scanner: VIP guest pass data
+  scanType?: 'ga_ticket' | 'vip_guest_pass';
+  vipGuestPassData?: ScanResult['vipGuestPassData'];
 }
 
 interface VipLinkInfo {
@@ -107,7 +112,7 @@ const determineTicketType = (
 const SCAN_COOLDOWN = 2500;
 
 const Scanner = () => {
-  const { user } = useAuth();
+  const { user, resetIdleTimer } = useAuth();
   const role = useRole();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -473,11 +478,12 @@ const Scanner = () => {
 
       // Online: perform the scan
       const result = await scanTicket(input.trim(), user?.id, method, supabase);
+      resetIdleTimer?.();
 
       // Guard: Don't update state if component unmounted
       if (!mountedRef.current) return;
 
-      // Check event filter
+      // Check event filter (GA tickets)
       if (selectedEvent !== "all" && result.ticket && result.ticket.event_name !== selectedEvent) {
         setScanState({
           status: "error",
@@ -507,7 +513,69 @@ const Scanner = () => {
         return;
       }
 
+      // Check event filter (VIP guest passes)
+      if (selectedEvent !== "all" && result.scanType === 'vip_guest_pass' && result.vipGuestPassData) {
+        const vipEventName = result.vipGuestPassData.reservation.event?.name;
+        if (vipEventName && vipEventName !== selectedEvent) {
+          setScanState({
+            status: "error",
+            ticket: null,
+            message: `This VIP pass is for "${vipEventName}", not the selected event`,
+            rejectionReason: 'wrong_event',
+            rejectionDetails: { wrongEventDate: vipEventName },
+          });
+          hapticRejection();
+          addToHistory({
+            timestamp: new Date(),
+            status: 'failure',
+            ticketType: 'VIP Guest',
+            errorReason: `Wrong event: ${vipEventName}`,
+          });
+          setManualInput("");
+          setIsProcessing(false);
+          return;
+        }
+      }
+
       if (result.success) {
+        // Handle VIP guest pass scans
+        if (result.scanType === 'vip_guest_pass' && result.vipGuestPassData) {
+          const vipData = result.vipGuestPassData;
+
+          setScanState({
+            status: vipData.isReentry ? "reentry" : "vip_success",
+            ticket: null,
+            message: result.message,
+            scanType: 'vip_guest_pass',
+            vipGuestPassData: vipData,
+          });
+
+          if (vipData.isReentry) {
+            hapticReentry();
+          } else {
+            hapticVIP();
+          }
+
+          addToHistory({
+            timestamp: new Date(),
+            status: 'success',
+            ticketType: 'VIP Guest',
+            guestName: vipData.pass.guest_name || `Guest ${vipData.pass.guest_number}`,
+            eventName: vipData.reservation.event?.name,
+          });
+
+          setScansToday(prev => {
+            const newCount = prev + 1;
+            localStorage.setItem('scans_today', String(newCount));
+            localStorage.setItem('scans_today_date', new Date().toDateString());
+            return newCount;
+          });
+
+          setManualInput("");
+          setIsProcessing(false);
+          return;
+        }
+
         // Check if this is a re-entry (VIP-linked ticket scanned again)
         const isReentry = result.rejectionReason === 'reentry';
 
@@ -666,6 +734,7 @@ const Scanner = () => {
       return;
     }
 
+    resetIdleTimer?.();
     processScan(manualInput, "manual");
   };
 
@@ -730,7 +799,7 @@ const Scanner = () => {
 
   // Reset to scan another
   const handleScanAnother = () => {
-    setScanState({ status: "idle", ticket: null, message: "", rejectionReason: undefined, rejectionDetails: undefined });
+    setScanState({ status: "idle", ticket: null, message: "", rejectionReason: undefined, rejectionDetails: undefined, scanType: undefined, vipGuestPassData: undefined });
     setVipLinkInfo({ isVipGuest: false, tableNumber: null, purchaserName: null });
     setManualInput("");
     lastScannedRef.current = "";
@@ -1068,8 +1137,8 @@ const Scanner = () => {
         )}
       </div>
 
-      {/* Success Overlay - Full screen green */}
-      {(scanState.status === "success" || scanState.status === "reentry") && (
+      {/* Success Overlay - Full screen green (GA tickets and VIP-linked GA tickets) */}
+      {(scanState.status === "success" || (scanState.status === "reentry" && scanState.scanType !== 'vip_guest_pass')) && (
         <SuccessOverlay
           ticketType={determineTicketType(scanState.ticket, vipLinkInfo)}
           guestName={scanState.ticket?.guest_name || undefined}
@@ -1091,6 +1160,19 @@ const Scanner = () => {
               })
               : undefined
           }
+          onDismiss={handleScanAnother}
+        />
+      )}
+
+      {/* VIP Guest Pass Success Overlay - Full screen with rich VIP details */}
+      {(scanState.status === "vip_success" || (scanState.status === "reentry" && scanState.scanType === 'vip_guest_pass')) && scanState.vipGuestPassData && (
+        <VipSuccessOverlay
+          pass={scanState.vipGuestPassData.pass}
+          reservation={scanState.vipGuestPassData.reservation}
+          isReentry={scanState.vipGuestPassData.isReentry}
+          lastEntryTime={scanState.vipGuestPassData.lastEntryTime}
+          checkedInGuests={scanState.vipGuestPassData.checkedInGuests}
+          totalGuests={scanState.vipGuestPassData.totalGuests}
           onDismiss={handleScanAnother}
         />
       )}

@@ -103,6 +103,8 @@ const VipTablesManagement = () => {
     bottles_included: number;
     package_description: string | null;
     is_available: boolean;
+    position_x: number;
+    position_y: number;
   }[]>([]);
   const [stats, setStats] = useState<{
     totalTables: number;

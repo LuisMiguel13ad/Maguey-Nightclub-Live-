@@ -5,8 +5,9 @@ import { inventoryService } from '../services/inventoryService';
 import { emailService } from '../services/emailService';
 import { createTicketData } from '../components/TicketGenerator';
 
-// Mock Stripe configuration
-const STRIPE_SECRET_KEY = import.meta.env.VITE_STRIPE_SECRET_KEY || 'sk_test_your_secret_key_here';
+// NOTE: This is mock code. Real payments are handled by maguey-pass-lounge.
+// No Stripe secret keys should ever be in client-side code.
+const STRIPE_SECRET_KEY = 'MOCK_KEY_NOT_REAL';
 
 interface CheckoutRequest {
   eventId: string;

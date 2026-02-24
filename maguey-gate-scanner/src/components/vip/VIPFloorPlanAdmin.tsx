@@ -212,6 +212,46 @@ const DEFAULT_TABLES: EventVIPTable[] = [
   { id: 'd20', event_id: '', table_template_id: '', table_number: 20, tier: 'standard', capacity: 6, price_cents: 60000, bottles_included: 1, champagne_included: 0, package_description: null, is_available: true, display_order: 20, position_x: 950, position_y: 500 },
 ];
 
+// Build a lookup map from DEFAULT_TABLES for known table numbers
+const DEFAULT_POSITION_MAP = new Map(
+  DEFAULT_TABLES.map(t => [t.table_number, { x: t.position_x ?? 0, y: t.position_y ?? 0 }])
+);
+
+// Compute fallback positions when DB positions are all (0,0)
+function computeDefaultPositions(tables: EventVIPTable[]): Map<string, { x: number; y: number }> {
+  const map = new Map<string, { x: number; y: number }>();
+  const COLS = 6;
+  let gridIndex = 0;
+
+  for (const t of tables) {
+    // Check if we have a known default position for this table number
+    const knownPos = DEFAULT_POSITION_MAP.get(t.table_number);
+    if (knownPos && (knownPos.x !== 0 || knownPos.y !== 0)) {
+      map.set(t.id, knownPos);
+    } else {
+      // Auto-grid: spread unknown tables across the canvas
+      const col = gridIndex % COLS;
+      const row = Math.floor(gridIndex / COLS);
+      map.set(t.id, { x: 100 + col * 150, y: 100 + row * 150 });
+      gridIndex++;
+    }
+  }
+  return map;
+}
+
+function buildPositionMap(tables: EventVIPTable[]): Map<string, { x: number; y: number }> {
+  const allAtOrigin = tables.every(t =>
+    (!t.position_x || t.position_x === 0) && (!t.position_y || t.position_y === 0)
+  );
+  if (allAtOrigin) {
+    return computeDefaultPositions(tables);
+  }
+  return new Map(tables.map(t => [
+    t.id,
+    { x: t.position_x ?? 0, y: t.position_y ?? 0 }
+  ]));
+}
+
 export function VIPFloorPlanAdmin({
   tables,
   reservations = [],
@@ -224,20 +264,14 @@ export function VIPFloorPlanAdmin({
   // Use provided tables or default to show full layout
   const effectiveTables = tables.length > 0 ? tables : DEFAULT_TABLES;
 
-  // Position state
+  // Position state — uses fallback layout when all DB positions are (0,0)
   const [positions, setPositions] = useState<Map<string, { x: number; y: number }>>(
-    new Map(effectiveTables.map(t => [
-      t.id,
-      { x: t.position_x ?? 0, y: t.position_y ?? 0 }
-    ]))
+    () => buildPositionMap(effectiveTables)
   );
 
   // Sync positions when tables prop changes
   useEffect(() => {
-    setPositions(new Map(effectiveTables.map(t => [
-      t.id,
-      { x: t.position_x ?? 0, y: t.position_y ?? 0 }
-    ])));
+    setPositions(buildPositionMap(effectiveTables));
   }, [effectiveTables]);
 
   // Check if a table has an active reservation

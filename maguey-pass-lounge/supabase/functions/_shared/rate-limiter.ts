@@ -9,7 +9,7 @@
  * - webhook: exempt (no rate limiting)
  */
 
-import { Ratelimit } from "https://cdn.skypack.dev/@upstash/ratelimit@latest";
+import { Ratelimit } from "https://esm.sh/@upstash/ratelimit@latest";
 import { Redis } from "https://esm.sh/@upstash/redis@latest";
 
 export type EndpointType = 'auth' | 'payment' | 'read' | 'webhook';

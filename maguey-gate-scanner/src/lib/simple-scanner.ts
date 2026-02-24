@@ -1,6 +1,11 @@
 import { supabase as defaultClient, Ticket } from './supabase';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { validateOffline, markAsScannedOffline, CachedTicket } from './offline-ticket-cache';
+import {
+  getGuestPassByQrToken,
+  processVipScanWithReentry,
+  type VipReservation,
+} from '@/lib/vip-tables-admin-service';
 
 export interface ScanResult {
   success: boolean;
@@ -30,6 +35,17 @@ export interface ScanResult {
   // Offline mode fields
   offlineValidated?: boolean;  // True if validated against cache (not server)
   offlineWarning?: string;     // Warning message for unknown tickets in offline mode
+
+  // Unified scanner: VIP guest pass support
+  scanType?: 'ga_ticket' | 'vip_guest_pass';
+  vipGuestPassData?: {
+    pass: { id: string; guest_number: number; guest_name: string | null; status: string };
+    reservation: VipReservation;
+    isReentry: boolean;
+    lastEntryTime?: string;
+    checkedInGuests: number;
+    totalGuests: number;
+  };
 }
 
 // UUID regex pattern
@@ -121,7 +137,7 @@ async function verifySignature(token: string, signature: string): Promise<boolea
 /**
  * Parse QR code input - could be JSON payload or plain ticket ID
  */
-async function parseQrInput(input: string): Promise<{ token: string; isVerified: boolean; signature?: string; error?: string }> {
+async function parseQrInput(input: string): Promise<{ token: string; isVerified: boolean; signature?: string; meta?: Record<string, unknown> | null; error?: string }> {
   const trimmed = input.trim();
 
   // Try to parse as JSON (QR code payload)
@@ -147,7 +163,7 @@ async function parseQrInput(input: string): Promise<{ token: string; isVerified:
       }
 
       console.log('[simple-scanner] QR signature verified successfully');
-      return { token: payload.token, isVerified: true, signature: payload.signature };
+      return { token: payload.token, isVerified: true, signature: payload.signature, meta: payload.meta || null };
 
     } catch (e) {
       console.error('[simple-scanner] Failed to parse QR JSON:', e);
@@ -327,11 +343,25 @@ export async function scanTicket(
 
   console.log('[simple-scanner] Searching for ticket with token:', parsed.token, 'verified:', parsed.isVerified);
 
+  // Detect VIP guest pass QR codes by checking meta field
+  if (parsed.meta && typeof parsed.meta === 'object' && 'reservationId' in parsed.meta) {
+    console.log('[simple-scanner] Detected VIP guest pass QR code, trying VIP path first');
+    const vipResult = await processVipPassScan(parsed.token, userId, method, client);
+    if (vipResult) return vipResult;
+    // VIP lookup failed — fall through to GA path
+    console.log('[simple-scanner] VIP lookup failed for meta-detected pass, falling through to GA path');
+  }
+
   // Find the ticket using the token
   const ticket = await findTicket(parsed.token, client);
 
   if (!ticket) {
-    // Log failed scan (fire-and-forget)
+    // Fallback: try VIP guest pass lookup (handles manual entry, old QR codes without meta)
+    console.log('[simple-scanner] GA ticket not found, trying VIP fallback');
+    const vipFallback = await processVipPassScan(parsed.token, userId, method, client);
+    if (vipFallback) return vipFallback;
+
+    // Neither GA ticket nor VIP pass found
     hashInput(parsed.token).then(h =>
       logFailedScan('not_found', method, { rawInputHash: h, errorMessage: 'Ticket not found' }, userId, client)
     );
@@ -569,6 +599,86 @@ export async function logFailedScan(
 }
 
 /**
+ * Attempt to process a QR token as a VIP guest pass.
+ * Returns a ScanResult if the token is a VIP guest pass, or null to fall through to GA path.
+ */
+async function processVipPassScan(
+  token: string,
+  userId: string | undefined,
+  method: 'manual' | 'qr' | 'nfc',
+  client: SupabaseClient
+): Promise<ScanResult | null> {
+  // Look up the guest pass by QR token
+  const vipResult = await getGuestPassByQrToken(token);
+
+  if (!vipResult) {
+    return null; // Not a VIP guest pass — caller falls through to GA path
+  }
+
+  const { pass, reservation } = vipResult;
+
+  // Check reservation status
+  const validStatuses = ['confirmed', 'checked_in', 'completed'];
+  if (!validStatuses.includes(reservation.status)) {
+    return {
+      success: false,
+      ticket: null,
+      message: `VIP reservation is ${reservation.status} — not valid for entry`,
+      rejectionReason: 'invalid',
+      scanType: 'vip_guest_pass',
+    };
+  }
+
+  // Process VIP scan with re-entry support
+  const scanResult = await processVipScanWithReentry(pass.id, userId || 'system');
+
+  if (!scanResult.success) {
+    // Log failed VIP scan (fire-and-forget)
+    hashInput(token).then(h =>
+      logFailedScan('vip_scan_failed', method, { rawInputHash: h, errorMessage: scanResult.message }, userId, client)
+    );
+
+    return {
+      success: false,
+      ticket: null,
+      message: scanResult.message || 'Failed to process VIP scan',
+      rejectionReason: 'invalid',
+      scanType: 'vip_guest_pass',
+    };
+  }
+
+  const isReentry = scanResult.entryType === 'reentry';
+  const totalGuests = scanResult.totalGuests || reservation.package_snapshot?.guestCount || 0;
+  const checkedInGuests = scanResult.checkedInGuests || reservation.checked_in_guests || 0;
+  const tableName = reservation.event_vip_table?.table_name || `Table ${reservation.table_number}`;
+
+  // Log the successful scan (fire-and-forget)
+  logScan(pass.id, 'success', method, userId, client);
+
+  return {
+    success: true,
+    ticket: null,
+    message: isReentry
+      ? `VIP Re-entry granted — ${tableName}`
+      : `VIP Guest ${pass.guest_number} of ${totalGuests} checked in — ${tableName}`,
+    scanType: 'vip_guest_pass',
+    vipGuestPassData: {
+      pass: {
+        id: pass.id,
+        guest_number: pass.guest_number,
+        guest_name: pass.guest_name,
+        status: isReentry ? 'checked_in' : pass.status,
+      },
+      reservation,
+      isReentry,
+      lastEntryTime: scanResult.lastEntryTime,
+      checkedInGuests,
+      totalGuests,
+    },
+  };
+}
+
+/**
  * Get list of available events for the scanner dropdown
  */
 export async function getActiveEvents(client: SupabaseClient = defaultClient): Promise<{ id: string; name: string; event_date: string }[]> {
@@ -718,6 +828,30 @@ export async function scanTicketOffline(
   const cacheResult = await validateOffline(parsed.token, eventId);
 
   if (cacheResult.status === 'not_in_cache') {
+    // If this looks like a VIP guest pass, queue it for sync when online
+    if (parsed.meta && typeof parsed.meta === 'object' && 'reservationId' in parsed.meta) {
+      console.log('[simple-scanner] Offline: VIP guest pass detected, queueing for sync');
+      const { queueVipScan } = await import('./vip-offline-queue-service');
+      await queueVipScan(
+        parsed.token,
+        parsed.signature || null,
+        {
+          reservationId: parsed.meta.reservationId as string,
+          guestNumber: parsed.meta.guestNumber as number,
+        },
+        userId
+      );
+
+      return {
+        success: true,
+        ticket: null,
+        message: 'VIP pass queued for verification when online',
+        scanType: 'vip_guest_pass',
+        offlineValidated: true,
+        offlineWarning: 'VIP pass accepted offline — will be verified when connection returns',
+      };
+    }
+
     // Reject unknown tickets in offline mode for security
     // Staff should connect to verify, or use manual override
     console.log('[simple-scanner] Offline: Ticket not in cache, rejecting');
