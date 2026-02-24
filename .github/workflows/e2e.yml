@@ -115,8 +115,8 @@ jobs:
 
       - name: Start servers
         run: |
-          npx serve maguey-pass-lounge/dist -l 3016 &
-          npx serve maguey-gate-scanner/dist -l 3015 &
+          npx serve -s maguey-pass-lounge/dist -l 3016 &
+          npx serve -s maguey-gate-scanner/dist -l 3015 &
           npx wait-on http://localhost:3016 http://localhost:3015 --timeout 120000
 
       - name: Run Cypress tests
