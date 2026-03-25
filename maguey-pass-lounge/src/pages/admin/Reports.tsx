@@ -120,10 +120,7 @@ const Reports = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Sales Reports</h1>
           <p className="text-muted-foreground">
-            Monitor ticket revenue and download summaries.{" "}
-            <span className="italic">
-              TODO: Replace mock data when Supabase analytics tables are ready.
-            </span>
+            Monitor ticket revenue and download summaries.
           </p>
         </div>
         <div className="flex gap-2">
