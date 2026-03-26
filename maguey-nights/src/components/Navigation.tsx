@@ -147,7 +147,7 @@ const Navigation = ({ transparent = false, variant }: NavigationProps) => {
             </button>
           </Link>
         ) : (
-          <a href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"} target="_self">
+          <a href={getPurchaseSiteBaseUrl()} target="_self">
             <button className="hover:from-green-500 hover:to-green-600 hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] transition-all flex text-sm font-medium text-white bg-gradient-to-b from-green-600 to-green-700 rounded-full py-2.5 px-6 shadow-[0px_0px_0px_1px_rgba(22,163,74,1),inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-sm relative items-center gap-2" style={{ '--border-gradient': 'linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.1))', '--border-radius-before': '9999px' } as any}>
               <span className="tracking-tight">BUY TICKETS</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right text-green-100"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
@@ -191,7 +191,7 @@ const Navigation = ({ transparent = false, variant }: NavigationProps) => {
                 <button className="w-full py-4 bg-[#39B54A] text-white font-bold rounded-xl uppercase tracking-wider">Order Online</button>
               </Link>
             ) : (
-              <a href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"} onClick={() => setIsOpen(false)}>
+              <a href={getPurchaseSiteBaseUrl()} onClick={() => setIsOpen(false)}>
                 <button className="w-full py-4 bg-[#39B54A] text-white font-bold rounded-xl uppercase tracking-wider">Buy Tickets</button>
               </a>
             )}

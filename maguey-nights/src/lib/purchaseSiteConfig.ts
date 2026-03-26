@@ -29,7 +29,7 @@ export const getPurchaseSiteBaseUrl = (): string => {
   }
 
   // Production default
-  return 'https://tickets.maguey.club';
+  return 'https://tickets.magueynightclub.com';
 };
 
 /**

@@ -8,10 +8,12 @@ import { User, Session, AuthError } from '@supabase/supabase-js';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useAuthMethods } from '@/hooks/useAuthMethods';
 import { useAuthProfile } from '@/hooks/useAuthProfile';
+import { type UserRole } from '@/lib/auth';
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  role: UserRole;
   loading: boolean;
   signUp: (email: string, password: string, metadata?: { firstName?: string; lastName?: string }) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: AuthError | null }>;
@@ -41,7 +43,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user, session, loading, signUp, signIn, signOut, logActivity } = useAuthSession();
+  const { user, session, role, loading, signUp, signIn, signOut, logActivity } = useAuthSession();
   const {
     signInWithGoogle, signInWithFacebook, signInWithApple, signInWithGithub,
     resetPassword, signInWithMagicLink, verifyMagicLink,
@@ -55,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useAuthProfile(user, session);
 
   const value: AuthContextType = {
-    user, session, loading,
+    user, session, role, loading,
     signUp, signIn, signOut,
     signInWithGoogle, signInWithFacebook, signInWithApple, signInWithGithub,
     resetPassword, signInWithMagicLink, verifyMagicLink,

@@ -177,7 +177,7 @@ const UpcomingEvents = () => {
             transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
             className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            <a href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"} target="_self">
+            <a href={getPurchaseSiteBaseUrl()} target="_self">
               <Button size="lg" className="group bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 text-lg px-12 py-6 font-semibold tracking-wider rounded-2xl shadow-[0_0_30px_rgba(255,0,180,0.25)] transition-all duration-300">
                 <span className="relative">
                   BUY TICKETS

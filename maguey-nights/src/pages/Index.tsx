@@ -382,7 +382,7 @@ const Index = () => {
                     Get ready for the hottest reggaeton night in Delaware. Dance to the latest hits
                     from Bad Bunny, J Balvin, Karol G, and more with our world-class DJs.
                   </p>
-                  <a href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"} target="_self">
+                  <a href={getPurchaseSiteBaseUrl()} target="_self">
                     <button className="btn-neon-glow group inline-flex items-center px-6 py-3 font-semibold tracking-wider rounded-2xl w-fit">
                       <span className="relative">
                         BUY TICKETS
@@ -420,7 +420,7 @@ const Index = () => {
                     Experience the rich sounds of Mexico with corridos, norteñas, banda, and more.
                     Our live performances bring the authentic Mexican music experience to Delaware.
                   </p>
-                  <a href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"} target="_self">
+                  <a href={getPurchaseSiteBaseUrl()} target="_self">
                     <button className="btn-neon-glow group inline-flex items-center px-6 py-3 font-semibold tracking-wider rounded-2xl w-fit">
                       <span className="relative">
                         BUY TICKETS
@@ -458,7 +458,7 @@ const Index = () => {
                     Feel the rhythm of cumbia music that gets everyone on the dance floor.
                     From classic hits to modern cumbia, experience the infectious beats that define Latin culture.
                   </p>
-                  <a href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"} target="_self">
+                  <a href={getPurchaseSiteBaseUrl()} target="_self">
                     <button className="btn-neon-glow group inline-flex items-center px-6 py-3 font-semibold tracking-wider rounded-2xl w-fit">
                       <span className="relative">
                         BUY TICKETS

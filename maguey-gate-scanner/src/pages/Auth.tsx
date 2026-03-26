@@ -20,7 +20,6 @@ const Auth = () => {
     const invite = searchParams.get('invite');
     const token = searchParams.get('token');
     const type = searchParams.get('type');
-    const role = searchParams.get('role');
     const hash = window.location.hash;
 
     // Invitations go to owner page
@@ -33,12 +32,6 @@ const Auth = () => {
     if ((token && type === 'recovery') || (hash && hash.includes('access_token') && hash.includes('type=recovery'))) {
       const hashPart = hash ? hash : '';
       navigate(`/auth/owner?${searchParams.toString()}${hashPart}`, { replace: true });
-      return;
-    }
-
-    // Explicit role parameter
-    if (role === 'owner') {
-      navigate('/auth/owner', { replace: true });
       return;
     }
 

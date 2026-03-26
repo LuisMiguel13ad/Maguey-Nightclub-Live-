@@ -143,7 +143,7 @@ export async function getAvailableTablesForEvent(eventId: string): Promise<VipTa
   // Get active reservations for this event
   const { data: reservations, error: reservationsError } = await supabase
     .from('vip_reservations')
-    .select('event_vip_table_id, status')
+    .select('event_vip_table_id, status, created_at')
     .eq('event_id', eventId)
     .in('status', ['pending', 'confirmed', 'checked_in']);
 
@@ -152,9 +152,21 @@ export async function getAvailableTablesForEvent(eventId: string): Promise<VipTa
     // Don't throw - continue with all tables showing availability based on is_available flag
   }
 
-  const typedReservations = (reservations || []) as Array<{ event_vip_table_id: string; status: string }>;
+  const typedReservations = (reservations || []) as Array<{ event_vip_table_id: string; status: string; created_at: string }>;
+
+  // Pending reservations expire after 15 minutes
+  const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+  const activeReservations = typedReservations.filter(r => {
+    if (r.status === 'confirmed' || r.status === 'checked_in') return true;
+    if (r.status === 'pending' && r.created_at) {
+      return new Date(r.created_at) > fifteenMinsAgo;
+    }
+    return false;
+  });
+
   const reservedTableIds = new Set(
-    typedReservations.map(r => r.event_vip_table_id).filter(Boolean)
+    activeReservations.map(r => r.event_vip_table_id).filter(Boolean)
   );
 
   const typedTables = (tables || []) as EventVipTable[];
@@ -287,18 +299,27 @@ export async function checkTableAvailability(eventId: string, tableId: string): 
   // Check for existing active reservations
   const { data: reservations, error: reservationsError } = await supabase
     .from('vip_reservations')
-    .select('id')
+    .select('id, status, created_at')
     .eq('event_id', eventId)
     .eq('event_vip_table_id', tableId)
-    .in('status', ['pending', 'confirmed', 'checked_in'])
-    .limit(1);
+    .in('status', ['pending', 'confirmed', 'checked_in']);
 
   if (reservationsError) {
     console.error('Error checking reservations:', reservationsError);
     throw reservationsError;
   }
 
-  return !reservations || reservations.length === 0;
+  const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000);
+  const typedReservations = (reservations as any[]) || [];
+  const hasActiveReservation = typedReservations.some(r => {
+    if (r.status === 'confirmed' || r.status === 'checked_in') return true;
+    if (r.status === 'pending' && r.created_at) {
+      return new Date(r.created_at) > fifteenMinsAgo;
+    }
+    return false;
+  });
+
+  return !hasActiveReservation;
 }
 
 // ============================================================================
@@ -343,7 +364,7 @@ export async function createTableReservation(
   data: CreateReservationData
 ): Promise<{ reservation: VipReservation; guestPasses: VipGuestPass[] }> {
   // Call the atomic reservation function
-  const { data: result, error: rpcError } = await supabase.rpc(
+  const { data: result, error: rpcError } = await (supabase.rpc as any)(
     'create_vip_reservation_atomic',
     {
       p_event_id: data.eventId,
@@ -639,7 +660,7 @@ export async function verifyPassSignature(
   reservationId?: string,
   guestNumber?: number
 ): Promise<SignatureVerificationResult> {
-  const { data: result, error: rpcError } = await supabase.rpc(
+  const { data: result, error: rpcError } = await (supabase.rpc as any)(
     'verify_vip_pass_signature',
     {
       p_qr_token: qrToken,
@@ -719,7 +740,7 @@ export async function checkInGuestPass(
   checkedInBy?: string
 ): Promise<VipGuestPass> {
   // Call the atomic check-in function
-  const { data: result, error: rpcError } = await supabase.rpc(
+  const { data: result, error: rpcError } = await (supabase.rpc as any)(
     'check_in_vip_guest_atomic',
     {
       p_pass_id: passId,

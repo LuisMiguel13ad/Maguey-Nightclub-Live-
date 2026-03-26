@@ -36,7 +36,6 @@ import {
   scanTicket,
   scanTicketOffline,
   getActiveEvents,
-  debugGetSampleTickets,
   type ScanResult,
 } from "@/lib/simple-scanner";
 import { ensureCacheIsFresh } from "@/lib/offline-ticket-cache";
@@ -197,7 +196,6 @@ const Scanner = () => {
         setSelectedEventId(tonightEvent.id);
       }
 
-      await debugGetSampleTickets(supabase);
     };
     loadEvents();
   }, []);

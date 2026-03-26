@@ -9,10 +9,30 @@
 --        Public pass view uses get_vip_pass_by_token() RPC (returns single record by token).
 -- ============================================================================
 
--- Part 1: Drop and recreate vip_reservations SELECT policy
--- Remove old policy that allowed anonymous access
-DROP POLICY IF EXISTS "vip_reservations_select" ON vip_reservations;
+-- Ensure RLS is enabled on both tables
+ALTER TABLE vip_reservations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vip_guest_passes ENABLE ROW LEVEL SECURITY;
 
+-- aggressively drop any existing policies that might be misnamed
+DO $$ 
+BEGIN
+    -- Drop all for vip_reservations
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vip_reservations') THEN
+        EXECUTE (
+            SELECT string_agg('DROP POLICY IF EXISTS ' || quote_ident(policyname) || ' ON vip_reservations;', ' ')
+            FROM pg_policies WHERE tablename = 'vip_reservations'
+        );
+    END IF;
+    -- Drop all for vip_guest_passes
+    IF EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'vip_guest_passes') THEN
+        EXECUTE (
+            SELECT string_agg('DROP POLICY IF EXISTS ' || quote_ident(policyname) || ' ON vip_guest_passes;', ' ')
+            FROM pg_policies WHERE tablename = 'vip_guest_passes'
+        );
+    END IF;
+END $$;
+
+-- Part 1: Recreate vip_reservations SELECT policy
 -- Recreate without anon access
 CREATE POLICY "vip_reservations_select" ON vip_reservations FOR SELECT
   USING (
@@ -20,9 +40,7 @@ CREATE POLICY "vip_reservations_select" ON vip_reservations FOR SELECT
     OR (auth.role() = 'authenticated' AND purchaser_email = auth.jwt() ->> 'email')
   );
 
--- Part 2: Drop and recreate vip_guest_passes SELECT policy
--- Remove old policy that allowed anonymous access
-DROP POLICY IF EXISTS "vip_guest_passes_select" ON vip_guest_passes;
+-- Part 2: Recreate vip_guest_passes SELECT policy
 
 -- Recreate without anon access
 CREATE POLICY "vip_guest_passes_select" ON vip_guest_passes FOR SELECT

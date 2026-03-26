@@ -10,6 +10,7 @@
     "cy:open": "cypress open --config-file e2e/cypress.config.ts",
     "cy:run": "cypress run --config-file e2e/cypress.config.ts",
     "e2e": "start-server-and-test 'npm run dev --workspace=maguey-pass-lounge & npm run dev --workspace=maguey-gate-scanner' 'http://localhost:3016|http://localhost:3015' 'npm run cy:run'",
+    "e2e:vip": "start-server-and-test 'npm run dev --workspace=maguey-pass-lounge & npm run dev --workspace=maguey-gate-scanner' 'http://localhost:3016|http://localhost:3015' 'cypress run --config-file e2e/cypress.config.ts --spec e2e/specs/happy-path/vip-booking-flow.cy.ts'",
     "e2e:open": "npm run cy:open",
     "load-test:purchase": "k6 run load-tests/scenarios/ticket-purchase.js",
     "load-test:scanner": "k6 run load-tests/scenarios/scanner-burst.js",
@@ -21,7 +22,7 @@
   "devDependencies": {
     "@cypress/grep": "^5.1.0",
     "@vitejs/plugin-basic-ssl": "^1.1.0",
-    "cypress": "^15.9.0",
+    "cypress": "^13.17.0",
     "cypress-plugin-stripe-elements": "^1.0.2",
     "dotenv": "^17.2.3",
     "jsqr": "^1.4.0",

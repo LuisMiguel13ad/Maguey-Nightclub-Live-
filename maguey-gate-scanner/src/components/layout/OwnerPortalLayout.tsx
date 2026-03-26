@@ -96,6 +96,15 @@ export const OwnerPortalLayout = ({ title, subtitle, description, actions, hero,
 
   const isActivePath = (path: string) => location.pathname === path;
 
+  // Map sidebar paths to data-cy attribute values for E2E testing
+  const sidebarDataCy: Record<string, string> = {
+    "/dashboard": "sidebar-dashboard",
+    "/events": "sidebar-events",
+    "/team": "sidebar-team",
+    "/analytics": "sidebar-analytics",
+    "/orders": "sidebar-orders",
+  };
+
   const handleSignOut = async () => {
     // Audit log: user logout
     await logAuditEvent('logout', 'user', `${role?.charAt(0).toUpperCase()}${role?.slice(1)} logged out`, {
@@ -166,6 +175,7 @@ export const OwnerPortalLayout = ({ title, subtitle, description, actions, hero,
                         navigate(item.path);
                         setSidebarOpen(false);
                       }}
+                      data-cy={sidebarDataCy[item.path]}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all",
                         isActivePath(item.path)

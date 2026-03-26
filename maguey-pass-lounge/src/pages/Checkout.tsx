@@ -1073,7 +1073,7 @@ const Checkout = () => {
                     <span>${serviceFee.toFixed(2)}</span>
                   </div>
                   {promoApplied && (
-                    <div className="flex justify-between text-emerald-400">
+                    <div data-cy="promo-discount-line" className="flex justify-between text-emerald-400">
                       <span>Promo ({promoApplied.code})</span>
                       <span>- ${promoAdjustedTotals.discount.toFixed(2)}</span>
                     </div>
@@ -1081,6 +1081,7 @@ const Checkout = () => {
                   <div className="flex flex-col gap-2 pt-2">
                     <div className="flex flex-col sm:flex-row gap-2">
                       <Input
+                        data-cy="promo-input"
                         value={promoCode}
                         onChange={(e) => setPromoCode(e.target.value)}
                         placeholder="Promo code"
@@ -1089,6 +1090,7 @@ const Checkout = () => {
                       <Button
                         type="button"
                         variant="outline"
+                        data-cy="promo-apply-button"
                         className="border-white/20 text-stone-300 hover:bg-white/10"
                         onClick={handleApplyPromo}
                         disabled={isApplyingPromo || isLoading}
@@ -1099,6 +1101,7 @@ const Checkout = () => {
                         <Button
                           type="button"
                           variant="ghost"
+                          data-cy="promo-clear-button"
                           className="text-stone-500 hover:text-stone-300"
                           onClick={resetPromo}
                         >
@@ -1107,7 +1110,7 @@ const Checkout = () => {
                       )}
                     </div>
                     {promoError && (
-                      <p className="text-xs text-red-400">{promoError}</p>
+                      <p data-cy="promo-error" className="text-xs text-red-400">{promoError}</p>
                     )}
                   </div>
                 </div>

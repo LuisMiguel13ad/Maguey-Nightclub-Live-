@@ -44,10 +44,14 @@ serve(async (req) => {
       specialRequests,
       bottlePreferences,
       estimatedArrival,
-      // GA ticket integration (REQUIRED for unified checkout)
+      // Host entry ticket (REQUIRED for unified checkout)
       ticketTierId,
       ticketTierName,
       ticketPriceCents,
+      // Guest tickets (OPTIONAL — host can buy for guests)
+      gaTicketCount,
+      gaTicketTypeId,
+      gaTicketPrice,
     } = body;
 
     console.log("Creating unified VIP payment intent for:", { eventId, tableId, customerEmail, tablePrice, ticketTierId });
@@ -99,6 +103,44 @@ serve(async (req) => {
       );
     }
 
+    // Cancel any existing pending reservations for the same table+email+event (idempotency)
+    // This prevents orphaned records when a user retries payment or refreshes
+    const { data: existingReservations } = await supabase
+      .from("vip_reservations")
+      .select("id, purchaser_ticket_id")
+      .eq("event_id", eventId)
+      .eq("event_vip_table_id", tableId)
+      .eq("purchaser_email", customerEmail)
+      .eq("status", "pending");
+
+    if (existingReservations && existingReservations.length > 0) {
+      console.log(`Cancelling ${existingReservations.length} existing pending reservation(s) for idempotency`);
+      for (const existing of existingReservations) {
+        // Cancel the reservation
+        await supabase
+          .from("vip_reservations")
+          .update({ status: "cancelled" })
+          .eq("id", existing.id);
+
+        // Cancel linked ticket and order
+        if (existing.purchaser_ticket_id) {
+          const { data: ticket } = await supabase
+            .from("tickets")
+            .update({ status: "cancelled" })
+            .eq("id", existing.purchaser_ticket_id)
+            .select("order_id")
+            .single();
+
+          if (ticket?.order_id) {
+            await supabase
+              .from("orders")
+              .update({ status: "cancelled" })
+              .eq("id", ticket.order_id);
+          }
+        }
+      }
+    }
+
     // Fetch GA ticket price from database (never trust client-sent prices)
     const { data: ticketType, error: ticketTypeError } = await supabase
       .from("ticket_types")
@@ -115,9 +157,18 @@ serve(async (req) => {
     }
 
     // Calculate prices from DATABASE values, not client input
-    const vipTablePriceCents = Math.round(Number(table.price) * 100);
+    // The event_vip_tables column is price_cents, not price
+    const vipTablePriceCents = table.price_cents != null ? table.price_cents : Math.round(Number(tablePrice) * 100);
     const serverTicketPriceCents = Math.round((ticketType.price + (ticketType.fee || 0)) * 100);
-    const totalAmountCents = vipTablePriceCents + serverTicketPriceCents;
+
+    // Guest tickets: validate count against table capacity, use same server-side price
+    const validatedGuestCount = Math.min(
+      Math.max(0, parseInt(gaTicketCount) || 0),
+      (table.capacity || 6) - 1  // Cap at capacity minus host
+    );
+    const guestTicketsCents = validatedGuestCount * serverTicketPriceCents;
+
+    const totalAmountCents = vipTablePriceCents + serverTicketPriceCents + guestTicketsCents;
 
     // Build package snapshot with booking details (using server-side prices)
     const packageSnapshot = {
@@ -130,10 +181,13 @@ serve(async (req) => {
       bottlePreferences: bottlePreferences || null,
       estimatedArrival: estimatedArrival || null,
       priceAtBooking: vipTablePriceCents / 100,
-      // GA ticket info (purchaser's ticket) - prices from DB
+      // Host entry ticket - prices from DB
       ticketTierId: ticketTierId,
       ticketTierName: ticketType.name || ticketTierName || "General Admission",
       ticketPrice: serverTicketPriceCents / 100,
+      // Guest tickets purchased by host
+      guestTicketCount: validatedGuestCount,
+      guestTicketTotalCents: guestTicketsCents,
       totalAmount: totalAmountCents / 100,
     };
 
@@ -193,9 +247,14 @@ serve(async (req) => {
           vipPriceCents: String(vipTablePriceCents),
           ticketPriceCents: String(serverTicketPriceCents),
           totalAmountCents: String(totalAmountCents),
+          // Guest ticket metadata for webhook processing
+          gaTicketCount: String(validatedGuestCount),
+          gaTicketTypeId: ticketTierId,
+          gaTicketPrice: String(serverTicketPriceCents / 100),
+          tableCapacity: String(table.capacity || 6),
         },
         receipt_email: customerEmail,
-        description: `VIP Table ${table.table_number || tableNumber} (${(table.tier || tableTier || "standard").replace('_', ' ')}) + GA Ticket for ${event.name}`,
+        description: `VIP Table ${table.table_number || tableNumber} (${(table.tier || tableTier || "standard").replace('_', ' ')}) + ${1 + validatedGuestCount} GA Ticket${validatedGuestCount > 0 ? 's' : ''} for ${event.name}`,
       });
     } catch (stripeError) {
       console.error("Stripe payment intent creation failed:", stripeError);
@@ -239,6 +298,8 @@ serve(async (req) => {
         amount: totalAmountCents / 100,
         vipAmount: vipTablePriceCents / 100,
         ticketAmount: serverTicketPriceCents / 100,
+        guestTicketCount: validatedGuestCount,
+        guestTicketAmount: guestTicketsCents / 100,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
     );

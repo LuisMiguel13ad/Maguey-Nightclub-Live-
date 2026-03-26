@@ -15,6 +15,8 @@ env:
   STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SK }}
   SCANNER_TEST_EMAIL: ${{ secrets.SCANNER_TEST_EMAIL }}
   SCANNER_TEST_PASSWORD: ${{ secrets.SCANNER_TEST_PASSWORD }}
+  OWNER_TEST_EMAIL: ${{ secrets.OWNER_TEST_EMAIL }}
+  OWNER_TEST_PASSWORD: ${{ secrets.OWNER_TEST_PASSWORD }}
 
 jobs:
   # Lint job - runs first
@@ -117,23 +119,24 @@ jobs:
         run: |
           npx serve -s maguey-pass-lounge/dist -l 3016 &
           npx serve -s maguey-gate-scanner/dist -l 3015 &
-          npx wait-on http://localhost:3016 http://localhost:3015 --timeout 120000
+          npx serve -s maguey-nights/dist -l 3017 &
+          npx wait-on http://localhost:3016 http://localhost:3015 http://localhost:3017 --timeout 120000
 
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           config-file: e2e/cypress.config.ts
           browser: chrome
-          # Split tests across containers (no duplication)
-          # Container 1: health + smoke
-          # Container 2: happy path (3 specs)
-          # Container 3: edge cases (5 specs)
-          # Container 4: offline (2 specs)
+          # Split 22 specs across 4 containers (balanced by estimated run time)
+          # Container 1: infrastructure + auth + dashboard + events (5 specs)
+          # Container 2: happy-path purchase + VIP booking + email (3 specs)
+          # Container 3: happy-path scan + VIP scan + promo + team + role + marketing (6 specs)
+          # Container 4: edge-cases + offline (8 specs)
           spec: |
-            ${{ matrix.containers == 1 && 'e2e/specs/health-check.cy.ts,e2e/specs/smoke.cy.ts' || '' }}
-            ${{ matrix.containers == 2 && 'e2e/specs/happy-path/**/*.cy.ts' || '' }}
-            ${{ matrix.containers == 3 && 'e2e/specs/edge-cases/**/*.cy.ts' || '' }}
-            ${{ matrix.containers == 4 && 'e2e/specs/offline/**/*.cy.ts' || '' }}
+            ${{ matrix.containers == 1 && 'e2e/specs/health-check.cy.ts,e2e/specs/smoke.cy.ts,e2e/specs/happy-path/auth-flows.cy.ts,e2e/specs/happy-path/owner-dashboard.cy.ts,e2e/specs/happy-path/event-management.cy.ts' || '' }}
+            ${{ matrix.containers == 2 && 'e2e/specs/happy-path/purchase-flow.cy.ts,e2e/specs/happy-path/email-verification.cy.ts,e2e/specs/happy-path/vip-booking-flow.cy.ts' || '' }}
+            ${{ matrix.containers == 3 && 'e2e/specs/happy-path/scan-flow.cy.ts,e2e/specs/happy-path/vip-scan-flow.cy.ts,e2e/specs/edge-cases/promo-codes.cy.ts,e2e/specs/edge-cases/team-management.cy.ts,e2e/specs/edge-cases/role-enforcement.cy.ts,e2e/specs/cross-site/marketing-links.cy.ts' || '' }}
+            ${{ matrix.containers == 4 && 'e2e/specs/edge-cases/payment-failures.cy.ts,e2e/specs/edge-cases/vip-payment-failures.cy.ts,e2e/specs/edge-cases/invalid-qr.cy.ts,e2e/specs/edge-cases/orphan-prevention.cy.ts,e2e/specs/edge-cases/webhook-failures.cy.ts,e2e/specs/edge-cases/email-failures.cy.ts,e2e/specs/offline/offline-scan.cy.ts,e2e/specs/offline/offline-recovery.cy.ts' || '' }}
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

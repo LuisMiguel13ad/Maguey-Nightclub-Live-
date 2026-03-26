@@ -20,6 +20,16 @@ import { metrics } from './monitoring';
 const logger = createLogger({ module: 'stripe' });
 const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
 
+/**
+ * Get the URL for a Supabase Edge Function.
+ * In dev, returns a relative path so Vite's proxy handles it (no CORS).
+ * In production, returns the full Supabase URL.
+ */
+function getEdgeFunctionUrl(functionName: string): string {
+  const base = import.meta.env.DEV ? '' : import.meta.env.VITE_SUPABASE_URL;
+  return `${base}/functions/v1/${functionName}`;
+}
+
 let stripePromise: Promise<Stripe | null>;
 
 // ============================================
@@ -150,7 +160,7 @@ export async function createCheckoutSession(orderData: {
         total: orderData.totalAmount,
       });
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
+      const response = await fetch(getEdgeFunctionUrl('create-checkout-session'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -292,7 +302,7 @@ export async function createSimplePaymentIntent(amount: number, currency = 'usd'
     return await stripeCircuit.execute(async () => {
       logger.debug('Creating Payment Intent', { amount, currency });
       
-      const response = await fetch(`${supabaseUrl}/functions/v1/create-payment-intent`, {
+      const response = await fetch(getEdgeFunctionUrl('create-payment-intent'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -398,7 +408,11 @@ export interface VipPaymentIntentData {
   specialRequests?: string;
   bottlePreferences?: string;
   estimatedArrival?: string;
-  // GA ticket integration fields
+  // Host entry ticket (required for unified checkout)
+  ticketTierId?: string;
+  ticketTierName?: string;
+  ticketPriceCents?: number;
+  // Guest ticket integration fields (optional — host can buy for guests)
   gaTicketCount?: number;
   gaTicketTypeId?: string;
   gaTicketPrice?: number;
@@ -466,7 +480,7 @@ export async function createVipPaymentIntent(
     amount: data.tablePrice,
   });
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/create-vip-payment-intent`, {
+  const response = await fetch(getEdgeFunctionUrl('create-vip-payment-intent'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -516,7 +530,7 @@ export async function confirmVipPayment(
     throw new Error('Supabase configuration missing.');
   }
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/confirm-vip-payment`, {
+  const response = await fetch(getEdgeFunctionUrl('confirm-vip-payment'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

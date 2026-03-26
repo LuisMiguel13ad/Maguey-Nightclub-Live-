@@ -116,6 +116,7 @@ function PaymentForm({
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
   const handleSubmit = useCallback(async (e?: React.FormEvent) => {
@@ -170,13 +171,40 @@ function PaymentForm({
   }, [stripe, elements, bookingData.email, paymentIntentId, reservationId, onSuccess, onError, setParentProcessing]);
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit}>
-      <PaymentElement
-        onReady={() => setIsReady(true)}
-        options={{
-          layout: 'tabs',
-        }}
-      />
+    <form ref={formRef} onSubmit={handleSubmit} className="relative">
+      {/* Loading Skeleton built into our theme while Stripe initializes */}
+      {!isReady && !loadError && (
+        <div className="absolute inset-0 z-10 bg-forest-900 border border-white/5 animate-pulse rounded-sm opacity-50 flex flex-col items-center justify-center min-h-[250px] mb-6">
+          <Loader2 className="w-8 h-8 animate-spin text-copper-400 mb-2" />
+          <p className="text-copper-400/70 text-sm font-medium tracking-wider uppercase">Connecting to Secure Payment...</p>
+        </div>
+      )}
+
+      {/* Stripe Error Fallback */}
+      {loadError && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-8 rounded-xl flex flex-col items-center gap-3 text-center mb-6">
+          <AlertCircle className="w-8 h-8 flex-shrink-0" />
+          <p className="font-semibold">{loadError}</p>
+          <p className="text-sm opacity-80 mt-2">
+            This typically happens if the Stripe API keys are mismatched or invalid. Please check your dashboard API keys.
+          </p>
+        </div>
+      )}
+
+      <div className={!isReady ? 'invisible absolute h-0' : 'block mb-6'}>
+        <PaymentElement
+          onReady={() => setIsReady(true)}
+          options={{
+            layout: 'tabs',
+          }}
+          onLoadError={(error) => {
+            console.error('Stripe PaymentElement load error:', error);
+            const errorMessage = (error as any).message || (error as any).error?.message || "Stripe failed to load the payment form.";
+            setLoadError(errorMessage);
+            setIsReady(false);
+          }}
+        />
+      </div>
 
       {/* Pay Button */}
       <button
@@ -206,10 +234,10 @@ function PaymentForm({
 }
 
 // Confirmation Section Component
-function ConfirmationSection({ 
-  reservation, 
-  eventId 
-}: { 
+function ConfirmationSection({
+  reservation,
+  eventId
+}: {
   reservation: VipReservationConfirmation;
   eventId: string;
 }) {
@@ -258,8 +286,8 @@ function ConfirmationSection({
         {/* Event Info */}
         <div className="flex items-start gap-4 pb-6 border-b border-white/5">
           {reservation.event.flyer_url ? (
-            <img 
-              src={reservation.event.flyer_url} 
+            <img
+              src={reservation.event.flyer_url}
               alt={reservation.event.name}
               className="w-20 h-20 rounded-xl object-cover"
             />
@@ -287,20 +315,18 @@ function ConfirmationSection({
         <div className="py-6 border-b border-white/5">
           <h3 className="text-sm text-copper-400 uppercase tracking-wider mb-3">Your Table</h3>
           <div className="flex items-center gap-4">
-            <div className={`w-16 h-16 rounded-xl flex items-center justify-center font-bold text-2xl ${
-              reservation.table.tier === 'premium' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+            <div className={`w-16 h-16 rounded-xl flex items-center justify-center font-bold text-2xl ${reservation.table.tier === 'premium' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
               reservation.table.tier === 'front_row' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-              'bg-copper-400/20 text-copper-400 border border-copper-400/30'
-            }`}>
+                'bg-copper-400/20 text-copper-400 border border-copper-400/30'
+              }`}>
               {reservation.table.table_number}
             </div>
             <div>
               <p className="text-white font-medium text-lg">Table {reservation.table.table_number}</p>
-              <p className={`text-sm ${
-                reservation.table.tier === 'premium' ? 'text-amber-400' :
+              <p className={`text-sm ${reservation.table.tier === 'premium' ? 'text-amber-400' :
                 reservation.table.tier === 'front_row' ? 'text-purple-400' :
-                'text-copper-400'
-              }`}>
+                  'text-copper-400'
+                }`}>
                 {formatTier(reservation.table.tier)}
               </p>
             </div>
@@ -352,7 +378,7 @@ function ConfirmationSection({
         <div>
           <p className="text-stone-300 font-medium">Guest Passes</p>
           <p className="text-sm text-copper-400/70">
-            QR passes for your party will be available in your account dashboard. 
+            QR passes for your party will be available in your account dashboard.
             Share them with your guests for easy check-in.
           </p>
         </div>
@@ -360,14 +386,14 @@ function ConfirmationSection({
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <Link 
-          to="/account" 
+        <Link
+          to="/account"
           className="flex-1 bg-copper-400 hover:bg-copper-500 text-forest-950 font-semibold py-3 rounded-sm transition-all flex items-center justify-center gap-2"
         >
           <QrCode className="w-5 h-5" />
           View Guest Passes
         </Link>
-        <Link 
+        <Link
           to={`/events/${eventId}`}
           className="flex-1 bg-[#0d1f1f] border border-white/5 text-stone-300 font-medium py-3 rounded-xl hover:bg-copper-400/5 transition-all flex items-center justify-center gap-2"
         >
@@ -394,12 +420,13 @@ export default function VipPayment() {
   const { eventId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   const tableId = searchParams.get('tableId');
-  
+
   const [event, setEvent] = useState<any>(null);
   const [bookingData, setBookingData] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   // Stripe state
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -431,7 +458,7 @@ export default function VipPayment() {
       navigate(`/events/${eventId}/vip-tables`);
       return;
     }
-    
+
     // If user has booking data but lands here, redirect to booking form
     // Payment is now handled there
     const parsedData = JSON.parse(storedData) as BookingData;
@@ -439,9 +466,9 @@ export default function VipPayment() {
       navigate(`/events/${eventId}/vip-booking?tableId=${parsedData.tableId}&tableNumber=${parsedData.tableNumber}&price=${parsedData.tablePrice}&tier=${parsedData.tableTier}&capacity=${parsedData.tableCapacity}&bottles=${parsedData.bottlesIncluded}`);
       return;
     }
-    
+
     setBookingData(parsedData);
-    
+
     // Load event data
     if (eventId) {
       const { data, error } = await supabase
@@ -449,10 +476,10 @@ export default function VipPayment() {
         .select('*')
         .eq('id', eventId)
         .single();
-      
+
       if (data) setEvent(data);
     }
-    
+
     setLoading(false);
   };
 
@@ -465,10 +492,10 @@ export default function VipPayment() {
 
   const initializePayment = async () => {
     if (!bookingData || !eventId || !tableId) return;
-    
+
     setInitializingPayment(true);
     setError('');
-    
+
     try {
       const result = await createVipPaymentIntent({
         eventId,
@@ -488,7 +515,7 @@ export default function VipPayment() {
         bottlePreferences: bookingData.bottlePreferences,
         estimatedArrival: bookingData.estimatedArrival,
       });
-      
+
       setClientSecret(result.clientSecret);
       setPaymentIntentId(result.paymentIntentId);
       setReservationId(result.reservationId);
@@ -564,14 +591,16 @@ export default function VipPayment() {
 
   if (!bookingData) {
     return (
-      <div className="min-h-screen bg-forest-950 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-forest-950 flex flex-col items-center justify-center p-4">
+        <div className="text-center max-w-md w-full bg-forest-900/50 p-8 rounded-2xl border border-red-500/20">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-white mb-2">Booking Not Found</h2>
-          <p className="text-stone-500 mb-4">Please start your reservation again.</p>
+          <p className="text-stone-400 mb-6 flex items-center justify-center gap-2">
+            {error ? error : "Please start your reservation again."}
+          </p>
           <button
             onClick={() => navigate(`/events/${eventId}/vip-tables`)}
-            className="px-6 py-2 bg-copper-400 text-forest-950 rounded-sm hover:bg-copper-500 transition-colors"
+            className="w-full px-6 py-3 bg-copper-400 text-forest-950 font-medium rounded-sm hover:bg-copper-500 transition-colors"
           >
             Back to Table Selection
           </button>
@@ -586,10 +615,10 @@ export default function VipPayment() {
       <div className="min-h-screen bg-forest-950 text-stone-300 overflow-x-hidden">
         {/* Custom Cursor */}
         <CustomCursor />
-        
+
         {/* Noise Overlay */}
         <div className="noise-overlay" />
-        
+
         {/* Grid Background */}
         <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0">
           <svg width="100%" height="100%">
@@ -622,9 +651,9 @@ export default function VipPayment() {
         </div>
 
         <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 relative z-10">
-          <ConfirmationSection 
-            reservation={confirmedReservation} 
-            eventId={eventId || ''} 
+          <ConfirmationSection
+            reservation={confirmedReservation}
+            eventId={eventId || ''}
           />
         </main>
       </div>
@@ -635,10 +664,10 @@ export default function VipPayment() {
     <div className="min-h-screen bg-forest-950 text-stone-300 overflow-x-hidden">
       {/* Custom Cursor */}
       <CustomCursor />
-      
+
       {/* Noise Overlay */}
       <div className="noise-overlay" />
-      
+
       {/* Grid Background */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0">
         <svg width="100%" height="100%">
@@ -653,7 +682,7 @@ export default function VipPayment() {
       <header className="bg-forest-950/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => navigate(-1)}
               className="text-copper-400/70 hover:text-copper-400 p-2 -ml-2 rounded-lg hover:bg-white/5 transition-colors"
             >
@@ -682,10 +711,10 @@ export default function VipPayment() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          
+
           {/* Payment Section - 3 columns */}
           <div className="lg:col-span-3 space-y-6">
-            
+
             {/* Order Review */}
             <div className="bg-white/[0.02] backdrop-blur-sm rounded-2xl p-6 border border-white/5">
               <h2 className="text-lg text-stone-100 mb-4 flex items-center gap-3" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>
@@ -694,25 +723,23 @@ export default function VipPayment() {
                 </div>
                 <span className="font-light tracking-wide">Review Your Order</span>
               </h2>
-              
+
               {/* Table Summary Card */}
               <div className="bg-forest-900 rounded-xl p-4 border border-white/10">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center font-bold text-2xl ${
-                      bookingData.tableTier === 'premium' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center font-bold text-2xl ${bookingData.tableTier === 'premium' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
                       bookingData.tableTier === 'front_row' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                      'bg-copper-400/20 text-copper-400 border border-copper-400/30'
-                    }`}>
+                        'bg-copper-400/20 text-copper-400 border border-copper-400/30'
+                      }`}>
                       {bookingData.tableNumber}
                     </div>
                     <div>
                       <p className="font-medium text-stone-100 text-lg">Table {bookingData.tableNumber}</p>
-                      <p className={`text-sm ${
-                        bookingData.tableTier === 'premium' ? 'text-amber-400' :
+                      <p className={`text-sm ${bookingData.tableTier === 'premium' ? 'text-amber-400' :
                         bookingData.tableTier === 'front_row' ? 'text-purple-400' :
-                        'text-copper-400'
-                      }`}>
+                          'text-copper-400'
+                        }`}>
                         {formatTier(bookingData.tableTier)}
                       </p>
                     </div>
@@ -721,7 +748,7 @@ export default function VipPayment() {
                     <p className="text-2xl font-bold text-white">${bookingData.tablePrice}</p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/10">
                   <div className="flex items-center gap-2 text-sm text-copper-400/60">
                     <Users className="w-4 h-4" />
@@ -733,7 +760,7 @@ export default function VipPayment() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Customer Info */}
               <div className="mt-4 pt-4 border-t border-white/10">
                 <p className="text-xs text-copper-400 uppercase tracking-wider mb-2">Reservation For</p>
@@ -741,7 +768,7 @@ export default function VipPayment() {
                 <p className="text-copper-400/60 text-sm">{bookingData.email}</p>
                 <p className="text-copper-400/60 text-sm">{bookingData.phone}</p>
               </div>
-              
+
               {/* Special Requests Summary */}
               {(bookingData.celebration || bookingData.bottlePreferences || bookingData.specialRequests) && (
                 <div className="mt-4 pt-4 border-t border-white/10">
@@ -774,7 +801,7 @@ export default function VipPayment() {
                 </div>
                 <span className="font-light tracking-wide">Payment Details</span>
               </h2>
-              
+
               {/* Trust Badges */}
               <div className="flex flex-wrap gap-4 mb-6 p-4 bg-copper-400/5 rounded-xl border border-white/5">
                 <div className="flex items-center gap-2 text-sm text-stone-300/70">
@@ -798,6 +825,15 @@ export default function VipPayment() {
                     <Loader2 className="w-8 h-8 animate-spin text-copper-400 mx-auto mb-3" />
                     <p className="text-copper-400/70">Initializing secure payment...</p>
                   </div>
+                </div>
+              ) : !import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ? (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-8 rounded-xl flex flex-col items-center gap-3 text-center mb-6">
+                  <AlertCircle className="w-8 h-8 flex-shrink-0" />
+                  <p className="font-semibold">Missing Stripe Configuration</p>
+                  <p className="text-sm opacity-80 mt-2">
+                    The VITE_STRIPE_PUBLISHABLE_KEY environment variable is not defined.<br />
+                    If it's in your .env file, please <strong>restart your local dev server</strong>.
+                  </p>
                 </div>
               ) : clientSecret && paymentIntentId && reservationId ? (
                 <Elements
@@ -823,7 +859,7 @@ export default function VipPayment() {
                   <div className="text-center">
                     <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-3" />
                     <p className="text-red-400/70">Failed to load payment form</p>
-                    <button 
+                    <button
                       onClick={initializePayment}
                       className="mt-4 px-4 py-2 bg-copper-400 text-forest-950 rounded-sm hover:bg-copper-500 transition-colors"
                     >
@@ -832,7 +868,7 @@ export default function VipPayment() {
                   </div>
                 </div>
               )}
-              
+
               <p className="text-center text-xs text-stone-600 mt-4">
                 Your payment information is encrypted and secure
               </p>
@@ -843,7 +879,7 @@ export default function VipPayment() {
           <div className="lg:col-span-2">
             <div className="bg-white/[0.02] backdrop-blur-sm rounded-2xl p-6 border border-white/5 sticky top-32">
               <h2 className="text-lg text-stone-100 mb-4 font-light tracking-wide" style={{ fontFamily: "'Times New Roman', Georgia, serif" }}>Order Summary</h2>
-              
+
               {/* Event Info */}
               <div className="mb-4 pb-4 border-b border-white/5">
                 <p className="text-[10px] text-copper-400 mb-1 uppercase tracking-[0.15em] font-medium">Event</p>
@@ -878,7 +914,7 @@ export default function VipPayment() {
                 <span className="text-3xl font-bold text-white">${bookingData.tablePrice}</span>
               </div>
               <p className="text-xs text-stone-600 mt-1 text-right">+ tax & gratuity at venue</p>
-              
+
               {/* What's Included */}
               <div className="mt-6 pt-4 border-t border-white/5">
                 <p className="text-xs text-copper-400 uppercase tracking-wider mb-3">What's Included</p>

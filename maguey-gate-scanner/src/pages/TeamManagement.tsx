@@ -370,7 +370,7 @@ const TeamManagement = () => {
     >
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-cy="team-container">
           <Card className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915]">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -438,6 +438,7 @@ const TeamManagement = () => {
               <Button
                 onClick={openInviteDialog}
                 className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0"
+                data-cy="invite-button"
               >
                 <Link2 className="h-4 w-4 mr-2" />
                 Create Invitation
@@ -511,6 +512,7 @@ const TeamManagement = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 bg-indigo-500/20 border-indigo-500/30 text-white placeholder:text-slate-400 focus:border-indigo-400 focus:ring-indigo-500/50"
+                  data-cy="team-search"
                 />
               </div>
             </div>
@@ -529,7 +531,7 @@ const TeamManagement = () => {
                 </p>
               </div>
             ) : (
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-lg overflow-hidden" data-cy="team-table">
                 <Table>
                   <TableHeader>
                     <TableRow>

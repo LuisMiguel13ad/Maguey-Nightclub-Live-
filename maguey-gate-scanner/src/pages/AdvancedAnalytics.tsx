@@ -199,45 +199,74 @@ const AdvancedAnalytics = () => {
   };
 
   const loadKPIData = async (start: Date, end: Date) => {
-    // Query tickets
-    const { data: ticketsData } = await (supabase as any)
-      .from("tickets")
-      .select("created_at, price, scanned_at, event_id")
-      .gte("created_at", start.toISOString())
-      .lte("created_at", end.toISOString());
+    const parseTicketPrice = (t: any): number => {
+      const price = typeof t.price === 'string' ? parseFloat(t.price) : parseFloat(t.price?.toString() || '0');
+      return price || 0;
+    };
 
-    let filteredData = ticketsData || [];
+    // Resolve event filter once (used for both periods)
+    let eventId: string | null = null;
     if (selectedEvent !== 'all') {
       const { data: eventsData } = await (supabase as any)
         .from("events")
         .select("id, name")
         .eq("name", selectedEvent)
         .single();
-      
-      if (eventsData) {
-        filteredData = filteredData.filter((t: any) => t.event_id === eventsData.id);
-      }
+      if (eventsData) eventId = eventsData.id;
     }
 
-    const totalRevenue = filteredData.reduce((sum: number, t: any) => {
-      const price = typeof t.price === 'string' ? parseFloat(t.price) : parseFloat(t.price?.toString() || '0');
-      return sum + (price || 0);
-    }, 0);
+    const filterByEvent = (data: any[]) =>
+      eventId ? data.filter((t: any) => t.event_id === eventId) : data;
 
+    // Query current period tickets
+    const { data: ticketsData } = await (supabase as any)
+      .from("tickets")
+      .select("created_at, price, scanned_at, event_id")
+      .gte("created_at", start.toISOString())
+      .lte("created_at", end.toISOString());
+
+    const filteredData = filterByEvent(ticketsData || []);
+
+    const totalRevenue = filteredData.reduce((sum: number, t: any) => sum + parseTicketPrice(t), 0);
     const totalTickets = filteredData.length;
     const totalScans = filteredData.filter((t: any) => t.scanned_at).length;
     const avgTicketPrice = totalTickets > 0 ? totalRevenue / totalTickets : 0;
     const scanRate = totalTickets > 0 ? (totalScans / totalTickets) * 100 : 0;
 
-    // Calculate changes (simplified - compare with previous period)
+    // Query previous period (same duration, shifted back) for comparison
+    const periodMs = end.getTime() - start.getTime();
+    const prevStart = new Date(start.getTime() - periodMs);
+    const prevEnd = new Date(end.getTime() - periodMs);
+
+    const { data: prevTicketsData } = await (supabase as any)
+      .from("tickets")
+      .select("created_at, price, scanned_at, event_id")
+      .gte("created_at", prevStart.toISOString())
+      .lte("created_at", prevEnd.toISOString());
+
+    const prevFiltered = filterByEvent(prevTicketsData || []);
+    const prevRevenue = prevFiltered.reduce((sum: number, t: any) => sum + parseTicketPrice(t), 0);
+    const prevTickets = prevFiltered.length;
+    const prevScans = prevFiltered.filter((t: any) => t.scanned_at).length;
+
+    const revenueChange = prevRevenue > 0
+      ? ((totalRevenue - prevRevenue) / prevRevenue) * 100
+      : 0;
+    const ticketsChange = prevTickets > 0
+      ? ((totalTickets - prevTickets) / prevTickets) * 100
+      : 0;
+    const scansChange = prevScans > 0
+      ? ((totalScans - prevScans) / prevScans) * 100
+      : 0;
+
     setKpiData({
       totalRevenue,
       totalTickets,
       totalScans,
       avgTicketPrice,
-      revenueChange: 12.5, // Mock data
-      ticketsChange: 8.2,
-      scansChange: -3.1,
+      revenueChange,
+      ticketsChange,
+      scansChange,
       scanRate,
     });
   };

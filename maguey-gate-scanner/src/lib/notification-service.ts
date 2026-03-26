@@ -1,29 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import sgMail from '@sendgrid/mail';
-
-// Firebase Admin SDK (server-side only - requires Node.js environment)
-// Note: This will only work in server-side contexts (API routes, server functions)
-// For client-side web push, use Firebase client SDK instead
-let firebaseAdmin: typeof import('firebase-admin') | null = null;
-
-// Lazy load firebase-admin to avoid errors in browser environments
-async function getFirebaseAdmin() {
-  if (firebaseAdmin) return firebaseAdmin;
-  
-  // Only import in Node.js environments
-  if (typeof window === 'undefined' && typeof process !== 'undefined') {
-    try {
-      firebaseAdmin = await import('firebase-admin');
-      return firebaseAdmin;
-    } catch (error) {
-      console.warn('[Notification] Firebase Admin SDK not available (browser environment):', error);
-      return null;
-    }
-  }
-  
-  return null;
-}
+// Server-side SDKs (firebase-admin, @sendgrid/mail, twilio) have been removed.
+// Email, SMS, and push notifications should be handled via server-side Edge Functions.
+// Client-side code uses Supabase queries, browser notifications, and webhook/fetch calls only.
 
 // Types for notification system (may not exist in generated types yet)
 type NotificationRule = {
@@ -476,151 +455,13 @@ async function sendEmailNotification(
   message: string,
   metadata?: Record<string, any>
 ): Promise<boolean> {
-  const maxRetries = 3;
-  let lastError: Error | null = null;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const apiKey = import.meta.env.VITE_SENDGRID_API_KEY;
-      
-      if (!apiKey) {
-        console.warn('[Notification] SendGrid API key not configured');
-        
-        // Try fallback to AWS SES
-        if (import.meta.env.VITE_AWS_SES_ENABLED === 'true') {
-          return await sendEmailViaSES(recipients, title, message, metadata);
-        }
-        
-        return false;
-      }
-      
-      sgMail.setApiKey(apiKey);
-      
-      // Build email template based on notification type
-      const templateId = getTemplateId(metadata?.type);
-      
-      const fromEmail = import.meta.env.VITE_SENDGRID_FROM_EMAIL || 'alerts@maguey.com';
-      const fromName = import.meta.env.VITE_SENDGRID_FROM_NAME || 'Event Scanner System';
-      
-      const msg: any = {
-        to: recipients,
-        from: {
-          email: fromEmail,
-          name: fromName,
-        },
-        subject: title,
-        text: message,
-        html: generateEmailHTML(title, message, metadata),
-      };
-      
-      // Add template if configured
-      if (templateId) {
-        msg.templateId = templateId;
-        msg.dynamicTemplateData = {
-          title,
-          message,
-          ...metadata,
-        };
-      }
-      
-      // Handle attachments if provided
-      if (metadata?.attachments && Array.isArray(metadata.attachments)) {
-        msg.attachments = metadata.attachments.map((att: any) => ({
-          content: att.content,
-          filename: att.filename,
-          type: att.type,
-          disposition: att.disposition || 'attachment',
-        }));
-      }
-      
-      // Send emails
-      await sgMail.sendMultiple(msg);
-      
-      console.log('[Notification] Email sent successfully', { 
-        recipients: recipients.length,
-        title,
-        attempt,
-      });
-      
-      // Log email send to database
-      try {
-        await (supabase.from as any)('notifications')
-          .insert({
-            title: `Email: ${title}`,
-            message: `Sent to ${recipients.length} recipient(s)`,
-            severity: metadata?.severity || 'medium',
-            channels_used: ['email'],
-            recipients: recipients,
-            metadata: {
-              email_recipients: recipients,
-              email_subject: title,
-              ...metadata,
-            },
-            status: 'sent',
-            sent_at: new Date().toISOString(),
-          });
-      } catch (logError) {
-        console.warn('[Notification] Failed to log email to database:', logError);
-      }
-      
-      return true;
-    } catch (error: any) {
-      lastError = error;
-      console.error(`[Notification] Email send failed (attempt ${attempt}/${maxRetries}):`, error);
-      
-      // If it's a rate limit error, wait before retrying
-      if (error.response?.status === 429 && attempt < maxRetries) {
-        const retryAfter = error.response.headers['retry-after'] || Math.pow(2, attempt);
-        console.log(`[Notification] Rate limited, waiting ${retryAfter} seconds before retry`);
-        await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-        continue;
-      }
-      
-      // If it's a permanent error (4xx except 429), don't retry
-      if (error.response?.status >= 400 && error.response?.status < 500 && error.response?.status !== 429) {
-        break;
-      }
-      
-      // Wait before retry (exponential backoff)
-      if (attempt < maxRetries) {
-        const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  
-  // All retries failed, try fallback provider
+  // SendGrid SDK removed — email should be sent via server-side Edge Functions.
+  // Try fetch-based SES fallback if configured, otherwise log and return false.
   if (import.meta.env.VITE_AWS_SES_ENABLED === 'true') {
-    console.log('[Notification] Attempting fallback to AWS SES');
-    const fallbackSuccess = await sendEmailViaSES(recipients, title, message, metadata);
-    if (fallbackSuccess) {
-      return true;
-    }
+    return await sendEmailViaSES(recipients, title, message, metadata);
   }
-  
-  // Log failure to database for admin alerts
-  try {
-    await (supabase.from as any)('notifications')
-      .insert({
-        title: `Email Failed: ${title}`,
-        message: `Failed to send email to ${recipients.length} recipient(s) after ${maxRetries} attempts`,
-        severity: 'high',
-        channels_used: ['email'],
-        recipients: recipients,
-        metadata: {
-          email_recipients: recipients,
-          email_subject: title,
-          error: lastError?.message,
-          attempts: maxRetries,
-          ...metadata,
-        },
-        status: 'failed',
-        sent_at: new Date().toISOString(),
-      });
-  } catch (logError) {
-    console.warn('[Notification] Failed to log email failure to database:', logError);
-  }
-  
+
+  console.warn('[Notification] Email sending requires server-side Edge Function (SendGrid SDK removed from browser bundle)');
   return false;
 }
 
@@ -877,152 +718,9 @@ export async function sendSMSNotification(
   message: string,
   metadata?: Record<string, any>
 ): Promise<boolean> {
-  try {
-    // Dynamic import for Twilio (client-side compatible)
-    const twilio = await import('twilio');
-    const accountSid = import.meta.env.VITE_TWILIO_ACCOUNT_SID;
-    const authToken = import.meta.env.VITE_TWILIO_AUTH_TOKEN;
-    const fromNumber = import.meta.env.VITE_TWILIO_PHONE_NUMBER;
-    
-    if (!accountSid || !authToken || !fromNumber) {
-      console.warn('[Notification] Twilio credentials not configured');
-      return false;
-    }
-    
-    const client = twilio.default(accountSid, authToken);
-    
-    // Truncate message to SMS limit (160 chars with buffer)
-    const smsMessage = truncateForSMS(`${title}: ${message}`);
-    
-    // Get phone numbers from user IDs if needed
-    let phoneNumbers: string[] = [];
-    
-    // Check if recipients are already phone numbers or user IDs
-    const recipientPhones: string[] = [];
-    const recipientUserIds: string[] = [];
-    
-    for (const recipient of recipients) {
-      // Check if it looks like a phone number
-      if (/^[\d\s\-\+\(\)]+$/.test(recipient) && recipient.replace(/\D/g, '').length >= 10) {
-        recipientPhones.push(recipient);
-      } else {
-        recipientUserIds.push(recipient);
-      }
-    }
-    
-    // Get phone numbers for user IDs
-    if (recipientUserIds.length > 0) {
-      const userPhones = await getUserPhoneNumbers(recipientUserIds);
-      phoneNumbers.push(...userPhones);
-    }
-    
-    // Add direct phone numbers
-    phoneNumbers.push(...recipientPhones);
-    
-    if (phoneNumbers.length === 0) {
-      console.warn('[Notification] No valid phone numbers found for SMS recipients');
-      return false;
-    }
-    
-    // Send to all recipients
-    const sendPromises = phoneNumbers.map(async (phoneNumber) => {
-      // Validate and format phone number
-      const formattedNumber = formatPhoneNumber(phoneNumber);
-      
-      if (!formattedNumber) {
-        console.warn('[Notification] Invalid phone number:', phoneNumber);
-        return { success: false, phoneNumber, error: 'Invalid format' };
-      }
-      
-      // Check opt-out status
-      const optedOut = await isPhoneOptedOut(formattedNumber);
-      if (optedOut) {
-        console.log('[Notification] Phone number opted out, skipping:', formattedNumber);
-        return { success: false, phoneNumber: formattedNumber, error: 'Opted out' };
-      }
-      
-      try {
-        const result = await client.messages.create({
-          body: smsMessage,
-          from: fromNumber,
-          to: formattedNumber,
-        });
-        
-        console.log('[Notification] SMS sent:', {
-          to: formattedNumber,
-          sid: result.sid,
-          status: result.status,
-        });
-        
-        // Track cost (average cost: $0.0075 per SMS in US)
-        const estimatedCost = 0.0075;
-        await trackSMSCost(
-          result.sid,
-          formattedNumber,
-          smsMessage,
-          estimatedCost,
-          result.status as string,
-          undefined,
-          undefined,
-          metadata?.rule_id,
-          metadata?.notification_id,
-          metadata?.user_id,
-          metadata
-        );
-        
-        return { success: true, phoneNumber: formattedNumber, sid: result.sid };
-      } catch (error: any) {
-        console.error('[Notification] SMS send failed:', error);
-        
-        // Track failed attempt
-        await trackSMSCost(
-          `failed_${Date.now()}`,
-          formattedNumber,
-          smsMessage,
-          0,
-          'failed',
-          error.code,
-          error.message,
-          metadata?.rule_id,
-          metadata?.notification_id,
-          metadata?.user_id,
-          metadata
-        );
-        
-        return { success: false, phoneNumber: formattedNumber, error: error.message };
-      }
-    });
-    
-    const results = await Promise.all(sendPromises);
-    const successCount = results.filter(r => r.success).length;
-    
-    // Log SMS send to database
-    try {
-      await (supabase.from as any)('notifications')
-        .insert({
-          title: `SMS: ${title}`,
-          message: `Sent to ${successCount}/${phoneNumbers.length} recipient(s)`,
-          severity: metadata?.severity || 'medium',
-          channels_used: ['sms'],
-          recipients: recipients,
-          metadata: {
-            sms_recipients: phoneNumbers,
-            sms_message: smsMessage,
-            sms_results: results,
-            ...metadata,
-          },
-          status: successCount > 0 ? 'sent' : 'failed',
-          sent_at: new Date().toISOString(),
-        });
-    } catch (logError) {
-      console.warn('[Notification] Failed to log SMS to database:', logError);
-    }
-    
-    return successCount > 0;
-  } catch (error: any) {
-    console.error('[Notification] SMS service error:', error);
-    return false;
-  }
+  // Twilio SDK removed — SMS should be sent via server-side Edge Function.
+  console.warn('[Notification] SMS sending requires server-side Edge Function (Twilio SDK removed from browser bundle)');
+  return false;
 }
 
 /**
@@ -1156,49 +854,17 @@ async function sendDiscordNotification(
 }
 
 /**
- * Initialize Firebase Admin SDK (call once at app startup)
- * Note: This requires server-side environment (Node.js)
+ * Initialize Firebase Admin SDK — removed (server-side only).
+ * Push notifications should be handled via server-side Edge Functions.
  */
 export async function initializeFirebaseAdmin(): Promise<boolean> {
-  try {
-    const admin = await getFirebaseAdmin();
-    if (!admin) {
-      console.warn('[Notification] Firebase Admin SDK not available (browser environment)');
-      return false;
-    }
-
-    // Check if already initialized
-    if (admin.apps.length > 0) {
-      return true;
-    }
-
-    const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
-    const privateKey = import.meta.env.VITE_FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    const clientEmail = import.meta.env.VITE_FIREBASE_CLIENT_EMAIL;
-
-    if (!projectId || !privateKey || !clientEmail) {
-      console.warn('[Notification] Firebase credentials not configured');
-      return false;
-    }
-
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId,
-        privateKey,
-        clientEmail,
-      }),
-    });
-
-    console.log('[Notification] Firebase Admin SDK initialized');
-    return true;
-  } catch (error: any) {
-    console.error('[Notification] Firebase Admin initialization failed:', error);
-    return false;
-  }
+  console.warn('[Notification] Firebase Admin SDK removed from browser bundle');
+  return false;
 }
 
 /**
- * Send push notification to multiple users via Firebase Cloud Messaging
+ * Send push notification — Firebase Admin SDK removed.
+ * Push notifications should be handled via server-side Edge Functions.
  */
 export async function sendPushNotification(
   userIds: string[],
@@ -1206,143 +872,8 @@ export async function sendPushNotification(
   message: string,
   metadata?: Record<string, any>
 ): Promise<boolean> {
-  try {
-    // Initialize Firebase Admin if not already done
-    await initializeFirebaseAdmin();
-    
-    const admin = await getFirebaseAdmin();
-    if (!admin) {
-      console.warn('[Notification] Firebase Admin SDK not available, skipping push notification');
-      return false;
-    }
-
-    // Get device tokens for users
-    const { data: deviceTokens, error } = await (supabase.from as any)('user_device_tokens')
-      .select('token, platform')
-      .in('user_id', userIds)
-      .eq('is_active', true);
-
-    if (error || !deviceTokens || deviceTokens.length === 0) {
-      console.warn('[Notification] No device tokens found for users:', userIds);
-      return false;
-    }
-
-    // Build notification payload
-    const notification = {
-      title,
-      body: message,
-      imageUrl: metadata?.imageUrl,
-    };
-
-    // Build data payload
-    const data: Record<string, string> = {
-      notificationId: metadata?.notificationId || '',
-      type: metadata?.type || 'general',
-      timestamp: new Date().toISOString(),
-      ...Object.fromEntries(
-        Object.entries(metadata?.data || {}).map(([k, v]) => [k, String(v)])
-      ),
-    };
-
-    // Prepare messages for each device
-    const messages = deviceTokens.map((device: { token: string; platform: string }) => ({
-      notification,
-      data,
-      token: device.token,
-      android: {
-        priority: metadata?.priority === 'high' ? 'high' : 'normal',
-        notification: {
-          sound: 'default',
-          priority: metadata?.priority === 'high' ? 'high' : 'default',
-          channelId: metadata?.type || 'default',
-        },
-      },
-      apns: {
-        payload: {
-          aps: {
-            alert: {
-              title,
-              body: message,
-            },
-            sound: 'default',
-            badge: 1,
-          },
-        },
-      },
-      webpush: {
-        notification: {
-          title,
-          body: message,
-          icon: '/logo.png',
-          badge: '/badge.png',
-          vibrate: [200, 100, 200],
-          requireInteraction: metadata?.priority === 'high',
-          actions: [
-            { action: 'view', title: 'View' },
-            { action: 'dismiss', title: 'Dismiss' },
-          ],
-        },
-      },
-    }));
-
-    // Send notifications in batches (FCM limit: 500 per request)
-    const batchSize = 500;
-    let successCount = 0;
-    const invalidTokens: string[] = [];
-
-    for (let i = 0; i < messages.length; i += batchSize) {
-      const batch = messages.slice(i, i + batchSize);
-
-      try {
-        const messaging = admin.messaging();
-        const response = await messaging.sendEach(batch);
-
-        successCount += response.successCount;
-
-        // Handle failures
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            const errorCode = resp.error?.code;
-
-            // Remove invalid tokens
-            if (
-              errorCode === 'messaging/invalid-registration-token' ||
-              errorCode === 'messaging/registration-token-not-registered'
-            ) {
-              invalidTokens.push(deviceTokens[i + idx].token);
-            }
-
-            console.error('[Notification] Push send failed:', {
-              token: deviceTokens[i + idx].token,
-              error: resp.error?.message,
-            });
-          }
-        });
-      } catch (error: any) {
-        console.error('[Notification] Batch send failed:', error);
-      }
-    }
-
-    // Clean up invalid tokens
-    if (invalidTokens.length > 0) {
-      await (supabase.from as any)('user_device_tokens')
-        .update({ is_active: false })
-        .in('token', invalidTokens);
-
-      console.log('[Notification] Removed invalid tokens:', invalidTokens.length);
-    }
-
-    console.log('[Notification] Push notifications sent:', {
-      total: messages.length,
-      success: successCount,
-      failed: messages.length - successCount,
-    });
-
-    return successCount > 0;
-  } catch (error: any) {
-    console.error('[Notification] Push notification error:', error);
-    return false;
-  }
+  console.warn('[Notification] Push notifications require server-side Edge Function (Firebase Admin SDK removed from browser bundle)');
+  return false;
 }
 
 /**

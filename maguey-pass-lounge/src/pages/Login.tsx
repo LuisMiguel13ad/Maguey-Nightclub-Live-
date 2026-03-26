@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Music, Mail, Lock, Loader2, AlertCircle, Eye, EyeOff, Zap, ArrowLeft } from "lucide-react";
+import { Music, Mail, Lock, Loader2, AlertCircle, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,7 +49,7 @@ const Login = () => {
 
     try {
       const { error } = await signIn(data.email, data.password, rememberMe);
-      
+
       if (error) {
         setError(error.message);
         toast.error(error.message);
@@ -93,87 +93,7 @@ const Login = () => {
     }
   };
 
-  const handleQuickLogin = async () => {
-    setIsLoading(true);
-    setError(null);
 
-    try {
-      // Try test customer account first (has tickets)
-      // Account: testcustomer@maguey.com / test1234
-      const testCustomerResult = await signIn('testcustomer@maguey.com', 'test1234', rememberMe);
-      
-      if (!testCustomerResult.error) {
-        toast.success("Quick login successful!");
-        navigate(from, { replace: true });
-        setIsLoading(false);
-        return;
-      }
-
-      // If login fails with "Invalid credentials", try to create the account
-      if (testCustomerResult.error?.message?.includes('Invalid login credentials')) {
-        toast.loading('Creating account...', { id: 'quick-login' });
-        
-        try {
-          const signUpResult = await signUp('testcustomer@maguey.com', 'test1234', {
-            firstName: 'Test',
-            lastName: 'Customer',
-          });
-
-          if (signUpResult.error) {
-            // Account might exist but password is wrong, or other error
-            toast.dismiss('quick-login');
-            toast.error(`Account creation failed: ${signUpResult.error.message}`);
-          } else {
-            // Account created, try to sign in again
-            toast.dismiss('quick-login');
-            const retryResult = await signIn('testcustomer@maguey.com', 'test1234', rememberMe);
-            
-            if (!retryResult.error) {
-              toast.success("Account created and logged in!");
-              navigate(from, { replace: true });
-              setIsLoading(false);
-              return;
-            } else {
-              // Needs email confirmation
-              setError('Account created but needs email confirmation. Please confirm in Supabase Dashboard → Authentication → Users');
-              toast.error('Email confirmation required. Check Supabase Dashboard.');
-            }
-          }
-        } catch (signUpErr: any) {
-          toast.dismiss('quick-login');
-          console.error('Sign up error:', signUpErr);
-          toast.error(`Error: ${signUpErr.message || 'Failed to create account'}`);
-        }
-      }
-
-      // If testcustomer fails, try demo account as fallback
-      const demoResult = await signIn('demo@maguey.com', 'demo1234', rememberMe);
-      if (!demoResult.error) {
-        toast.success("Quick login successful!");
-        navigate(from, { replace: true });
-        setIsLoading(false);
-        return;
-      }
-
-      // Both failed - show helpful error
-      const errorMsg = testCustomerResult.error?.message || demoResult.error?.message || 'Login failed';
-      
-      // Check if it's an email confirmation issue
-      if (errorMsg.includes('email') || errorMsg.includes('confirm') || errorMsg.includes('Email not confirmed')) {
-        setError('Account needs email confirmation. Please confirm in Supabase Dashboard → Authentication → Users');
-        toast.error('Email confirmation required. Check Supabase Dashboard.');
-      } else {
-        setError(`Login failed: ${errorMsg}`);
-        toast.error(`Login failed: ${errorMsg}`);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to sign in";
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-dark flex items-center justify-center p-4">
@@ -215,6 +135,7 @@ const Login = () => {
             <Button
               type="button"
               variant="outline"
+              data-cy="google-login"
               className="w-full"
               onClick={() => handleSocialLogin('google')}
               disabled={isLoading}
@@ -300,6 +221,7 @@ const Login = () => {
                 <Input
                   id="email"
                   type="email"
+                  data-cy="customer-email"
                   placeholder="you@example.com"
                   className="pl-10"
                   {...register("email")}
@@ -318,6 +240,7 @@ const Login = () => {
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  data-cy="customer-password"
                   placeholder="••••••••"
                   className="pl-10 pr-10"
                   {...register("password")}
@@ -352,6 +275,7 @@ const Login = () => {
 
             <Button
               type="submit"
+              data-cy="customer-login-button"
               className="w-full bg-gradient-primary hover:shadow-glow-primary transition-all"
               size="lg"
               disabled={isLoading}
@@ -367,24 +291,14 @@ const Login = () => {
             </Button>
           </form>
 
-          {/* Quick Login Button */}
-          <div className="mt-6 pt-6 border-t border-primary/10">
-            <div className="text-center space-y-3">
-              <p className="text-sm text-muted-foreground">Quick Access</p>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full border-primary/20 bg-primary/5 hover:bg-primary/10"
-                onClick={handleQuickLogin}
-                disabled={isLoading}
-              >
-                <Zap className="mr-2 h-4 w-4 text-primary" />
-                Quick Login (Demo Account)
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Logs in with testcustomer@maguey.com (has tickets)
-              </p>
-            </div>
+          {/* Footer link to organizer login */}
+          <div className="mt-8 text-center text-sm pt-6 border-t border-primary/10">
+            <p className="text-muted-foreground">
+              Are you an organizer?{" "}
+              <Link to="/auth/owner" className="text-primary hover:underline">
+                Organizer Login
+              </Link>
+            </p>
           </div>
 
           <EmailVerificationBanner />

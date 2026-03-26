@@ -788,6 +788,7 @@ serve(async (req) => {
 
               // Generate QR code token for the reservation
               const qrCodeToken = `VIP-${crypto.randomUUID().substring(0, 12).toUpperCase()}`;
+              const inviteCode = crypto.randomUUID().substring(0, 8).toUpperCase();
 
               // Create VIP reservation
               const reservationData = {
@@ -812,6 +813,7 @@ serve(async (req) => {
                   firstName: nameParts[0] || "",
                   lastName: nameParts.slice(1).join(" ") || "",
                 },
+                invite_code: inviteCode,
                 special_requests: null,
                 disclaimer_accepted_at: new Date().toISOString(),
                 refund_policy_accepted_at: new Date().toISOString(),
@@ -925,6 +927,7 @@ serve(async (req) => {
                   guestCount,
                   bottlesIncluded,
                   totalAmount: ticket.unitPrice,
+                  inviteCode,
                   guestPasses: emailGuestPasses,
                 }).catch(err => {
                   logger.error('Failed to queue VIP email', {
@@ -1132,7 +1135,7 @@ serve(async (req) => {
     const metadata = paymentIntent.metadata || {};
 
     // Check if this is a VIP table reservation
-    if (metadata.type === "vip_table_reservation" && metadata.reservationId) {
+    if ((metadata.type === "vip_table_reservation" || metadata.type === "vip_unified") && metadata.reservationId) {
       console.log("VIP table payment succeeded:", paymentIntent.id);
 
       const reservationId = metadata.reservationId;

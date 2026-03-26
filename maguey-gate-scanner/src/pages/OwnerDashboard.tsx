@@ -846,7 +846,7 @@ const OwnerDashboard = () => {
           </p>
         </div>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4" data-cy="revenue-card">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Week Revenue</p>
             <p className="mt-2 text-2xl font-semibold">{currencyFormatter.format(stats.weekRevenue)}</p>
             <p className="text-xs text-emerald-300 mt-1">
@@ -893,7 +893,7 @@ const OwnerDashboard = () => {
       hero={heroSection}
     >
       {/* Recent Purchases + Operational Insights - Side by Side */}
-      <section className="grid gap-6 md:grid-cols-2">
+      <section className="grid gap-6 md:grid-cols-2" data-cy="dashboard-container">
         <div>
           <RecentPurchases orders={recentOrders} currencyFormatter={currencyFormatter} />
         </div>
@@ -1003,7 +1003,7 @@ const OwnerDashboard = () => {
             </div>
 
             {/* Scanner Status Section */}
-            <div className="rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10">
+            <div className="rounded-2xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10" data-cy="scanner-status">
               <div className="flex items-center gap-4 mb-3">
                 <div className="rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 p-3 text-green-300 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
                   <Smartphone className="h-4 w-4" />
@@ -1067,12 +1067,12 @@ const OwnerDashboard = () => {
       </section>
 
       {/* Check-In Progress - Real-time check-in bars */}
-      <section className="mt-6">
+      <section className="mt-6" data-cy="check-in-progress">
         <CheckInProgress />
       </section>
 
       {/* Upcoming Events */}
-      <section className="mt-6 [&_.card]:border-white/10 [&_.card]:bg-black/40 [&_.card]:backdrop-blur-md">
+      <section className="mt-6 [&_.card]:border-white/10 [&_.card]:bg-black/40 [&_.card]:backdrop-blur-md" data-cy="upcoming-events">
         <UpcomingEventsCard events={upcomingEvents} onManageEvents={() => navigate("/events")} />
       </section>
 

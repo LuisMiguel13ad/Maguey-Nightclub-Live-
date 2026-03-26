@@ -430,6 +430,7 @@ const OwnerLogin = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={loading}
+                  data-cy="owner-email"
                 />
               </div>
 
@@ -443,6 +444,7 @@ const OwnerLogin = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   disabled={loading}
+                  data-cy="owner-password"
                 />
               </div>
 
@@ -450,6 +452,7 @@ const OwnerLogin = () => {
                 type="submit"
                 className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
                 disabled={loading}
+                data-cy="owner-login-button"
               >
                 {loading ? (
                   <>
@@ -469,6 +472,7 @@ const OwnerLogin = () => {
                   type="button"
                   onClick={() => setMode('resetRequest')}
                   className="text-sm text-green-600 hover:text-green-700 hover:underline"
+                  data-cy="owner-forgot-password"
                 >
                   Forgot your password?
                 </button>

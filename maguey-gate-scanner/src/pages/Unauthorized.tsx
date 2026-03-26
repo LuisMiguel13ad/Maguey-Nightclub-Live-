@@ -25,7 +25,7 @@ const Unauthorized = () => {
     if (!user) {
       // Edge case: DEV-only route accessed in production (no user)
       return (
-        <Button variant="default" onClick={() => navigate("/auth")} className="w-full">
+        <Button variant="default" onClick={() => navigate("/auth")} className="w-full" data-cy="unauthorized-back-button">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Login
         </Button>
@@ -34,7 +34,7 @@ const Unauthorized = () => {
 
     if (role === "owner" || role === "promoter") {
       return (
-        <Button variant="default" onClick={() => navigate("/dashboard")} className="w-full">
+        <Button variant="default" onClick={() => navigate("/dashboard")} className="w-full" data-cy="unauthorized-back-button">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Dashboard
         </Button>
@@ -43,7 +43,7 @@ const Unauthorized = () => {
 
     // Employee role
     return (
-      <Button variant="default" onClick={() => navigate("/scanner")} className="w-full">
+      <Button variant="default" onClick={() => navigate("/scanner")} className="w-full" data-cy="unauthorized-back-button">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Scanner
       </Button>
@@ -51,7 +51,7 @@ const Unauthorized = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex min-h-screen items-center justify-center bg-background" data-cy="unauthorized-page">
       <div className="text-center max-w-md mx-auto p-6">
         <ShieldAlert className="h-16 w-16 text-destructive mx-auto mb-4" />
         <h1 className="mb-2 text-4xl font-bold">403</h1>

@@ -246,7 +246,6 @@ export async function findTicket(input: string, client: SupabaseClient = default
   }
 
   const { data, error } = await query.maybeSingle();
-  console.log('[DEBUG-FIX-APPLIED v4] Query Result:', { data, error });
 
   if (error) {
     // PGRST116 = no rows found, which is not really an error
@@ -258,7 +257,6 @@ export async function findTicket(input: string, client: SupabaseClient = default
     return null;
   }
 
-  console.log('[simple-scanner] Found ticket:', data?.ticket_id, data?.guest_name);
   return data as Ticket;
 }
 
@@ -340,8 +338,6 @@ export async function scanTicket(
       rejectionReason: 'tampered',
     };
   }
-
-  console.log('[simple-scanner] Searching for ticket with token:', parsed.token, 'verified:', parsed.isVerified);
 
   // Detect VIP guest pass QR codes by checking meta field
   if (parsed.meta && typeof parsed.meta === 'object' && 'reservationId' in parsed.meta) {
@@ -743,9 +739,11 @@ export async function getEventsFromTickets(client: SupabaseClient = defaultClien
 }
 
 /**
- * Debug: Get sample tickets from database
+ * Debug: Get sample tickets from database (DEV only)
  */
 export async function debugGetSampleTickets(client: SupabaseClient = defaultClient): Promise<void> {
+  if (!import.meta.env.DEV) return;
+
   const { data, error } = await client
     .from('tickets')
     .select('ticket_id, guest_name, event_name, qr_code_data, is_used')
@@ -757,15 +755,6 @@ export async function debugGetSampleTickets(client: SupabaseClient = defaultClie
   }
 
   console.log('[DEBUG] Sample tickets in database:', data);
-  if (data && data.length > 0) {
-    console.log('[DEBUG] ===== VALID TICKET IDs TO TEST =====');
-    data.forEach((t, i) => {
-      console.log(`[DEBUG] ${i + 1}. ticket_id: "${t.ticket_id}" | guest: ${t.guest_name} | used: ${t.is_used}`);
-    });
-    console.log('[DEBUG] =====================================');
-  } else {
-    console.log('[DEBUG] No tickets found in database!');
-  }
 }
 
 // ============================================================================

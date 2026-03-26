@@ -269,7 +269,7 @@ const Hero = () => {
           className="flex flex-col sm:flex-row gap-4 w-full justify-center"
         >
           <a
-            href={getPurchaseSiteBaseUrl() || "http://localhost:5173/"}
+            href={getPurchaseSiteBaseUrl()}
             target="_self"
             className="inline-block"
           >

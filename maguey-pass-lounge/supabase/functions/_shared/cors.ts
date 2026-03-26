@@ -13,6 +13,12 @@ const PRODUCTION_ORIGINS = [
   "https://www.magueynightclub.com",
 ];
 
+const DEV_ORIGINS = [
+  "http://localhost:3015",
+  "http://localhost:3016",
+  "http://localhost:3017",
+];
+
 export function getAllowedOrigin(requestOrigin: string | null): string {
   const allowedOriginsEnv = Deno.env.get("ALLOWED_ORIGINS");
 
@@ -28,8 +34,11 @@ export function getAllowedOrigin(requestOrigin: string | null): string {
     return allowedOrigins[0] || PRODUCTION_ORIGINS[0];
   }
 
-  // Default: production origins (secure by default)
+  // Default: production origins + localhost for development
   if (requestOrigin && PRODUCTION_ORIGINS.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+  if (requestOrigin && DEV_ORIGINS.includes(requestOrigin)) {
     return requestOrigin;
   }
   return PRODUCTION_ORIGINS[0];
@@ -49,6 +58,7 @@ export function getCorsHeaders(req: Request, extraAllowedHeaders?: string) {
   return {
     "Access-Control-Allow-Origin": getAllowedOrigin(req.headers.get("origin")),
     "Access-Control-Allow-Headers": allowHeaders,
+    "Access-Control-Allow-Methods": "POST, GET, OPTIONS, PUT, DELETE",
   };
 }
 

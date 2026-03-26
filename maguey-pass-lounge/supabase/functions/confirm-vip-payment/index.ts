@@ -43,11 +43,24 @@ serve(async (req) => {
 
     if (paymentIntent.status !== "succeeded") {
       return new Response(
-        JSON.stringify({ 
-          error: "Payment not completed", 
-          status: paymentIntent.status 
+        JSON.stringify({
+          error: "Payment not completed",
+          status: paymentIntent.status
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
+      );
+    }
+
+    // Verify Payment Intent was created for this specific reservation
+    // Prevents reusing a valid PI from one reservation to confirm a different one
+    if (paymentIntent.metadata?.reservationId !== reservationId) {
+      console.error("PI metadata mismatch:", {
+        expected: reservationId,
+        actual: paymentIntent.metadata?.reservationId,
+      });
+      return new Response(
+        JSON.stringify({ error: "Payment intent does not match this reservation" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 },
       );
     }
 
@@ -90,6 +103,29 @@ serve(async (req) => {
     }
 
     console.log("Reservation confirmed:", reservation.id);
+
+    // Promote ticket to 'valid' and order to 'paid' now that payment succeeded
+    if (reservation.purchaser_ticket_id) {
+      const { data: ticket, error: ticketError } = await supabase
+        .from("tickets")
+        .update({ status: "valid" })
+        .eq("id", reservation.purchaser_ticket_id)
+        .select("order_id")
+        .single();
+
+      if (ticketError) {
+        console.error("Ticket status update error:", ticketError);
+      } else if (ticket?.order_id) {
+        const { error: orderError } = await supabase
+          .from("orders")
+          .update({ status: "paid" })
+          .eq("id", ticket.order_id);
+
+        if (orderError) {
+          console.error("Order status update error:", orderError);
+        }
+      }
+    }
 
     // Generate reservation number from ID
     const reservationNumber = `VIP-${reservation.id.substring(0, 8).toUpperCase()}`;

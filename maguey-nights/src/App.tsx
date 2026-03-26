@@ -13,11 +13,6 @@ const EventPage = lazy(() => import("./pages/EventPage"));
 const UpcomingEvents = lazy(() => import("./pages/UpcomingEvents"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Gallery = lazy(() => import("./pages/Gallery"));
-const Checkout = lazy(() => import("./pages/Checkout"));
-const Payment = lazy(() => import("./pages/Payment"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
-const TicketScanner = lazy(() => import("./pages/TicketScanner"));
-const MobileScanner = lazy(() => import("./pages/MobileScanner"));
 const Restaurant = lazy(() => import("./pages/Restaurant"));
 const RestaurantMenu = lazy(() => import("./pages/RestaurantMenu"));
 const RestaurantCheckout = lazy(() => import("./pages/RestaurantCheckout"));
@@ -70,11 +65,6 @@ const AppContent = () => {
           <Route path="/faq" element={<FAQ />} />
           <Route path="/careers" element={<Careers />} />
           <Route path="/event/:eventId" element={<EventPage />} />
-          <Route path="/checkout/:eventId" element={<Checkout />} />
-          <Route path="/payment/:paymentIntentId" element={<Payment />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/scanner" element={<TicketScanner />} />
-          <Route path="/scanner/mobile" element={<MobileScanner />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

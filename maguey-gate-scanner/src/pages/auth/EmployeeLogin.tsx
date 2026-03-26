@@ -129,6 +129,7 @@ const EmployeeLogin = () => {
                 required
                 disabled={loading}
                 className="h-12"
+                data-cy="employee-email"
               />
             </div>
 
@@ -143,6 +144,7 @@ const EmployeeLogin = () => {
                 required
                 disabled={loading}
                 className="h-12"
+                data-cy="employee-password"
               />
             </div>
 
@@ -154,6 +156,7 @@ const EmployeeLogin = () => {
                 onChange={(e) => setRememberMe(e.target.checked)}
                 disabled={loading}
                 className="h-4 w-4 rounded border-gray-300"
+                data-cy="employee-remember-me"
               />
               <Label
                 htmlFor="remember"
@@ -167,6 +170,7 @@ const EmployeeLogin = () => {
               type="submit"
               className="w-full h-12 bg-gradient-green"
               disabled={loading}
+              data-cy="employee-login-button"
             >
               {loading ? "Signing in..." : "Sign In"}
             </Button>

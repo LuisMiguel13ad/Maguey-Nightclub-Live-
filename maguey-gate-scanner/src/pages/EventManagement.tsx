@@ -177,15 +177,22 @@ const EventManagement = () => {
   });
 
   useEffect(() => {
-    // Load API key from local storage on mount
-    const storedKey = localStorage.getItem("maguey_openai_key");
-    if (storedKey) {
-      setOpenaiKey(storedKey);
-      setTempOpenaiKey(storedKey);
+    // Load API key from local storage on mount (DEV only — never store API keys in production)
+    if (import.meta.env.DEV) {
+      const storedKey = localStorage.getItem("maguey_openai_key");
+      if (storedKey) {
+        setOpenaiKey(storedKey);
+        setTempOpenaiKey(storedKey);
+      }
     }
   }, []);
 
   const handleSaveSettings = () => {
+    if (!import.meta.env.DEV) {
+      // In production, the Edge Function should use its own OPENAI_API_KEY env var
+      setSettingsDialogOpen(false);
+      return;
+    }
     if (tempOpenaiKey.trim()) {
       localStorage.setItem("maguey_openai_key", tempOpenaiKey.trim());
       setOpenaiKey(tempOpenaiKey.trim());
@@ -939,10 +946,12 @@ const EventManagement = () => {
 
   const headerActions = (
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" size="icon" onClick={() => setSettingsDialogOpen(true)} className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20">
-        <Settings className="h-4 w-4" />
-      </Button>
-      <Button onClick={handleCreateNew}>
+      {import.meta.env.DEV && (
+        <Button variant="outline" size="icon" onClick={() => setSettingsDialogOpen(true)} className="border-indigo-500/30 bg-indigo-500/10 hover:bg-indigo-500/20">
+          <Settings className="h-4 w-4" />
+        </Button>
+      )}
+      <Button onClick={handleCreateNew} data-cy="create-event-button">
         <Plus className="mr-2 h-4 w-4" />
         New Event
       </Button>
@@ -960,7 +969,7 @@ const EventManagement = () => {
       description="Create and manage events, capacity, and ticket types."
       actions={headerActions}
     >
-      <div className="space-y-6">
+      <div className="space-y-6" data-cy="events-container">
         <Card className="rounded-3xl border border-white/10 bg-gradient-to-br from-[#161d45] via-[#0b132f] to-[#050915] shadow-[0_45px_90px_rgba(3,7,23,0.7)]">
           <CardContent className="pt-6">
             <div className="relative">
@@ -993,7 +1002,7 @@ const EventManagement = () => {
                 {searchQuery ? "No events found matching your search." : "No events yet. Create your first event!"}
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" data-cy="events-table">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -1690,6 +1699,7 @@ const EventManagement = () => {
                     onClick={handleSave}
                     disabled={saving}
                     className="flex-1 sm:flex-none h-11 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-indigo-900/40 hover:scale-105 transition-transform"
+                    data-cy="save-event-button"
                   >
                     {saving ? (
                       <div className="flex items-center gap-2 px-4">
@@ -1714,6 +1724,7 @@ const EventManagement = () => {
                     onClick={handleSave}
                     disabled={saving}
                     className="flex-1 sm:flex-none h-11 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 text-white shadow-lg shadow-indigo-900/40 hover:scale-105 transition-transform"
+                    data-cy="save-event-button"
                   >
                     {saving ? (
                       <div className="flex items-center gap-2 px-4">

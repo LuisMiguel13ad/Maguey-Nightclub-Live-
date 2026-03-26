@@ -210,21 +210,21 @@ export const validateNFCSignature = async (
   signature?: string
 ): Promise<boolean> => {
   if (!signature) {
-    // No signature to validate - allow unsigned tickets
-    return true;
+    // No signature to validate - reject unsigned tickets (fail closed)
+    return false;
   }
 
   try {
     // Use the same QR signing secret for NFC signatures
     const secret = import.meta.env.VITE_QR_SIGNING_SECRET;
     if (!secret) {
-      console.warn('[NFC] No signing secret configured - skipping signature validation');
-      return true; // Allow if no secret configured
+      console.error('[NFC] No signing secret configured - rejecting');
+      return false; // Reject if no secret configured (fail closed)
     }
 
     if (!globalThis.crypto?.subtle) {
-      console.warn('[NFC] Web Crypto API unavailable - skipping signature validation');
-      return true; // Allow if crypto unavailable
+      console.error('[NFC] Web Crypto API unavailable - rejecting');
+      return false; // Reject if crypto unavailable (fail closed)
     }
 
     const textEncoder = new TextEncoder();

@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { checkPasswordBreach } from '@/lib/password-breach';
+import { getUserRole, type UserRole } from '@/lib/auth';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -31,6 +32,7 @@ const demoUser = {
 export function useAuthSession() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<UserRole>('attendee');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export function useAuthSession() {
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
+          setRole(getUserRole(session?.user ?? null));
           setLoading(false);
         }
       })
@@ -77,6 +80,7 @@ export function useAuthSession() {
         if (!mounted) return;
         setSession(session);
         setUser(session?.user ?? null);
+        setRole(getUserRole(session?.user ?? null));
         setLoading(false);
       });
 
@@ -150,6 +154,7 @@ export function useAuthSession() {
       if (data?.user) {
         setUser(data.user);
         setSession(data.session);
+        setRole(getUserRole(data.user));
       }
 
       return { error };
@@ -169,6 +174,7 @@ export function useAuthSession() {
       if (isDemoCredentials) {
         setUser(demoUser);
         setSession(null);
+        setRole('organizer'); // Demo user is an organizer
         // Skip logging for demo mode
         return { error: null };
       }
@@ -193,6 +199,7 @@ export function useAuthSession() {
       if (data?.user) {
         setUser(data.user);
         setSession(data.session);
+        setRole(getUserRole(data.user));
         // Log activity after user is set
         await logActivity('email', true);
       } else if (error) {
@@ -226,17 +233,20 @@ export function useAuthSession() {
       await supabase.auth.signOut();
       setUser(null);
       setSession(null);
+      setRole('attendee');
     } catch (error) {
       console.error('Sign out error:', error);
       // Still clear local state even if sign out fails
       setUser(null);
       setSession(null);
+      setRole('attendee');
     }
   };
 
   return {
     user,
     session,
+    role,
     loading,
     signUp,
     signIn,

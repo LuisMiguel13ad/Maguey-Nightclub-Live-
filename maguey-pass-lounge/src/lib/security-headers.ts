@@ -136,10 +136,10 @@ export function getSecurityHeaders(
   }
 
   // Cross-Origin-Embedder-Policy
+  // Only set if explicitly passed — omitted by default for Stripe PaymentElement compatibility.
+  // COEP 'credentialless' or 'require-corp' silently blocks Stripe's cross-origin iframes.
   if (config.crossOriginEmbedderPolicy !== undefined) {
     headers['Cross-Origin-Embedder-Policy'] = config.crossOriginEmbedderPolicy;
-  } else {
-    headers['Cross-Origin-Embedder-Policy'] = DEFAULT_SECURITY_HEADERS.crossOriginEmbedderPolicy;
   }
 
   // Cross-Origin-Opener-Policy
@@ -214,7 +214,7 @@ export const securityHeaders = getSecurityHeaders({
   ].join(', '),
   strictTransportSecurity: 'max-age=31536000; includeSubDomains; preload',
   xXSSProtection: '1; mode=block',
-  crossOriginEmbedderPolicy: 'credentialless',
+  // crossOriginEmbedderPolicy omitted — incompatible with Stripe PaymentElement iframes
   crossOriginOpenerPolicy: 'same-origin-allow-popups',
   crossOriginResourcePolicy: 'cross-origin',
 });

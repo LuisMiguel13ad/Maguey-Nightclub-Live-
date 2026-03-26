@@ -3,6 +3,8 @@ import './commands/auth';
 import './commands/purchase';
 import './commands/scan';
 import './commands/db';
+import './commands/vip';
+import './commands/dashboard';
 
 // Import Stripe plugin
 import 'cypress-plugin-stripe-elements';
