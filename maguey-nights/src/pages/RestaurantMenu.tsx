@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus, ShoppingCart } from "lucide-react";
 import { motion } from "framer-motion";
+import { useStaticJsonLd, buildMenuSchema } from "@/lib/json-ld";
 
 interface MenuItem {
   id: string;
@@ -96,6 +97,9 @@ const RestaurantMenu = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState("tacos");
   const navigate = useNavigate();
+
+  // JSON-LD structured data for SEO
+  useStaticJsonLd(() => buildMenuSchema(menuItems, menuCategories), 'json-ld-menu');
 
   useEffect(() => {
     window.scrollTo(0, 0);

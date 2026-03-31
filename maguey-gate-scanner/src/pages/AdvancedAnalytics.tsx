@@ -23,7 +23,16 @@ import {
   Ticket,
   ShoppingBag,
   Settings,
+  Link2,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   LineChart,
   Line,
@@ -99,6 +108,13 @@ interface KPIData {
   scanRate: number;
 }
 
+interface PromoterStat {
+  referral_code: string;
+  promoter_name: string;
+  order_count: number;
+  revenue: number;
+}
+
 const AdvancedAnalytics = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -127,6 +143,7 @@ const AdvancedAnalytics = () => {
   const [staffEfficiency, setStaffEfficiency] = useState<StaffEfficiency[]>([]);
   const [events, setEvents] = useState<Array<{ name: string }>>([]);
   const [comparisonData, setComparisonData] = useState<any[]>([]);
+  const [promoterStats, setPromoterStats] = useState<PromoterStat[]>([]);
 
   // Redirect employees (allow owners and promoters)
   useEffect(() => {
@@ -139,6 +156,7 @@ const AdvancedAnalytics = () => {
     if (role === 'owner' || role === 'promoter') {
       loadEvents();
       loadAnalytics();
+      if (role === 'owner') loadPromoterStats();
     }
   }, [role, timeRange, startDate, endDate, selectedEvent]);
 
@@ -154,6 +172,56 @@ const AdvancedAnalytics = () => {
       }
     } catch (error) {
       console.error("Error loading events:", error);
+    }
+  };
+
+  const loadPromoterStats = async () => {
+    if (!isSupabaseConfigured()) return;
+    try {
+      const { data, error } = await (supabase as any)
+        .from("orders")
+        .select("referral_code, total, status")
+        .not("referral_code", "is", null);
+
+      if (error || !data) return;
+
+      // Aggregate by referral_code client-side
+      const map: Record<string, { order_count: number; revenue: number }> = {};
+      for (const row of data as Array<{ referral_code: string; total: number; status: string }>) {
+        if (row.status !== "completed" && row.status !== "paid") continue;
+        if (!map[row.referral_code]) {
+          map[row.referral_code] = { order_count: 0, revenue: 0 };
+        }
+        map[row.referral_code].order_count += 1;
+        map[row.referral_code].revenue += row.total || 0;
+      }
+
+      // Attempt to resolve names from user_profiles table
+      const codes = Object.keys(map);
+      const nameMap: Record<string, string> = {};
+      if (codes.length > 0) {
+        const { data: profiles } = await (supabase as any)
+          .from("user_profiles")
+          .select("id, full_name, email")
+          .in("id", codes);
+
+        for (const p of profiles || []) {
+          nameMap[p.id] = p.full_name || p.email || p.id.slice(0, 8);
+        }
+      }
+
+      const stats: PromoterStat[] = codes
+        .map((code) => ({
+          referral_code: code,
+          promoter_name: nameMap[code] || code.slice(0, 8) + "…",
+          order_count: map[code].order_count,
+          revenue: map[code].revenue,
+        }))
+        .sort((a, b) => b.revenue - a.revenue);
+
+      setPromoterStats(stats);
+    } catch (err) {
+      console.error("Error loading promoter stats:", err);
     }
   };
 
@@ -780,6 +848,12 @@ const AdvancedAnalytics = () => {
                   <Settings className="h-4 w-4" />
                   Staff
                 </TabsTrigger>
+                {role === 'owner' && (
+                  <TabsTrigger value="promoters" className="gap-2 data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-lg text-slate-400 hover:text-white transition-all">
+                    <Link2 className="h-4 w-4" />
+                    Promoters
+                  </TabsTrigger>
+                )}
               </TabsList>
 
               {/* Tab 1: Revenue */}
@@ -1418,6 +1492,60 @@ const AdvancedAnalytics = () => {
             </Card>
                 </div>
               </TabsContent>
+
+              {/* Tab 4: Promoters — Owner-only */}
+              {role === 'owner' && (
+                <TabsContent value="promoters" className="space-y-6">
+                  <Card className="bg-white/5 border-white/10">
+                    <CardHeader>
+                      <CardTitle className="text-white flex items-center gap-2">
+                        <Link2 className="w-5 h-5 text-indigo-400" />
+                        Sales by Promoter
+                      </CardTitle>
+                      <CardDescription className="text-slate-400">
+                        Orders attributed via promoter referral links (?ref= parameter). Completed orders only.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {promoterStats.length === 0 ? (
+                        <div className="py-10 text-center text-slate-500">
+                          No referral sales recorded yet. Promoters share links like{" "}
+                          <code className="text-indigo-400 text-xs">
+                            /events?ref=&lt;promoter-id&gt;
+                          </code>
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-white/10">
+                              <TableHead className="text-slate-400">#</TableHead>
+                              <TableHead className="text-slate-400">Promoter</TableHead>
+                              <TableHead className="text-slate-400 text-right">Orders</TableHead>
+                              <TableHead className="text-slate-400 text-right">Revenue</TableHead>
+                              <TableHead className="text-slate-400 text-right">Avg. Order</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {promoterStats.map((p, idx) => (
+                              <TableRow key={p.referral_code} className="border-white/10">
+                                <TableCell className="text-slate-500 text-sm">{idx + 1}</TableCell>
+                                <TableCell className="text-white font-medium">{p.promoter_name}</TableCell>
+                                <TableCell className="text-slate-300 text-right">{p.order_count}</TableCell>
+                                <TableCell className="text-green-400 text-right font-mono">
+                                  ${p.revenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell className="text-slate-300 text-right font-mono">
+                                  ${p.order_count > 0 ? (p.revenue / p.order_count).toFixed(2) : "0.00"}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
             </Tabs>
           </div>
         )}

@@ -7,6 +7,7 @@ import { useEvents } from "@/hooks/useEvents";
 import { useEffect, useState } from "react";
 import { fetchEventAvailability, type EventAvailability } from "@/services/eventService";
 import { getPurchaseEventUrl, getPurchaseSiteBaseUrl } from "@/lib/purchaseSiteConfig";
+import { useJsonLd, buildEventListSchema } from "@/lib/json-ld";
 import { Calendar, Music, Sparkles } from "lucide-react";
 import { CinemaArchiveCarousel } from "@/components/CinemaArchiveCarousel";
 
@@ -44,6 +45,11 @@ const UpcomingEvents = () => {
 
     fetchAllAvailability();
   }, [events]);
+
+  // JSON-LD structured data for SEO
+  const siteBaseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://magueynightclub.com';
+  const eventListSchema = events.length > 0 ? buildEventListSchema(events, siteBaseUrl) : null;
+  useJsonLd(eventListSchema, 'json-ld-event-list');
 
   // Optimized motion variants for better performance
   const fadeUp = {

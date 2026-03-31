@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import type { EventDisplay } from "@/services/eventService";
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Search, X } from "lucide-react";
 import { getPurchaseEventUrl } from "@/lib/purchaseSiteConfig";
 
 interface CinemaArchiveCarouselProps {
@@ -14,10 +15,30 @@ const DISTRESS_TEXTURE = `data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns=
 type FilterType = "ALL" | "THIS WEEK" | "NEXT WEEK" | "ALL MONTH" | "NEXT MONTH";
 
 export function CinemaArchiveCarousel({ events }: CinemaArchiveCarouselProps) {
-  const [filter, setFilter] = useState<FilterType>("THIS WEEK");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const [filter, setFilter] = useState<FilterType>(() => {
+    const urlDate = searchParams.get('date');
+    const valid: FilterType[] = ["ALL", "THIS WEEK", "NEXT WEEK", "ALL MONTH", "NEXT MONTH"];
+    return valid.find(f => f === urlDate) ?? "ALL";
+  });
   // -1 indicates no card is active (all spines)
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [isPaused, setIsPaused] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') || '');
+  const [activeGenres, setActiveGenres] = useState<Set<string>>(() => {
+    const genres = searchParams.get('genres');
+    return genres ? new Set(genres.split(',').filter(Boolean)) : new Set();
+  });
+
+  // Sync all filters to URL for shareable links
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (filter !== "ALL") params.date = filter;
+    if (searchQuery) params.q = searchQuery;
+    if (activeGenres.size > 0) params.genres = Array.from(activeGenres).join(',');
+    setSearchParams(params, { replace: true });
+  }, [filter, searchQuery, activeGenres, setSearchParams]);
   
   // Helper to parse YYYY-MM-DD as local date
   const parseDate = (dateStr: string) => {
@@ -27,60 +48,88 @@ export function CinemaArchiveCarousel({ events }: CinemaArchiveCarouselProps) {
     return new Date(year, month - 1, day);
   };
 
-  // Memoize filtered events to avoid recalculation on every render
+  // Derive all genres from all events (not just filtered)
+  const allGenres = useMemo(() => {
+    const genreSet = new Set<string>();
+    events.forEach(event => {
+      (event.tags || []).forEach(tag => genreSet.add(tag));
+    });
+    return Array.from(genreSet).sort();
+  }, [events]);
+
+  // Memoize filtered events: date + search + genre
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
-      // Use safe local date parsing
       const eventDate = parseDate(event.eventDate);
       eventDate.setHours(0, 0, 0, 0);
-      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
+      // Date filter
       if (filter === "THIS WEEK") {
-        // Next 7 days including today
-        const endOfWeek = new Date(today);
-        endOfWeek.setDate(today.getDate() + 6);
-        return eventDate >= today && eventDate <= endOfWeek;
-      }
-      
-      if (filter === "NEXT WEEK") {
-        // 7 days starting from next week
-        const startOfNextWeek = new Date(today);
-        startOfNextWeek.setDate(today.getDate() + 7);
-        
-        const endOfNextWeek = new Date(startOfNextWeek);
-        endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
-        
-        return eventDate >= startOfNextWeek && eventDate <= endOfNextWeek;
+        const end = new Date(today);
+        end.setDate(today.getDate() + 6);
+        if (!(eventDate >= today && eventDate <= end)) return false;
+      } else if (filter === "NEXT WEEK") {
+        const start = new Date(today);
+        start.setDate(today.getDate() + 7);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        if (!(eventDate >= start && eventDate <= end)) return false;
+      } else if (filter === "ALL MONTH") {
+        if (!(eventDate >= today && eventDate.getMonth() === today.getMonth() && eventDate.getFullYear() === today.getFullYear())) return false;
+      } else if (filter === "NEXT MONTH") {
+        const nextMonth = new Date(today);
+        nextMonth.setMonth(today.getMonth() + 1);
+        if (!(eventDate.getMonth() === nextMonth.getMonth() && eventDate.getFullYear() === nextMonth.getFullYear())) return false;
       }
 
-      if (filter === "ALL MONTH") {
-        // Events in the current calendar month (upcoming)
-        return eventDate >= today && 
-               eventDate.getMonth() === today.getMonth() && 
-               eventDate.getFullYear() === today.getFullYear();
+      // Search filter (artist name, case-insensitive)
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        if (!event.artist.toLowerCase().includes(q)) return false;
       }
-      
-      if (filter === "NEXT MONTH") {
-        const nextMonthDate = new Date(today);
-        nextMonthDate.setMonth(today.getMonth() + 1);
-        // Handle year wrap automatically by Date
-        
-        return eventDate.getMonth() === nextMonthDate.getMonth() && 
-               eventDate.getFullYear() === nextMonthDate.getFullYear();
+
+      // Genre filter (event must have at least one selected genre)
+      if (activeGenres.size > 0) {
+        const eventTagSet = new Set(event.tags || []);
+        const hasMatch = [...activeGenres].some(g => eventTagSet.has(g));
+        if (!hasMatch) return false;
       }
-      
-      // "ALL" filter
+
       return true;
     });
-  }, [events, filter]);
+  }, [events, filter, searchQuery, activeGenres]);
 
-  // Handle filter change
+  // Handlers
   const handleFilterChange = (newFilter: FilterType) => {
     setFilter(newFilter);
-    setActiveIndex(-1); // Reset to spine view on filter change
+    setActiveIndex(-1);
   };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setActiveIndex(-1);
+  };
+
+  const handleGenreToggle = (genre: string) => {
+    setActiveGenres(prev => {
+      const next = new Set(prev);
+      if (next.has(genre)) next.delete(genre);
+      else next.add(genre);
+      return next;
+    });
+    setActiveIndex(-1);
+  };
+
+  const handleClearAll = () => {
+    setFilter("ALL");
+    setSearchQuery("");
+    setActiveGenres(new Set());
+    setActiveIndex(-1);
+  };
+
+  const hasActiveFilters = filter !== "ALL" || searchQuery.trim() !== "" || activeGenres.size > 0;
 
   // Determine if we should marquee or just show static
   const shouldMarquee = filteredEvents.length > 4;
@@ -121,7 +170,43 @@ export function CinemaArchiveCarousel({ events }: CinemaArchiveCarouselProps) {
       return (
         <div className="flex flex-col w-full min-h-screen bg-black overflow-hidden text-zinc-300 font-sans">
             {/* Filter Navigation */}
-            <nav className="w-full flex justify-center py-8 z-30">
+            <nav className="w-full flex flex-col items-center gap-3 py-6 px-4 z-30">
+                {/* Search input */}
+                <div className="relative w-full max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search events..."
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    className="w-full bg-zinc-900/80 border border-zinc-800/50 rounded-lg pl-9 pr-9 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 backdrop-blur-md transition-colors"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => handleSearchChange("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                {/* Genre chips */}
+                {allGenres.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1.5 max-w-2xl">
+                    {allGenres.map(genre => (
+                      <button
+                        key={genre}
+                        onClick={() => handleGenreToggle(genre)}
+                        className={cn(
+                          "px-3 py-1 text-xs font-medium rounded-full border transition-all cursor-pointer",
+                          activeGenres.has(genre)
+                            ? "bg-red-600 border-red-600 text-white"
+                            : "border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
+                        )}
+                      >
+                        {genre}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {/* Date filters */}
                 <div className="flex flex-wrap justify-center items-center gap-1 bg-zinc-900/50 p-1 rounded-lg backdrop-blur-sm border border-zinc-800/50 max-w-full overflow-x-auto">
                   <FilterButton type="ALL" label="ALL" />
                   <FilterButton type="THIS WEEK" label="THIS WEEK" />
@@ -130,13 +215,21 @@ export function CinemaArchiveCarousel({ events }: CinemaArchiveCarouselProps) {
                   <FilterButton type="NEXT MONTH" label="NEXT MONTH" />
                 </div>
             </nav>
-            
+
             {/* Empty State */}
             <main className="flex-1 flex flex-col items-center justify-center opacity-50 min-h-[400px]">
-                <p className="text-lg tracking-widest uppercase">NO EVENTS FOUND FOR {filter}</p>
-                <button onClick={() => handleFilterChange("ALL")} className="mt-4 text-xs text-red-500 hover:text-red-400 tracking-widest underline cursor-pointer z-50">
-                    VIEW ALL EVENTS
-                </button>
+                <p className="text-lg tracking-widest uppercase">
+                  {searchQuery.trim()
+                    ? `NO RESULTS FOR "${searchQuery.toUpperCase()}"`
+                    : activeGenres.size > 0
+                    ? `NO EVENTS MATCH SELECTED GENRES`
+                    : `NO EVENTS FOUND FOR ${filter}`}
+                </p>
+                {hasActiveFilters && (
+                  <button onClick={handleClearAll} className="mt-4 text-xs text-red-500 hover:text-red-400 tracking-widest underline cursor-pointer z-50">
+                    CLEAR ALL FILTERS
+                  </button>
+                )}
             </main>
         </div>
       );
@@ -153,7 +246,43 @@ export function CinemaArchiveCarousel({ events }: CinemaArchiveCarouselProps) {
   return (
     <div className="flex flex-col w-full min-h-screen bg-black overflow-hidden text-zinc-300 font-sans">
       {/* Filter Navigation */}
-      <nav className="w-full flex justify-center py-8 z-30 relative">
+      <nav className="w-full flex flex-col items-center gap-3 py-6 px-4 z-30 relative">
+        {/* Search input */}
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search events..."
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full bg-zinc-900/80 border border-zinc-800/50 rounded-lg pl-9 pr-9 py-2 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 backdrop-blur-md transition-colors"
+          />
+          {searchQuery && (
+            <button onClick={() => handleSearchChange("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+        {/* Genre chips */}
+        {allGenres.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5 max-w-2xl">
+            {allGenres.map(genre => (
+              <button
+                key={genre}
+                onClick={() => handleGenreToggle(genre)}
+                className={cn(
+                  "px-3 py-1 text-xs font-medium rounded-full border transition-all cursor-pointer",
+                  activeGenres.has(genre)
+                    ? "bg-red-600 border-red-600 text-white"
+                    : "border-zinc-700 text-zinc-500 hover:border-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                {genre}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Date filters */}
         <div className="flex flex-wrap justify-center items-center gap-1 bg-zinc-900/80 p-1.5 rounded-lg backdrop-blur-md border border-zinc-800/50 pointer-events-auto max-w-full overflow-x-auto shadow-lg">
           <FilterButton type="ALL" label="ALL" />
           <FilterButton type="THIS WEEK" label="THIS WEEK" />

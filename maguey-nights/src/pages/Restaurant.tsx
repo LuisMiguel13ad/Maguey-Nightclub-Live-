@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Plus, Minus, ShoppingCart, Clock, MapPin, Phone, Mail, UtensilsCrossed, ChefHat, Users } from "lucide-react";
 import { motion } from "framer-motion";
+import { useStaticJsonLd, buildFAQSchema } from "@/lib/json-ld";
 
 // Import images for gallery
 import venuePatio from "@/Pictures/venue-patio.jpg";
@@ -90,6 +91,25 @@ const menuItems: MenuItem[] = [
   { id: "d3", name: "El Jarrito Diablito", description: "Must be 21+ (Please show ID)", price: 10.00, category: "drinks" },
 ];
 
+const restaurantFaqData = [
+  {
+    question: "What makes Maguey Delaware unique?",
+    answer: "We pride ourselves on authentic Mexican cuisine made with fresh ingredients and traditional recipes passed down through generations. Our vibrant atmosphere and commitment to quality make every visit special.",
+  },
+  {
+    question: "What makes your food so good?",
+    answer: "We use only the freshest ingredients and prepare everything from scratch daily. Our chefs follow traditional Mexican cooking methods and recipes, ensuring authentic flavors in every dish.",
+  },
+  {
+    question: "What is your restaurant's atmosphere or vibe?",
+    answer: "Maguey Delaware offers a warm, family-friendly atmosphere with vibrant Mexican decor. Whether you're dining with family, friends, or on a date, you'll feel welcomed and at home.",
+  },
+  {
+    question: "Do you cater to any dietary restrictions?",
+    answer: "Yes! We offer vegetarian and gluten-free options. Please inform your server about any allergies or dietary restrictions, and we'll be happy to accommodate your needs.",
+  },
+];
+
 const Restaurant = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -101,6 +121,9 @@ const Restaurant = () => {
     email: "",
     specialInstructions: "",
   });
+
+  // JSON-LD structured data for SEO — restaurant-specific FAQ rich snippets
+  useStaticJsonLd(() => buildFAQSchema(restaurantFaqData), 'json-ld-restaurant-faq');
 
   // Gallery images
   const galleryImages = [

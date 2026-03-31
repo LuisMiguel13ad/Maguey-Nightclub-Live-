@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Calendar,
   MapPin,
@@ -57,7 +57,16 @@ const genreColors: Record<string, { text: string; border: string; bg: string }> 
 
 const Events = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [events, setEvents] = useState<Event[]>([]);
+
+  // Capture promoter referral code from ?ref= param and persist through checkout
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      sessionStorage.setItem("maguey_referral", ref);
+    }
+  }, [searchParams]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [ticketModalOpen, setTicketModalOpen] = useState(false);

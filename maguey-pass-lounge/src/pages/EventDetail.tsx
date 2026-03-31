@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link, useParams, Navigate } from "react-router-dom";
-import { Calendar, MapPin, Music, Twitter, Facebook, Loader2, AlertCircle, Wine } from "lucide-react";
+import { Link, useParams, Navigate, useSearchParams } from "react-router-dom";
+import { Calendar, MapPin, Music, Loader2, AlertCircle, Wine, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -8,12 +8,23 @@ import { AuthButton } from "@/components/AuthButton";
 import { getEventWithTicketsAndAvailability, type EventWithTickets, type EventAvailability } from "@/lib/events-service";
 import { WaitlistForm } from "@/components/WaitlistForm";
 import { VIPTableSection } from "@/components/VIPTableSection";
+import ShareButton from "@/components/ShareButton";
+import { getMarketingEventUrl } from "@/lib/marketingSiteConfig";
 
 const EventDetail = () => {
   const { eventId } = useParams();
+  const [searchParams] = useSearchParams();
   const [event, setEvent] = useState<EventWithTickets | null>(null);
   const [availability, setAvailability] = useState<EventAvailability | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Capture promoter referral code from ?ref= param and persist through checkout
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      sessionStorage.setItem("maguey_referral", ref);
+    }
+  }, [searchParams]);
 
   // Load event data
   useEffect(() => {
@@ -171,9 +182,17 @@ const EventDetail = () => {
               </div>
             </div>
 
-            <Badge className="bg-primary/90 text-white border-none px-3 py-1.5 text-xs md:text-sm mb-5">
-              {venueName.toUpperCase()}
-            </Badge>
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+              <Badge className="bg-primary/90 text-white border-none px-3 py-1.5 text-xs md:text-sm">
+                {venueName.toUpperCase()}
+              </Badge>
+              {event.age_restriction && (
+                <Badge className="bg-red-600/90 text-white border-none px-3 py-1.5 text-xs md:text-sm flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  {event.age_restriction} ONLY
+                </Badge>
+              )}
+            </div>
 
             <div className="flex flex-wrap gap-3">
               <Button 
@@ -418,42 +437,24 @@ const EventDetail = () => {
               </div>
 
               {/* Age Restriction */}
-              <div className="mb-6 pb-6 border-b border-border/30">
-                <p className="text-sm text-foreground leading-relaxed">
-                  ALL GUESTS MUST BE AT LEAST 21 YEARS OF AGE WITH A VALID GOVERNMENT ISSUED ID TO BE PRESENTED AT THE TIME OF CHECK-IN.
-                </p>
-              </div>
+              {event.age_restriction && (
+                <div className="mb-6 pb-6 border-b border-border/30">
+                  <div className="flex items-start gap-3">
+                    <ShieldAlert className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-foreground leading-relaxed font-medium">
+                      ALL GUESTS MUST BE AT LEAST {event.age_restriction === "21+" ? "21" : "18"} YEARS OF AGE WITH A VALID GOVERNMENT ISSUED ID TO BE PRESENTED AT THE TIME OF CHECK-IN.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Social Sharing */}
-              <div className="mb-6 pb-6 border-b border-border/30 flex gap-3">
-                <Button
-                  variant="outline"
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-foreground"
-                  asChild
-                >
-                  <a 
-                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${event.name} - ${venueName}`)}&url=${encodeURIComponent(window.location.href)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Twitter className="w-4 h-4 mr-2" />
-                    X Tweet
-                  </a>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-foreground"
-                  asChild
-                >
-                  <a 
-                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Facebook className="w-4 h-4 mr-2" />
-                    f Share
-                  </a>
-                </Button>
+              <div className="mb-6 pb-6 border-b border-border/30">
+                <ShareButton
+                  url={eventId ? getMarketingEventUrl(eventId) : window.location.href}
+                  title={event.name}
+                  text={`${event.name} at ${venueName} — ${dateInfo.day}, ${dateInfo.month} ${dateInfo.dayNum}`}
+                />
               </div>
 
               {/* Venue Location */}

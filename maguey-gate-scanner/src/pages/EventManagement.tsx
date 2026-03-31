@@ -28,6 +28,8 @@ import {
   CheckCircle,
   Loader2,
   Crown,
+  Copy,
+  ShieldCheck,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -93,6 +95,8 @@ interface Event {
   updated_at: string;
   newsletter_sent_at: string | null;
   newsletter_sent_count: number;
+  vip_enabled: boolean;
+  age_restriction: string | null;
 }
 
 const EventManagement = () => {
@@ -139,6 +143,7 @@ const EventManagement = () => {
   const [tags, setTags] = useState<string[]>([]);
   const [categoriesInput, setCategoriesInput] = useState("");
   const [tagsInput, setTagsInput] = useState("");
+  const [ageRestriction, setAgeRestriction] = useState<string>("none");
 
   // Settings state
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -315,7 +320,7 @@ const EventManagement = () => {
       // Query events with new fields
       const { data: eventsData, error: eventsError } = await supabase
         .from("events")
-        .select("id, name, description, event_date, event_time, venue_name, venue_address, city, image_url, status, published_at, categories, tags, created_at, updated_at, newsletter_sent_at, newsletter_sent_count")
+        .select("id, name, description, event_date, event_time, venue_name, venue_address, city, image_url, status, published_at, categories, tags, created_at, updated_at, newsletter_sent_at, newsletter_sent_count, vip_enabled, age_restriction")
         .order("event_date", { ascending: false });
 
       if (eventsError) throw eventsError;
@@ -336,6 +341,8 @@ const EventManagement = () => {
         tags: Array.isArray((event as any).tags) ? (event as any).tags : [],
         newsletter_sent_at: (event as any).newsletter_sent_at || null,
         newsletter_sent_count: (event as any).newsletter_sent_count || 0,
+        vip_enabled: !!(event as any).vip_enabled,
+        age_restriction: (event as any).age_restriction || null,
         ticket_types: (ticketTypesData || [])
           .filter(tt => tt.event_id === event.id)
           .map(tt => ({
@@ -377,8 +384,40 @@ const EventManagement = () => {
     setTags([]);
     setCategoriesInput("");
     setTagsInput("");
+    setAgeRestriction("none");
     setEnableVipOnCreate(false);
     // Reset wizard state for new event creation
+    setWizardStep(1);
+    setVipTablePricing({ premium: 750, front_row: 600, standard: 500 });
+    setEditDialogOpen(true);
+  };
+
+  const handleCloneEvent = (event: Event) => {
+    setEditingEvent(null);
+    setEventName(`${event.name} (Copy)`);
+    setEventDescription(event.description || "");
+
+    const cloneDate = new Date(event.event_date);
+    setEventDate(cloneDate.toISOString().split('T')[0]);
+    setEventTime(event.event_time || "20:00");
+    setVenueName(event.venue_name || DEFAULT_VENUE_NAME);
+    setVenueAddress(event.venue_address || DEFAULT_VENUE_ADDRESS);
+    setCity(event.city || DEFAULT_CITY);
+    setImageUrl(event.image_url || "");
+    setImageFile(null);
+    setImagePreview(event.image_url || "");
+    setTicketTypes(
+      event.ticket_types?.length
+        ? event.ticket_types.map(tt => ({ name: tt.name, price: tt.price, capacity: tt.capacity }))
+        : [{ name: "General Admission", price: 25, capacity: 100 }]
+    );
+    setEventStatus('draft');
+    setCategories(event.categories || []);
+    setTags(event.tags || []);
+    setCategoriesInput((event.categories || []).join(", "));
+    setTagsInput((event.tags || []).join(", "));
+    setAgeRestriction(event.age_restriction || "none");
+    setEnableVipOnCreate(event.vip_enabled);
     setWizardStep(1);
     setVipTablePricing({ premium: 750, front_row: 600, standard: 500 });
     setEditDialogOpen(true);
@@ -400,6 +439,7 @@ const EventManagement = () => {
     setImagePreview(event.image_url || "");
     setTicketTypes(event.ticket_types || []);
     setEventStatus(event.status || 'draft');
+    setAgeRestriction(event.age_restriction || "none");
     setCategories(event.categories || []);
     setTags(event.tags || []);
     setCategoriesInput((event.categories || []).join(", "));
@@ -655,6 +695,7 @@ const EventManagement = () => {
         published_at: publishedAtValue,
         categories: parsedCategories,
         tags: parsedTags,
+        age_restriction: ageRestriction === "none" ? null : ageRestriction,
       };
 
       let eventId: string;
@@ -1019,6 +1060,7 @@ const EventManagement = () => {
                         key={event.id}
                         event={event}
                         onEdit={handleEdit}
+                        onClone={handleCloneEvent}
                         onDelete={(e) => {
                           setEventToDelete(e);
                           setDeleteDialogOpen(true);
@@ -1155,6 +1197,23 @@ const EventManagement = () => {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="age-restriction" className="text-slate-300 font-medium tracking-wide flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-amber-400" />
+                    Age Restriction
+                  </Label>
+                  <Select value={ageRestriction} onValueChange={setAgeRestriction}>
+                    <SelectTrigger id="age-restriction" className="bg-white/5 border-white/10 text-white h-11 rounded-xl focus:border-indigo-500/50 focus:ring-indigo-500/20 w-48">
+                      <SelectValue placeholder="No restriction" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0b0f1a] border-white/10 text-white">
+                      <SelectItem value="none" className="focus:bg-white/10 focus:text-white">No Restriction</SelectItem>
+                      <SelectItem value="18+" className="focus:bg-white/10 focus:text-white">18+</SelectItem>
+                      <SelectItem value="21+" className="focus:bg-white/10 focus:text-white">21+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500">Customers must acknowledge age requirement at checkout</p>
+                </div>
 
                 <div className="space-y-4">
                   <Label className="text-slate-300 font-medium tracking-wide">Event Image / Flyer</Label>
@@ -1378,6 +1437,24 @@ const EventManagement = () => {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="age-restriction-new" className="text-slate-300 font-medium tracking-wide flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-amber-400" />
+                        Age Restriction
+                      </Label>
+                      <Select value={ageRestriction} onValueChange={setAgeRestriction}>
+                        <SelectTrigger id="age-restriction-new" className="bg-white/5 border-white/10 text-white h-11 rounded-xl focus:border-indigo-500/50 focus:ring-indigo-500/20 w-48">
+                          <SelectValue placeholder="No restriction" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#0b0f1a] border-white/10 text-white">
+                          <SelectItem value="none" className="focus:bg-white/10 focus:text-white">No Restriction</SelectItem>
+                          <SelectItem value="18+" className="focus:bg-white/10 focus:text-white">18+</SelectItem>
+                          <SelectItem value="21+" className="focus:bg-white/10 focus:text-white">21+</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-slate-500">Customers must acknowledge age requirement at checkout</p>
                     </div>
 
                     <div className="space-y-4">
@@ -1930,12 +2007,13 @@ const EventManagement = () => {
 interface EventRowProps {
   event: Event;
   onEdit: (event: Event) => void;
+  onClone: (event: Event) => void;
   onDelete: (event: Event) => void;
   onNotify: (event: Event) => void;
   getStats: (eventId: string) => Promise<{ totalTickets: number; scannedTickets: number; revenue: number }>;
 }
 
-const EventRow = ({ event, onEdit, onDelete, onNotify, getStats }: EventRowProps) => {
+const EventRow = ({ event, onEdit, onClone, onDelete, onNotify, getStats }: EventRowProps) => {
   const [stats, setStats] = useState<{ totalTickets: number; scannedTickets: number; revenue: number } | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
@@ -2020,6 +2098,14 @@ const EventRow = ({ event, onEdit, onDelete, onNotify, getStats }: EventRowProps
             className={hasBeenNotified ? "text-emerald-500" : "text-blue-500"}
           >
             <Mail className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onClone(event)}
+            title="Clone event"
+          >
+            <Copy className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"

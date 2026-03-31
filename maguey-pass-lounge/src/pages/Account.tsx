@@ -1,14 +1,18 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Music, Ticket, User, Mail, Calendar, LogOut, Loader2, Download, ExternalLink } from "lucide-react";
+import { Music, Ticket, User, Mail, Calendar, LogOut, Loader2, Download, ExternalLink, Send, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { getUserTickets, type UserTicket } from "@/lib/orders-service";
 import { EmailVerificationBanner } from "@/components/auth/EmailVerificationBanner";
 import { VIPReservationsSection } from "@/components/dashboard/VIPReservationsSection";
+import { transferTicket, getSentTransfers, type TicketTransfer } from "@/lib/ticket-transfer-service";
 import QRCode from "react-qr-code";
 
 const Account = () => {
@@ -17,6 +21,12 @@ const Account = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [tickets, setTickets] = useState<UserTicket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [sentTransfers, setSentTransfers] = useState<TicketTransfer[]>([]);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<UserTicket | null>(null);
+  const [transferToEmail, setTransferToEmail] = useState('');
+  const [transferToName, setTransferToName] = useState('');
+  const [transferLoading, setTransferLoading] = useState(false);
 
   // Get user display name
   const userName = user?.user_metadata?.first_name && user?.user_metadata?.last_name
@@ -50,6 +60,12 @@ const Account = () => {
     loadTickets();
   }, [userEmail, user?.id]);
 
+  // Fetch tickets the current user has transferred to others
+  useEffect(() => {
+    if (!userEmail) return;
+    getSentTransfers(userEmail).then(setSentTransfers);
+  }, [userEmail]);
+
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
@@ -77,6 +93,55 @@ const Account = () => {
     const eventDate = new Date(ticket.event_date);
     return eventDate < now || ticket.status === 'checked_in';
   });
+
+  const openTransferDialog = (ticket: UserTicket) => {
+    setSelectedTicket(ticket);
+    setTransferToEmail('');
+    setTransferToName('');
+    setTransferDialogOpen(true);
+  };
+
+  const handleTransfer = async () => {
+    if (!selectedTicket || !userEmail) return;
+    if (!transferToEmail.trim() || !transferToName.trim()) {
+      toast.error('Please enter recipient email and name');
+      return;
+    }
+
+    setTransferLoading(true);
+    const result = await transferTicket(
+      selectedTicket.id,
+      userEmail,
+      transferToEmail.trim(),
+      transferToName.trim()
+    );
+    setTransferLoading(false);
+
+    if (!result.success) {
+      toast.error(result.error || 'Transfer failed');
+      return;
+    }
+
+    // Remove the transferred ticket from the list (it now belongs to the recipient)
+    setTickets((prev) => prev.filter((t) => t.ticket_id !== selectedTicket.ticket_id));
+
+    // Add the transfer to the sent transfers list for immediate UI feedback
+    setSentTransfers((prev) => [
+      {
+        id: crypto.randomUUID(),
+        ticket_id: selectedTicket.ticket_id,
+        to_email: transferToEmail.trim(),
+        to_name: transferToName.trim(),
+        event_name: selectedTicket.event_name,
+        ticket_type_name: selectedTicket.ticket_type_name,
+        transferred_at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+
+    setTransferDialogOpen(false);
+    toast.success(`Ticket transferred to ${transferToName.trim()}`);
+  };
 
   const handleDownloadTicket = (ticketId: string) => {
     window.open(`/ticket/${ticketId}?download=1`, "_blank", "noopener,noreferrer");
@@ -328,6 +393,14 @@ const Account = () => {
                           <Calendar className="w-4 h-4 mr-2" />
                           Add to Calendar
                         </Button>
+                        <Button
+                          variant="ghost"
+                          className="justify-center text-muted-foreground hover:text-foreground"
+                          onClick={() => openTransferDialog(ticket)}
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          Transfer
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -353,6 +426,43 @@ const Account = () => {
         <div className="mb-8">
           <VIPReservationsSection />
         </div>
+
+        {/* Transferred Tickets — tickets the user has sent to others */}
+        {sentTransfers.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <ArrowRightLeft className="w-6 h-6 text-muted-foreground" />
+              <h2 className="text-xl font-bold text-muted-foreground">Transferred Tickets</h2>
+            </div>
+            <div className="space-y-3">
+              {sentTransfers.map((transfer) => (
+                <Card
+                  key={transfer.id}
+                  className="p-4 border-border/30 bg-card/40 opacity-70"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="font-semibold text-muted-foreground">
+                        {transfer.event_name || 'Event'}
+                      </p>
+                      <p className="text-sm text-muted-foreground/70">
+                        {transfer.ticket_type_name || 'Ticket'} • Transferred on{' '}
+                        {new Date(transfer.transferred_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 border-muted-foreground/30 text-muted-foreground">
+                      Transferred to {transfer.to_name}
+                    </Badge>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Past Tickets */}
         {!ticketsLoading && pastTickets.length > 0 && (
@@ -385,6 +495,84 @@ const Account = () => {
           </div>
         )}
       </div>
+
+      {/* Transfer Ticket Dialog */}
+      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5" />
+              Transfer Ticket
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedTicket && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                <p className="font-medium">{selectedTicket.event_name}</p>
+                <p className="text-muted-foreground">{selectedTicket.ticket_type_name}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="transfer-email">Recipient email</Label>
+                <Input
+                  id="transfer-email"
+                  type="email"
+                  placeholder="friend@example.com"
+                  value={transferToEmail}
+                  onChange={(e) => setTransferToEmail(e.target.value)}
+                  disabled={transferLoading}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="transfer-name">Recipient name</Label>
+                <Input
+                  id="transfer-name"
+                  type="text"
+                  placeholder="Jane Smith"
+                  value={transferToName}
+                  onChange={(e) => setTransferToName(e.target.value)}
+                  disabled={transferLoading}
+                />
+              </div>
+
+              <p className="text-xs text-muted-foreground bg-yellow-500/10 border border-yellow-500/30 rounded-md p-3">
+                This will transfer your ticket to{' '}
+                <strong>{transferToName || 'the recipient'}</strong>. Your QR code will
+                stop working immediately and a new one will be issued to the recipient.
+                This action cannot be undone.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setTransferDialogOpen(false)}
+              disabled={transferLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleTransfer}
+              disabled={transferLoading || !transferToEmail.trim() || !transferToName.trim()}
+            >
+              {transferLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Transferring...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Transfer Ticket
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

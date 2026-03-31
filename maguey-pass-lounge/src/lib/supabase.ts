@@ -62,6 +62,7 @@ export type Event = {
   event_date: string
   event_time: string
   status?: 'draft' | 'published' | 'archived' | null // Optional for backward compatibility
+  age_restriction?: string | null
   created_at: string
   updated_at: string
 }

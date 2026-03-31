@@ -36,6 +36,7 @@ serve(async (req) => {
       successUrl,
       cancelUrl,
       vipInviteCode,
+      referralCode,
     } = await req.json();
 
     console.log("Creating checkout for:", { eventId, tickets, customerEmail, totalAmount });
@@ -181,6 +182,8 @@ serve(async (req) => {
         payment_provider: "stripe",
         status: "pending",
         metadata: { tickets: secureTicketsMetadata }, // Store the secure metadata
+        // Promoter referral attribution
+        ...(referralCode && { referral_code: referralCode }),
       })
       .select()
       .single();
@@ -200,7 +203,7 @@ serve(async (req) => {
       mode: "payment",
       customer_email: customerEmail,
       line_items: secureLineItems,
-      success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&orderId=${order.id}`,
+      success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}&orderId=${order.id}&eventId=${eventId}`,
       cancel_url: `${cancelUrl}?canceled=true&orderId=${order.id}`,
       metadata: {
         orderId: order.id,
@@ -211,6 +214,8 @@ serve(async (req) => {
         tickets: JSON.stringify(secureTicketsMetadata),
         // VIP invite code for linking GA tickets to VIP reservations
         ...(vipInviteCode && { vipInviteCode }),
+        // Promoter referral attribution
+        ...(referralCode && { referralCode }),
       },
     });
 

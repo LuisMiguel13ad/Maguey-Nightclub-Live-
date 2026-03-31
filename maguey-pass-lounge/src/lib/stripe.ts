@@ -134,6 +134,8 @@ export async function createCheckoutSession(orderData: {
   cancelUrl: string;
   // VIP invite code for linking GA tickets to VIP reservations
   vipInviteCode?: string;
+  // Promoter referral code (their user UUID) for sales attribution
+  referralCode?: string;
 }): Promise<{ url: string; sessionId: string; orderId: string }> {
   // Check if Stripe key is configured
   if (!stripePublishableKey) {

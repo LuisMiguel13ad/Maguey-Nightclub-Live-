@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
 import { HelpCircle, ChevronDown } from "lucide-react";
 import { useState } from "react";
+import { useStaticJsonLd, buildFAQSchema } from "@/lib/json-ld";
 
 interface FAQItem {
   question: string;
@@ -62,6 +63,9 @@ const faqData: FAQItem[] = [
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  // JSON-LD structured data for SEO — enables FAQ rich snippets in Google
+  useStaticJsonLd(() => buildFAQSchema(faqData), 'json-ld-faq');
 
   const toggleFAQ = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);

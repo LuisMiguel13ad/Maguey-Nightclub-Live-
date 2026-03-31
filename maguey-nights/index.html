@@ -29,11 +29,13 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "NightClub",
-    "name": "Maguey Nightclub",
-    "description": "Delaware's premier Latin-inspired nightclub featuring premium bottle service, world-class DJs, and unforgettable nights.",
+    "@type": ["NightClub", "Restaurant"],
+    "name": "Maguey Delaware",
+    "alternateName": "Maguey Nightclub",
+    "description": "Delaware's premier Latin-inspired nightclub and authentic Mexican restaurant featuring premium bottle service, world-class DJs, and unforgettable nights.",
     "url": "https://magueynightclub.com",
-    "telephone": "+13028888888",
+    "telephone": "+13026602669",
+    "email": "info@elmagueydelaware.com",
     "address": {
       "@type": "PostalAddress",
       "streetAddress": "3320 Old Capitol Trail",
@@ -50,11 +52,29 @@
     "openingHoursSpecification": [
       {
         "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+        "opens": "11:00",
+        "closes": "21:00",
+        "description": "Restaurant"
+      },
+      {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Sunday"],
+        "opens": "12:00",
+        "closes": "22:00",
+        "description": "Restaurant (Seafood Sundays)"
+      },
+      {
+        "@type": "OpeningHoursSpecification",
         "dayOfWeek": ["Friday", "Saturday"],
         "opens": "21:00",
-        "closes": "03:00"
+        "closes": "03:00",
+        "description": "Nightclub"
       }
     ],
+    "servesCuisine": ["Mexican", "Latin American"],
+    "acceptsReservations": true,
+    "hasMenu": "https://magueynightclub.com/restaurant/menu",
     "sameAs": [
       "https://www.instagram.com/magueynightclub",
       "https://www.facebook.com/magueynightclub"

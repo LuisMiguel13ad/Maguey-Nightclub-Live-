@@ -10,6 +10,8 @@ import { MapPin, Info, ShoppingCart, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { fetchEventById, fetchEventAvailability, type EventDisplay, type EventAvailability } from "@/services/eventService";
 import { getPurchaseEventUrl } from "@/lib/purchaseSiteConfig";
+import { useJsonLd, buildEventSchema } from "@/lib/json-ld";
+import ShareButton from "@/components/ShareButton";
 
 const EventPage = () => {
   const { eventId } = useParams();
@@ -209,6 +211,10 @@ const EventPage = () => {
   const totalAvailable = availability?.ticketTypes.reduce((sum, tt) => sum + tt.available, 0) || 0;
   const isSoldOut = totalAvailable === 0;
   const purchaseUrl = getPurchaseEventUrl(eventId, event?.artist);
+
+  // JSON-LD structured data for SEO
+  const eventSchema = event ? buildEventSchema(event, purchaseUrl, availability) : null;
+  useJsonLd(eventSchema, 'json-ld-event');
 
   const handleTableSelection = (tableId: string, guests: number) => {
     setSelectedTables(prev => ({
@@ -629,13 +635,12 @@ const EventPage = () => {
                   ALL GUESTS MUST BE AT LEAST 21 YEARS OF AGE WITH A VALID GOVERNMENT ISSUED ID TO BE PRESENTED AT THE TIME OF CHECK-IN.
                 </p>
                 
-                <div className="flex space-x-4 mb-4">
-                  <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
-                    Tweet
-                  </Button>
-                  <Button variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-700">
-                    Share
-                  </Button>
+                <div className="mb-4">
+                  <ShareButton
+                    url={window.location.href}
+                    title={event.artist}
+                    text={`${event.artist} — ${event.date} at ${event.venue}`}
+                  />
                 </div>
                 
                 <div className="flex items-center space-x-2 text-gray-300 mb-4">

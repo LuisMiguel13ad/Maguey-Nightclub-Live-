@@ -40,6 +40,7 @@ import VipTablesManagement from "./pages/VipTablesManagement";
 import { GuestListCheckIn } from "./pages/GuestListCheckIn";
 import VipScannerPage from "./pages/VipScannerPage";
 import Orders from "./pages/Orders";
+import PromoterDashboard from "./pages/PromoterDashboard";
 import TestQrGenerator from "./pages/TestQrGenerator";
 // Monitoring pages
 import MetricsPage from "./pages/monitoring/MetricsPage";
@@ -90,6 +91,7 @@ const AppContent = () => {
         <Route path="/crew/settings" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><CrewSettings /></ProtectedRoute>} />
         <Route path="/vip-tables" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><VipTablesManagement /></ProtectedRoute>} />
         <Route path="/orders" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><Orders /></ProtectedRoute>} />
+        <Route path="/promoter-dashboard" element={<ProtectedRoute allowedRoles={['owner', 'promoter']}><PromoterDashboard /></ProtectedRoute>} />
 
         {/* DEV-ONLY ROUTES - Blocked in production + owner role required */}
         <Route path="/test-qr" element={<ProtectedRoute requireDev allowedRoles={['owner']}><TestQrGenerator /></ProtectedRoute>} />

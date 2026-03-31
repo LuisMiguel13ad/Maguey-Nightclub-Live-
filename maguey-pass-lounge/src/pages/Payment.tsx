@@ -153,6 +153,9 @@ const Payment = () => {
       // Get VIP invite code if present
       const vipInviteCode = searchParams.get("vipInviteCode") || undefined;
 
+      // Get promoter referral code (URL param takes precedence over sessionStorage)
+      const referralCode = searchParams.get("ref") || sessionStorage.getItem("maguey_referral") || undefined;
+
       const session = await createCheckoutSession({
         eventId,
         tickets: stripeTickets,
@@ -163,6 +166,7 @@ const Payment = () => {
         successUrl,
         cancelUrl,
         vipInviteCode,
+        referralCode,
       });
 
       toast.success("Redirecting to Stripe...", { id: toastId });

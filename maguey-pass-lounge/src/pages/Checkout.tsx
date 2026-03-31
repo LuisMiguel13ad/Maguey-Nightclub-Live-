@@ -7,7 +7,7 @@ import {
   CreditCard, Mail, User, Lock, Loader2, AlertCircle,
   Share2, Menu, Plus, Minus,
   Clock, Info, Twitter, Facebook, Instagram,
-  ShoppingCart, Wine, Crown, Ticket, ArrowRight
+  ShoppingCart, Wine, Crown, Ticket, ArrowRight, ShieldAlert
 } from "lucide-react";
 import { CheckoutStepper, CHECKOUT_STEPS } from "@/components/checkout/CheckoutStepper";
 import { FadeTransition, AnimatedStep } from "@/components/checkout/FadeTransition";
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EventCardSkeleton, TicketCardSkeleton } from "@/components/ui/skeleton-card";
 import { toast } from "sonner";
@@ -92,6 +93,7 @@ const Checkout = () => {
   const [promoApplied, setPromoApplied] = useState<Promotion | null>(null);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [promoError, setPromoError] = useState<string | null>(null);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
 
   // Checkout step management: 1=Tickets, 2=Details, 3=Payment
   const [checkoutStep, setCheckoutStep] = useState(1);
@@ -150,6 +152,14 @@ const Checkout = () => {
       setCheckoutStep(1);
     }
   }, [selectedTickets, checkoutStep]);
+
+  // Capture promoter referral code — from URL param or sessionStorage carryover
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      sessionStorage.setItem("maguey_referral", ref);
+    }
+  }, [searchParams]);
 
   // Detect VIP invite code from URL
   useEffect(() => {
@@ -454,6 +464,11 @@ const Checkout = () => {
       return;
     }
 
+    if (event.age_restriction && !ageConfirmed) {
+      setError("Please confirm age verification to continue");
+      return;
+    }
+
     // Advance to payment step
     setCheckoutStep(3);
     setIsLoading(true);
@@ -530,6 +545,12 @@ const Checkout = () => {
       // Add VIP invite code if present
       if (vipInviteCode) {
         params.set("vipInviteCode", vipInviteCode);
+      }
+
+      // Carry promoter referral code through to payment
+      const referralCode = sessionStorage.getItem("maguey_referral");
+      if (referralCode) {
+        params.set("ref", referralCode);
       }
 
       const paymentUrl = `/payment?${params.toString()}`;
@@ -716,6 +737,12 @@ const Checkout = () => {
                   <p className="text-stone-400">
                     at {eventVenue}
                   </p>
+                  {event.age_restriction && (
+                    <Badge className="mt-3 bg-red-600/20 text-red-400 border border-red-500/30 px-3 py-1 text-xs flex items-center gap-1.5 w-fit">
+                      <ShieldAlert className="w-3.5 h-3.5" />
+                      {event.age_restriction} Event — Valid ID Required
+                    </Badge>
+                  )}
                 </div>
 
                 {/* Ticket Selection Card - Glass Panel Style */}
@@ -990,6 +1017,30 @@ const Checkout = () => {
                     <p className="text-stone-500 text-xs">Your tickets will be sent to this email</p>
                   </div>
 
+                  {/* Age Verification Acknowledgment */}
+                  {event?.age_restriction && (
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          id="age-confirm"
+                          checked={ageConfirmed}
+                          onCheckedChange={(checked) => setAgeConfirmed(checked === true)}
+                          className="mt-0.5 border-amber-500/50 data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500"
+                        />
+                        <label
+                          htmlFor="age-confirm"
+                          className="text-sm text-stone-300 leading-relaxed cursor-pointer select-none"
+                        >
+                          <span className="flex items-center gap-1.5 font-semibold text-amber-400 mb-1">
+                            <ShieldAlert className="w-4 h-4" />
+                            Age Verification Required
+                          </span>
+                          I confirm that I am {event.age_restriction === "21+" ? "21" : "18"}+ years of age and will present valid government-issued photo ID at the venue upon entry.
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="pt-4 flex gap-3">
                     <Button
                       type="button"
@@ -1002,8 +1053,9 @@ const Checkout = () => {
                     <LoadingButton
                       type="submit"
                       isLoading={isLoading}
+                      disabled={!!(event?.age_restriction && !ageConfirmed)}
                       loadingText="Processing..."
-                      className="flex-1 bg-copper-400 hover:bg-copper-500 text-forest-950 font-semibold"
+                      className="flex-1 bg-copper-400 hover:bg-copper-500 text-forest-950 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Continue to Payment
                     </LoadingButton>

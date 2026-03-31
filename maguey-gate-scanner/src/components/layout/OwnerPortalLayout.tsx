@@ -18,6 +18,7 @@ import {
   FileText,
   HeartPulse,
   LayoutDashboard,
+  Link2,
   LogOut,
   Menu,
   Shield,
@@ -54,6 +55,7 @@ const sidebarSections = [
       { title: "Ticket Sales", path: "/orders", icon: ShoppingCart },
       { title: "VIP Tables", path: "/vip-tables", icon: Wine },
       { title: "Analytics", path: "/analytics", icon: BarChart3 },
+      { title: "My Referrals", path: "/promoter-dashboard", icon: Link2 },
     ],
   },
   {

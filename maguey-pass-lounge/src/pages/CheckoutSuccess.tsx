@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
-import { CheckCircle2, Mail, Download, Share2, Loader2 } from "lucide-react";
+import { CheckCircle2, Mail, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CustomCursor } from "@/components/CustomCursor";
+import ShareButton from "@/components/ShareButton";
+import { getMarketingEventUrl, MARKETING_SITE_URL } from "@/lib/marketingSiteConfig";
 
 const CheckoutSuccess = () => {
   const [searchParams] = useSearchParams();
@@ -14,6 +16,7 @@ const CheckoutSuccess = () => {
   const sessionId = searchParams.get("session_id");
   const orderIdParam = searchParams.get("orderId");
   const emailParam = searchParams.get("email");
+  const eventIdParam = searchParams.get("eventId");
 
   useEffect(() => {
     if (orderIdParam) {
@@ -165,19 +168,31 @@ const CheckoutSuccess = () => {
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 pt-4">
-            <Button asChild className="flex-1 bg-copper-400 hover:bg-copper-500 text-forest-950 rounded-sm">
-              <Link to="/account">
-                <Download className="w-4 h-4 mr-2" />
-                View My Tickets
-              </Link>
-            </Button>
-            <Button variant="outline" asChild className="flex-1 border-white/20 text-stone-300 hover:bg-white/10 rounded-sm">
-              <Link to="/">
-                <Share2 className="w-4 h-4 mr-2" />
-                Browse More Events
-              </Link>
-            </Button>
+          <div className="flex flex-col gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button asChild className="flex-1 bg-copper-400 hover:bg-copper-500 text-forest-950 rounded-sm">
+                <Link to="/account">
+                  <Download className="w-4 h-4 mr-2" />
+                  View My Tickets
+                </Link>
+              </Button>
+              <Button variant="outline" asChild className="flex-1 border-white/20 text-stone-300 hover:bg-white/10 rounded-sm">
+                <Link to="/">
+                  Browse More Events
+                </Link>
+              </Button>
+            </div>
+
+            {/* Share with Friends */}
+            <div className="border-t border-white/10 pt-4">
+              <p className="text-sm text-stone-400 mb-3">Share with friends</p>
+              <ShareButton
+                url={eventIdParam ? getMarketingEventUrl(eventIdParam) : MARKETING_SITE_URL}
+                title="Maguey Nightclub"
+                text="I just got tickets to Maguey Nightclub! Join me"
+                variant="dark"
+              />
+            </div>
           </div>
         </div>
       </div>
