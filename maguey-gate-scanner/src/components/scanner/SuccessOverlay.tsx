@@ -5,13 +5,16 @@
  * Auto-dismisses after 1.5 seconds per context decision.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { playSuccess, playTierSuccess } from '@/lib/audio-feedback-service';
+import { supabase, isSupabaseConfigured } from '@/integrations/supabase/client';
 
 export interface SuccessOverlayProps {
   ticketType: 'ga' | 'vip_reservation' | 'vip_guest';
   guestName?: string;
+  /** Attendee email used to look up visit count for the "Welcome back!" banner */
+  attendeeEmail?: string;
   vipDetails?: {
     tableName: string;
     tier: string;
@@ -27,12 +30,15 @@ export interface SuccessOverlayProps {
 export const SuccessOverlay = ({
   ticketType,
   guestName,
+  attendeeEmail,
   vipDetails,
   groupCheckIn,
   isReentry = false,
   lastEntryTime,
   onDismiss,
 }: SuccessOverlayProps) => {
+  const [visitCount, setVisitCount] = useState<number | null>(null);
+
   // Play audio and auto-dismiss on mount
   useEffect(() => {
     // Play appropriate audio based on ticket type
@@ -54,6 +60,18 @@ export const SuccessOverlay = ({
     return () => clearTimeout(timer);
   }, [onDismiss, ticketType]);
 
+  // Fetch visit count for GA first-scan (not re-entry) to show "Welcome back!" banner.
+  // Uses SECURITY DEFINER RPC so scanner employees can query without full order access.
+  useEffect(() => {
+    if (!attendeeEmail || isReentry || ticketType !== 'ga' || !isSupabaseConfigured()) return;
+
+    supabase
+      .rpc('get_customer_visit_count', { p_email: attendeeEmail.toLowerCase() })
+      .then(({ data }) => {
+        if (typeof data === 'number') setVisitCount(data);
+      });
+  }, [attendeeEmail, isReentry, ticketType]);
+
   return (
     <div data-cy="scan-result" className="fixed inset-0 z-[100] bg-green-500 flex flex-col items-center justify-center animate-in fade-in duration-200">
       {/* Re-entry banner - gold banner at top for VIP-linked re-entry */}
@@ -63,6 +81,15 @@ export const SuccessOverlay = ({
           {lastEntryTime && (
             <p className="text-sm opacity-80 mt-1">Last entry: {lastEntryTime}</p>
           )}
+        </div>
+      )}
+
+      {/* Welcome back banner - shown for repeat GA visitors (visit count ≥ 2) */}
+      {!isReentry && visitCount !== null && visitCount >= 2 && ticketType === 'ga' && (
+        <div className="absolute top-0 left-0 right-0 bg-blue-600 text-white py-4 px-6 text-center">
+          <p className="text-xl font-black uppercase tracking-tight">
+            Welcome back! Visit #{visitCount}
+          </p>
         </div>
       )}
 

@@ -24,7 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, User, Mail, Phone, Calendar, DollarSign, Ticket, Tag } from "lucide-react";
+import { Search, User, Phone, DollarSign, Ticket } from "lucide-react";
 import { format } from "date-fns";
 
 interface Customer {
@@ -34,9 +34,11 @@ interface Customer {
   totalOrders: number;
   totalSpent: number;
   totalTickets: number;
-  firstPurchase: string | null;
-  lastPurchase: string | null;
+  distinctEvents: number;
   events: string[];
+  firstVisit: string | null;
+  lastVisit: string | null;
+  daysSinceLastVisit: number | null;
   tags: string[];
 }
 
@@ -95,121 +97,34 @@ const CustomerManagement = () => {
 
     setIsLoading(true);
     try {
-      // Get all orders
-      const { data: orders, error: ordersError } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("status", "completed")
-        .order("completed_at", { ascending: false });
+      const { data, error } = await (supabase as any)
+        .from("customer_stats")
+        .select("email, name, phone, total_orders, total_spent, total_tickets, distinct_events, event_names, first_visit, last_visit, days_since_last_visit")
+        .order("total_spent", { ascending: false });
 
-      if (ordersError) throw ordersError;
+      if (error) throw error;
 
-      // Get all tickets
-      const { data: tickets, error: ticketsError } = await supabase
-        .from("tickets")
-        .select("guest_email, guest_name, guest_phone, event_name, price_paid, created_at, order_id");
+      const customerList: Customer[] = (data || []).map((row: any) => {
+        const tags: string[] = [];
+        if (Number(row.total_spent) >= 500) tags.push("VIP");
+        if (Number(row.total_orders) >= 5) tags.push("Regular");
+        if (Number(row.distinct_events) >= 3) tags.push("Multi-Event");
 
-      if (ticketsError) throw ticketsError;
-
-      // Aggregate customer data
-      const customerMap = new Map<string, Customer>();
-
-      // Process orders
-      orders?.forEach((order: any) => {
-        const email = order.customer_email.toLowerCase();
-        if (!customerMap.has(email)) {
-          customerMap.set(email, {
-            email: order.customer_email,
-            name: order.customer_name || null,
-            phone: order.customer_phone || null,
-            totalOrders: 0,
-            totalSpent: 0,
-            totalTickets: 0,
-            firstPurchase: null,
-            lastPurchase: null,
-            events: [],
-            tags: [],
-          });
-        }
-
-        const customer = customerMap.get(email)!;
-        customer.totalOrders += 1;
-        // orders.total is stored in cents, convert to dollars
-        customer.totalSpent += Number(order.total || 0) / 100;
-        customer.totalTickets += order.ticket_count || 0;
-
-        if (order.completed_at) {
-          const purchaseDate = order.completed_at;
-          if (!customer.firstPurchase || purchaseDate < customer.firstPurchase) {
-            customer.firstPurchase = purchaseDate;
-          }
-          if (!customer.lastPurchase || purchaseDate > customer.lastPurchase) {
-            customer.lastPurchase = purchaseDate;
-          }
-        }
-
-        if (order.event_name && !customer.events.includes(order.event_name)) {
-          customer.events.push(order.event_name);
-        }
+        return {
+          email: row.email,
+          name: row.name || null,
+          phone: row.phone || null,
+          totalOrders: Number(row.total_orders) || 0,
+          totalSpent: Number(row.total_spent) || 0,
+          totalTickets: Number(row.total_tickets) || 0,
+          distinctEvents: Number(row.distinct_events) || 0,
+          events: Array.isArray(row.event_names) ? row.event_names.filter(Boolean) : [],
+          firstVisit: row.first_visit || null,
+          lastVisit: row.last_visit || null,
+          daysSinceLastVisit: row.days_since_last_visit != null ? Number(row.days_since_last_visit) : null,
+          tags,
+        };
       });
-
-      // Process tickets
-      tickets?.forEach((ticket: any) => {
-        if (ticket.guest_email) {
-          const email = ticket.guest_email.toLowerCase();
-          if (!customerMap.has(email)) {
-            customerMap.set(email, {
-              email: ticket.guest_email,
-              name: ticket.guest_name || null,
-              phone: ticket.guest_phone || null,
-              totalOrders: 0,
-              totalSpent: 0,
-              totalTickets: 0,
-              firstPurchase: null,
-              lastPurchase: null,
-              events: [],
-              tags: [],
-            });
-          }
-
-          const customer = customerMap.get(email)!;
-          customer.totalTickets += 1;
-          if (ticket.price_paid) {
-            customer.totalSpent += parseFloat(ticket.price_paid);
-          }
-
-          if (ticket.created_at) {
-            const purchaseDate = ticket.created_at;
-            if (!customer.firstPurchase || purchaseDate < customer.firstPurchase) {
-              customer.firstPurchase = purchaseDate;
-            }
-            if (!customer.lastPurchase || purchaseDate > customer.lastPurchase) {
-              customer.lastPurchase = purchaseDate;
-            }
-          }
-
-          if (ticket.event_name && !customer.events.includes(ticket.event_name)) {
-            customer.events.push(ticket.event_name);
-          }
-        }
-      });
-
-      // Add tags based on spending
-      customerMap.forEach((customer) => {
-        if (customer.totalSpent >= 500) {
-          customer.tags.push("VIP");
-        }
-        if (customer.totalOrders >= 5) {
-          customer.tags.push("Regular");
-        }
-        if (customer.events.length >= 3) {
-          customer.tags.push("Multi-Event");
-        }
-      });
-
-      const customerList = Array.from(customerMap.values()).sort(
-        (a, b) => b.totalSpent - a.totalSpent
-      );
 
       setCustomers(customerList);
       setFilteredCustomers(customerList);
@@ -229,16 +144,20 @@ const CustomerManagement = () => {
     if (!isSupabaseConfigured()) return;
 
     try {
+      const emailFilter = `purchaser_email.ilike.${customer.email},customer_email.ilike.${customer.email}`;
+      const ticketEmailFilter = `guest_email.ilike.${customer.email},attendee_email.ilike.${customer.email}`;
+
       const [ordersResult, ticketsResult] = await Promise.all([
         supabase
           .from("orders")
-          .select("*")
-          .eq("customer_email", customer.email)
-          .order("completed_at", { ascending: false }),
+          .select("id, created_at, total, status, event_id")
+          .or(emailFilter)
+          .in("status", ["paid", "completed"])
+          .order("created_at", { ascending: false }),
         supabase
           .from("tickets")
-          .select("*")
-          .eq("guest_email", customer.email)
+          .select("id, created_at, status, scanned_at, ticket_type_id, event_id")
+          .or(ticketEmailFilter)
           .order("created_at", { ascending: false }),
       ]);
 
@@ -328,7 +247,7 @@ const CustomerManagement = () => {
                       <TableHead>Orders</TableHead>
                       <TableHead>Tickets</TableHead>
                       <TableHead>Total Spent</TableHead>
-                      <TableHead>Last Purchase</TableHead>
+                      <TableHead>Last Visit</TableHead>
                       <TableHead>Tags</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -365,8 +284,8 @@ const CustomerManagement = () => {
                           {currencyFormatter.format(customer.totalSpent)}
                         </TableCell>
                         <TableCell>
-                          {customer.lastPurchase
-                            ? format(new Date(customer.lastPurchase), "MMM d, yyyy")
+                          {customer.lastVisit
+                            ? format(new Date(customer.lastVisit), "MMM d, yyyy")
                             : "-"}
                         </TableCell>
                         <TableCell>
@@ -435,10 +354,36 @@ const CustomerManagement = () => {
                   <Card>
                     <CardContent className="pt-4">
                       <div className="text-sm text-muted-foreground">Events Attended</div>
-                      <div className="text-2xl font-bold">{selectedCustomer.events.length}</div>
+                      <div className="text-2xl font-bold">{selectedCustomer.distinctEvents}</div>
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Days since last visit */}
+                {selectedCustomer.daysSinceLastVisit !== null && (
+                  <div className="text-sm text-muted-foreground">
+                    Last visit: {selectedCustomer.daysSinceLastVisit === 0
+                      ? "today"
+                      : `${selectedCustomer.daysSinceLastVisit} day${selectedCustomer.daysSinceLastVisit === 1 ? "" : "s"} ago`}
+                    {selectedCustomer.firstVisit && (
+                      <> · First visit: {format(new Date(selectedCustomer.firstVisit), "MMM d, yyyy")}</>
+                    )}
+                  </div>
+                )}
+
+                {/* Events attended */}
+                {selectedCustomer.events.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2 text-sm">Events</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedCustomer.events.map((event) => (
+                        <Badge key={event} variant="outline" className="text-xs">
+                          {event}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Orders */}
                 <div>
@@ -451,8 +396,6 @@ const CustomerManagement = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Date</TableHead>
-                            <TableHead>Event</TableHead>
-                            <TableHead>Tickets</TableHead>
                             <TableHead>Amount</TableHead>
                             <TableHead>Status</TableHead>
                           </TableRow>
@@ -461,19 +404,17 @@ const CustomerManagement = () => {
                           {customerOrders.map((order: any) => (
                             <TableRow key={order.id}>
                               <TableCell>
-                                {order.completed_at
-                                  ? format(new Date(order.completed_at), "MMM d, yyyy")
+                                {order.created_at
+                                  ? format(new Date(order.created_at), "MMM d, yyyy")
                                   : "-"}
                               </TableCell>
-                              <TableCell>{order.event_name}</TableCell>
-                              <TableCell>{order.ticket_count}</TableCell>
                               <TableCell>
-                                {currencyFormatter.format(Number(order.total || 0) / 100)}
+                                {currencyFormatter.format(Number(order.total || 0))}
                               </TableCell>
                               <TableCell>
                                 <Badge
                                   variant={
-                                    order.status === "completed"
+                                    order.status === "paid" || order.status === "completed"
                                       ? "default"
                                       : order.status === "refunded"
                                       ? "destructive"
@@ -502,8 +443,6 @@ const CustomerManagement = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Ticket ID</TableHead>
-                            <TableHead>Event</TableHead>
-                            <TableHead>Type</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Scanned At</TableHead>
                           </TableRow>
@@ -512,26 +451,24 @@ const CustomerManagement = () => {
                           {customerTickets.slice(0, 20).map((ticket: any) => (
                             <TableRow key={ticket.id}>
                               <TableCell className="font-mono text-xs">
-                                {ticket.ticket_id}
+                                {String(ticket.id).slice(0, 8)}…
                               </TableCell>
-                              <TableCell>{ticket.event_name}</TableCell>
-                              <TableCell>{ticket.ticket_type}</TableCell>
                               <TableCell>
                                 <Badge
                                   variant={
-                                    ticket.is_used || ticket.status === "scanned"
+                                    ticket.status === "scanned" || ticket.status === "used"
                                       ? "default"
                                       : "secondary"
                                   }
                                 >
-                                  {ticket.is_used || ticket.status === "scanned"
-                                    ? "Scanned"
-                                    : "Active"}
+                                  {ticket.status || "issued"}
                                 </Badge>
                               </TableCell>
                               <TableCell>
                                 {ticket.scanned_at
                                   ? format(new Date(ticket.scanned_at), "MMM d, h:mm a")
+                                  : ticket.created_at
+                                  ? format(new Date(ticket.created_at), "MMM d, yyyy")
                                   : "-"}
                               </TableCell>
                             </TableRow>
@@ -551,4 +488,3 @@ const CustomerManagement = () => {
 };
 
 export default CustomerManagement;
-

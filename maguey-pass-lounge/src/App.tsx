@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { EmbedProvider } from "@/contexts/EmbedContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import Events from "./pages/Events";
@@ -56,6 +57,7 @@ const App = () => {
               v7_relativeSplatPath: true,
             }}
           >
+            <EmbedProvider>
             <GoogleAnalytics />
             <Routes>
               <Route path="/" element={<Events />} />
@@ -121,6 +123,7 @@ const App = () => {
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </EmbedProvider>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

@@ -8,6 +8,7 @@ const navItems = [
   { to: "/admin/tickets", label: "Tickets" },
   { to: "/admin/guest-lists", label: "Guest Lists" },
   { to: "/admin/vip-tables", label: "🍾 VIP Tables" },
+  { to: "/admin/events", label: "💲 Pricing Tiers" },
   { to: "/admin/reports", label: "Reports" },
 ];
 

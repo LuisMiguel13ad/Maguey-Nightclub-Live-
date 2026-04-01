@@ -32,9 +32,7 @@ serve(async (req) => {
       tableId,
       tableNumber,
       tableTier,
-      tablePrice,
       tableCapacity,
-      bottlesIncluded,
       customerEmail,
       customerName,
       customerPhone,
@@ -54,7 +52,7 @@ serve(async (req) => {
       gaTicketPrice,
     } = body;
 
-    console.log("Creating unified VIP payment intent for:", { eventId, tableId, customerEmail, tablePrice, ticketTierId });
+    console.log("Creating unified VIP payment intent for:", { eventId, tableId, customerEmail, ticketTierId });
 
     // Validate required fields (including GA ticket for unified checkout)
     // Note: tablePrice and ticketPriceCents are intentionally NOT required from the client.
@@ -158,7 +156,13 @@ serve(async (req) => {
 
     // Calculate prices from DATABASE values, not client input
     // The event_vip_tables column is price_cents, not price
-    const vipTablePriceCents = table.price_cents != null ? table.price_cents : Math.round(Number(tablePrice) * 100);
+    const vipTablePriceCents = table.price_cents;
+    if (!vipTablePriceCents) {
+      return new Response(
+        JSON.stringify({ error: "Table price not configured. Contact venue." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
+      );
+    }
     const serverTicketPriceCents = Math.round((ticketType.price + (ticketType.fee || 0)) * 100);
 
     // Guest tickets: validate count against table capacity, use same server-side price
@@ -174,7 +178,7 @@ serve(async (req) => {
     const packageSnapshot = {
       tier: table.tier || tableTier,
       capacity: table.capacity,
-      bottlesIncluded: table.bottles_included || bottlesIncluded,
+      bottlesIncluded: table.bottles_included ?? 1,
       guestCount: guestCount || table.capacity,
       celebration: celebration || null,
       celebrantName: celebrantName || null,

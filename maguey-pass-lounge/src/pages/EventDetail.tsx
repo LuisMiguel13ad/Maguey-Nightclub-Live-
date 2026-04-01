@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, Navigate, useSearchParams } from "react-router-dom";
-import { Calendar, MapPin, Music, Loader2, AlertCircle, Wine, ShieldAlert } from "lucide-react";
+import { Calendar, MapPin, Music, Loader2, AlertCircle, Wine, ShieldAlert, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -10,6 +10,13 @@ import { WaitlistForm } from "@/components/WaitlistForm";
 import { VIPTableSection } from "@/components/VIPTableSection";
 import ShareButton from "@/components/ShareButton";
 import { getMarketingEventUrl } from "@/lib/marketingSiteConfig";
+import { supabase } from "@/lib/supabase";
+
+interface PriceTierInfo {
+  tier_price: number;
+  tier_name: string;
+  tier_remaining: number;
+}
 
 const EventDetail = () => {
   const { eventId } = useParams();
@@ -17,6 +24,8 @@ const EventDetail = () => {
   const [event, setEvent] = useState<EventWithTickets | null>(null);
   const [availability, setAvailability] = useState<EventAvailability | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // Map of ticketTypeId → active price tier (null = no tiers, use base price)
+  const [priceTiers, setPriceTiers] = useState<Record<string, PriceTierInfo | null>>({});
 
   // Capture promoter referral code from ?ref= param and persist through checkout
   useEffect(() => {
@@ -45,6 +54,27 @@ const EventDetail = () => {
       setIsLoading(false);
     }
   }, [eventId]);
+
+  // Load active price tiers for all ticket types once event is ready
+  useEffect(() => {
+    if (!event?.ticketTypes?.length) return;
+
+    async function loadTiers() {
+      const results: Record<string, PriceTierInfo | null> = {};
+      await Promise.all(
+        event!.ticketTypes.map(async (tt) => {
+          const { data } = await supabase.rpc("get_current_tier_price", {
+            p_ticket_type_id: tt.id,
+          });
+          // data is an array of 0 or 1 rows
+          results[tt.id] = data && data.length > 0 ? (data[0] as PriceTierInfo) : null;
+        })
+      );
+      setPriceTiers(results);
+    }
+
+    loadTiers().catch(console.error);
+  }, [event]);
 
 
   // Helper to get availability for a ticket type
@@ -283,6 +313,14 @@ const EventDetail = () => {
                               const isSoldOut = ticketAvail ? ticketAvail.available <= 0 : false;
                               const isLowStock = ticketAvail ? ticketAvail.available > 0 && ticketAvail.available <= 5 : false;
                               
+                  const tierInfo = priceTiers[ticket.id];
+                  const activeTierPrice = tierInfo ? tierInfo.tier_price : null;
+                  const tierDisplayPrice = activeTierPrice !== null
+                    ? (activeTierPrice + ticket.fee).toFixed(2)
+                    : totalPrice;
+                  const isEarlyBird = activeTierPrice !== null && activeTierPrice < ticket.price;
+                  const tierRemaining = tierInfo?.tier_remaining ?? null;
+
                   return (
                     <div
                       key={ticket.id}
@@ -322,10 +360,31 @@ const EventDetail = () => {
                           )}
 
                           {/* Price */}
-                          <div className="pt-2">
-                            <span className="text-3xl font-bold text-foreground">
-                              ${totalPrice}
-                            </span>
+                          <div className="pt-2 space-y-1">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                              <span className="text-3xl font-bold text-foreground">
+                                ${tierDisplayPrice}
+                              </span>
+                              {isEarlyBird && (
+                                <span className="text-base text-muted-foreground line-through">
+                                  ${totalPrice}
+                                </span>
+                              )}
+                            </div>
+                            {/* Tier name + urgency counter */}
+                            {tierInfo && (
+                              <div className="flex items-center gap-1.5">
+                                <Zap className="w-3.5 h-3.5 text-amber-500" />
+                                <span className="text-xs font-semibold text-amber-600">
+                                  {tierInfo.tier_name}
+                                </span>
+                                {tierRemaining !== null && tierRemaining <= 20 && tierRemaining > 0 && (
+                                  <span className="text-xs text-amber-500">
+                                    — Only {tierRemaining} left at this price!
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
 

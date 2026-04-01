@@ -209,7 +209,8 @@ export function VIPFloorPlanAdmin({
   readOnly = false,
   compact = false,
 }: VIPFloorPlanAdminProps) {
-  const effectiveTables = tables.length > 0 ? tables : DEFAULT_TABLES;
+  const isShowingDemoData = tables.length === 0;
+  const effectiveTables = isShowingDemoData ? DEFAULT_TABLES : tables;
 
   const hasActiveReservation = (tableNumber: number) => {
     return reservations.some(
@@ -237,6 +238,11 @@ export function VIPFloorPlanAdmin({
 
   return (
     <div className={cn("space-y-3", compact && "space-y-1.5")}>
+      {isShowingDemoData && (
+        <div className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-sm text-amber-400">
+          DEMO — No tables configured for this event. Select an event or add tables to see real layout.
+        </div>
+      )}
       {/* Stats bar — only in compact mode (VIPSetupManager). Dashboard shows stats in toolbar. */}
       {compact && (
         <div className="flex flex-wrap items-center justify-between bg-zinc-900/50 rounded-lg border border-zinc-800 p-1.5 gap-2">

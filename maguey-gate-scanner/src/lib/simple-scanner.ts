@@ -6,6 +6,12 @@ import {
   processVipScanWithReentry,
   type VipReservation,
 } from '@/lib/vip-tables-admin-service';
+import { resolveStaffNames } from './staff-name-service';
+
+export interface ScanContext {
+  staffUserId?: string;   // current user's auth UUID
+  deviceLabel?: string;   // human-readable device name or ID
+}
 
 export interface ScanResult {
   success: boolean;
@@ -13,8 +19,11 @@ export interface ScanResult {
   message: string;
   alreadyScanned?: boolean;
 
+  // Semantic success type (first scan vs re-entry)
+  entryType?: 'first_entry' | 'reentry';
+
   // Detailed rejection info
-  rejectionReason?: 'already_used' | 'wrong_event' | 'invalid' | 'expired' | 'tampered' | 'not_found' | 'offline_unknown' | 'reentry';
+  rejectionReason?: 'already_used' | 'wrong_event' | 'invalid' | 'expired' | 'tampered' | 'not_found' | 'offline_unknown';
   rejectionDetails?: {
     previousScan?: {
       staff: string;      // Display name or "Unknown Staff"
@@ -286,7 +295,8 @@ export async function scanTicket(
   input: string,
   userId?: string,
   method: 'manual' | 'qr' | 'nfc' = 'manual',
-  client: SupabaseClient = defaultClient
+  client: SupabaseClient = defaultClient,
+  context?: ScanContext
 ): Promise<ScanResult> {
   // Parse input - handles both QR JSON payloads and plain ticket IDs
   const parsed = await parseQrInput(input);
@@ -394,7 +404,7 @@ export async function scanTicket(
         success: true,
         ticket,
         message: `Re-entry granted - Last entry at ${scannedTime}`,
-        rejectionReason: 'reentry',
+        entryType: 'reentry',
         vipInfo: {
           tableName: vipLinkCheck.table_name || `Table ${vipLinkCheck.table_number}`,
           tableNumber: vipLinkCheck.table_number || '',
@@ -416,12 +426,15 @@ export async function scanTicket(
       })
       : 'unknown time';
 
-    // Get staff name from scan - will show "Staff" as default
-    // In production, could be enhanced with a profiles lookup
-    const staffName = 'Staff';
+    // Resolve staff name from context (falls back to 'Staff' if unavailable)
+    let staffName = 'Staff';
+    if (context?.staffUserId) {
+      const names = await resolveStaffNames([context.staffUserId]);
+      staffName = names.get(context.staffUserId) || 'Staff';
+    }
 
-    // Get gate/device info - could use device_id from scanner context
-    const gateName = 'Gate';
+    // Resolve gate/device name from context
+    const gateName = context?.deviceLabel || 'Gate';
 
     return {
       success: false,
@@ -768,7 +781,8 @@ export async function debugGetSampleTickets(client: SupabaseClient = defaultClie
 export async function scanTicketOffline(
   input: string,
   userId?: string,
-  eventId?: string
+  eventId?: string,
+  context?: ScanContext
 ): Promise<ScanResult> {
   // Parse input for QR signature verification
   const parsed = await parseQrInput(input);
@@ -884,7 +898,7 @@ export async function scanTicketOffline(
       rejectionDetails: {
         previousScan: {
           staff: cachedTicket.scannedByName || 'Staff',
-          gate: 'This device',
+          gate: context?.deviceLabel || 'This device',
           time: scannedTime,
         },
       },

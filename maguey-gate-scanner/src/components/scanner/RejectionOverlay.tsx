@@ -17,8 +17,7 @@ export type RejectionReason =
   | 'expired'
   | 'tampered'
   | 'not_found'
-  | 'offline_unknown'
-  | 'reentry';
+  | 'offline_unknown';
 
 export interface RejectionOverlayProps {
   reason: RejectionReason;

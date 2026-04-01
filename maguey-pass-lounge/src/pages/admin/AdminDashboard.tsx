@@ -6,6 +6,7 @@ import TicketList from "./TicketList";
 import Reports from "./Reports";
 import GuestListManager from "./GuestListManager";
 import VIPTableManager from "./VIPTableManager";
+import EventManagement from "./EventManagement";
 
 const AdminDashboard = () => {
   return (
@@ -19,6 +20,7 @@ const AdminDashboard = () => {
             <Route path="tickets" element={<TicketList />} />
             <Route path="guest-lists" element={<GuestListManager />} />
             <Route path="vip-tables" element={<VIPTableManager />} />
+            <Route path="events" element={<EventManagement />} />
             <Route path="reports" element={<Reports />} />
           </Routes>
         </main>

@@ -114,6 +114,7 @@ export async function getTablesForEvent(eventId: string): Promise<EventVipTable[
     .from('event_vip_tables')
     .select('*')
     .eq('event_id', eventId)
+    .eq('is_active', true)
     .order('table_number', { ascending: true });
 
   if (error) {

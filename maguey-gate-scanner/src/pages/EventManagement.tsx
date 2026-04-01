@@ -160,6 +160,10 @@ const EventManagement = () => {
   // VIP section state for new events
   const [enableVipOnCreate, setEnableVipOnCreate] = useState(false);
 
+  // Early access notification state for new events
+  const [earlyAccessEnabled, setEarlyAccessEnabled] = useState(false);
+  const [sendingEarlyAccess, setSendingEarlyAccess] = useState(false);
+
   // Wizard step state for new event creation (1 = Event Details, 2 = VIP Setup)
   const [wizardStep, setWizardStep] = useState(1);
 
@@ -386,6 +390,7 @@ const EventManagement = () => {
     setTagsInput("");
     setAgeRestriction("none");
     setEnableVipOnCreate(false);
+    setEarlyAccessEnabled(false);
     // Reset wizard state for new event creation
     setWizardStep(1);
     setVipTablePricing({ premium: 750, front_row: 600, standard: 500 });
@@ -418,6 +423,7 @@ const EventManagement = () => {
     setTagsInput((event.tags || []).join(", "));
     setAgeRestriction(event.age_restriction || "none");
     setEnableVipOnCreate(event.vip_enabled);
+    setEarlyAccessEnabled(false);
     setWizardStep(1);
     setVipTablePricing({ premium: 750, front_row: 600, standard: 500 });
     setEditDialogOpen(true);
@@ -848,6 +854,45 @@ const EventManagement = () => {
         title: "Success",
         description: `Event ${editingEvent ? 'updated' : 'created'} successfully! ${editingEvent ? '' : 'Synced to main and purchase sites.'}`,
       });
+
+      // Send early access emails to loyal customers (new events only)
+      if (!editingEvent && earlyAccessEnabled) {
+        setSendingEarlyAccess(true);
+        try {
+          // Query loyal customers (2+ completed orders) from the customer_stats VIEW
+          const { data: loyalCustomers, error: loyalError } = await supabase
+            .from('customer_stats')
+            .select('email')
+            .gte('total_orders', 2);
+
+          if (!loyalError && loyalCustomers && loyalCustomers.length > 0) {
+            const recipientEmails = loyalCustomers.map((c: any) => c.email);
+
+            const { error: earlyError } = await supabase.functions.invoke('send-event-announcement', {
+              body: {
+                eventId,
+                recipientEmails,
+                isEarlyAccess: true,
+                customMessage: "You're getting early access to this event as one of our most loyal guests. Grab your tickets before they sell out!",
+              },
+            });
+
+            if (!earlyError) {
+              toast({
+                title: "Early Access Sent",
+                description: `Early access email sent to ${recipientEmails.length} loyal customer${recipientEmails.length !== 1 ? 's' : ''}.`,
+              });
+            } else {
+              console.warn('Early access send error:', earlyError);
+            }
+          }
+        } catch (earlyAccessError) {
+          console.warn('Early access notification failed:', earlyAccessError);
+          // Non-blocking — event was still created successfully
+        } finally {
+          setSendingEarlyAccess(false);
+        }
+      }
 
       // Audit log: event created or updated
       logAuditEvent(
@@ -1730,6 +1775,40 @@ const EventManagement = () => {
                         <p className="text-sm mt-1">Toggle the switch above to enable VIP reservations.</p>
                       </div>
                     )}
+
+                    {/* Early Access Notification Toggle */}
+                    <Card className="border-white/10 bg-white/5">
+                      <CardHeader className="pb-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-green-500/20 flex items-center justify-center">
+                              <Mail className="h-5 w-5 text-blue-400" />
+                            </div>
+                            <div>
+                              <CardTitle className="text-lg text-white">Early Access for Loyal Customers</CardTitle>
+                              <CardDescription className="text-slate-400">
+                                Email past attendees (2+ orders) before the public announcement
+                              </CardDescription>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={earlyAccessEnabled}
+                            onCheckedChange={setEarlyAccessEnabled}
+                            className="data-[state=checked]:bg-blue-500"
+                          />
+                        </div>
+                      </CardHeader>
+                      {earlyAccessEnabled && (
+                        <CardContent className="pt-0 pb-4">
+                          <div className="flex items-start gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                            <Users className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-xs text-slate-300">
+                              Customers with 2 or more completed orders will receive an exclusive early access email when this event is created.
+                            </p>
+                          </div>
+                        </CardContent>
+                      )}
+                    </Card>
                   </div>
                 )}
               </div>

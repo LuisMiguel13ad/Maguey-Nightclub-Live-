@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { CustomCursor } from "@/components/CustomCursor";
 import ShareButton from "@/components/ShareButton";
 import { getMarketingEventUrl, MARKETING_SITE_URL } from "@/lib/marketingSiteConfig";
+import { useEmbed } from "@/contexts/EmbedContext";
 
 const CheckoutSuccess = () => {
   const [searchParams] = useSearchParams();
+  const { isEmbed } = useEmbed();
   const [isLoading, setIsLoading] = useState(true);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [purchaserEmail, setPurchaserEmail] = useState<string | null>(null);
@@ -72,6 +74,14 @@ const CheckoutSuccess = () => {
     verifyPayment();
   }, [sessionId, orderIdParam, emailParam]);
 
+  // Notify parent frame when embedded in the CheckoutDrawer on the marketing site
+  useEffect(() => {
+    if (isEmbed && !isLoading && orderId) {
+      const targetOrigin = import.meta.env.VITE_MARKETING_SITE_URL || 'https://magueynightclub.com';
+      window.parent.postMessage({ type: 'purchase_complete', orderId }, targetOrigin);
+    }
+  }, [isEmbed, isLoading, orderId]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-forest-950 flex flex-col items-center justify-center gap-4">
@@ -102,13 +112,15 @@ const CheckoutSuccess = () => {
       </div>
 
       {/* Header */}
-      <header className="relative z-50 border-b border-white/5 bg-forest-950/80 backdrop-blur-md sticky top-0">
-        <div className="container mx-auto px-4 py-4">
-          <Link to="/" className="font-mono text-xs tracking-[0.2em] uppercase group">
-            MAGUEY <span className="text-copper-400">/</span> DE
-          </Link>
-        </div>
-      </header>
+      {!isEmbed && (
+        <header className="relative z-50 border-b border-white/5 bg-forest-950/80 backdrop-blur-md sticky top-0">
+          <div className="container mx-auto px-4 py-4">
+            <Link to="/" className="font-mono text-xs tracking-[0.2em] uppercase group">
+              MAGUEY <span className="text-copper-400">/</span> DE
+            </Link>
+          </div>
+        </header>
+      )}
 
       <div className="relative z-10 container mx-auto px-4 py-12 max-w-2xl">
         <div className="text-center mb-8">

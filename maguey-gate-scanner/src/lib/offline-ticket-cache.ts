@@ -51,6 +51,11 @@ export interface OfflineScanRecord {
   };
 }
 
+export interface DeviceMeta {
+  key: string;   // PK, always 'deviceId'
+  value: string;
+}
+
 // ============================================================================
 // Database
 // ============================================================================
@@ -59,6 +64,7 @@ class TicketCacheDatabase extends Dexie {
   cachedTickets!: Table<CachedTicket, string>;
   cacheMetadata!: Table<CacheMetadata, string>;
   offlineScans!: Table<OfflineScanRecord, number>;
+  deviceMeta!: Table<DeviceMeta, string>;
 
   constructor() {
     super('TicketCacheDatabase');
@@ -66,6 +72,12 @@ class TicketCacheDatabase extends Dexie {
       cachedTickets: 'ticketId, eventId, qrToken, status',
       cacheMetadata: 'eventId',
       offlineScans: '++id, ticketId, syncStatus, scannedAt',
+    });
+    this.version(2).stores({
+      cachedTickets: 'ticketId, eventId, qrToken, status',
+      cacheMetadata: 'eventId',
+      offlineScans: '++id, ticketId, syncStatus, scannedAt',
+      deviceMeta: 'key',
     });
   }
 }
@@ -77,12 +89,27 @@ const db = new TicketCacheDatabase();
 // ============================================================================
 
 /**
- * Get or create a unique device ID for conflict resolution tracking
+ * Get or create a unique device ID, persisted in Dexie (IndexedDB) as primary store.
+ * Falls back to / migrates from localStorage for backward compatibility.
+ * Writes to both stores so other services reading localStorage stay consistent.
  */
-function getDeviceId(): string {
-  let deviceId = localStorage.getItem('scanner_device_id');
-  if (!deviceId) {
-    deviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+export async function getOrInitDeviceId(): Promise<string> {
+  // 1. Try Dexie first (most persistent on iOS/Safari)
+  const stored = await db.deviceMeta.get('deviceId');
+  if (stored?.value) return stored.value;
+
+  // 2. Migrate from localStorage if present
+  const fromLocal =
+    typeof localStorage !== 'undefined'
+      ? localStorage.getItem('scanner_device_id')
+      : null;
+  const deviceId =
+    fromLocal ||
+    `device_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+
+  // 3. Store in Dexie (authoritative) + keep localStorage for compat
+  await db.deviceMeta.put({ key: 'deviceId', value: deviceId });
+  if (typeof localStorage !== 'undefined') {
     localStorage.setItem('scanner_device_id', deviceId);
   }
   return deviceId;
@@ -266,7 +293,7 @@ export async function markAsScannedOffline(
       qrToken: ticket.qrToken,
       scannedAt: now,
       scannedBy,
-      deviceId: getDeviceId(),
+      deviceId: await getOrInitDeviceId(),
       syncStatus: 'pending',
     });
 

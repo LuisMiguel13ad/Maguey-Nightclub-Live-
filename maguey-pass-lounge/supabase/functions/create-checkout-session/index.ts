@@ -127,7 +127,14 @@ serve(async (req) => {
         );
       }
 
-      const unitPrice = dbTicket.price;
+      // Fetch active tier price server-side (ignores any client-sent price)
+      const { data: tierRows } = await supabase.rpc("get_current_tier_price", {
+        p_ticket_type_id: dbTicket.id,
+      });
+      const activeTier = tierRows && tierRows.length > 0 ? tierRows[0] : null;
+      const unitPrice = activeTier ? Number(activeTier.tier_price) : dbTicket.price;
+      const tierName = activeTier ? activeTier.tier_name : null;
+
       const unitFee = dbTicket.fee;
       const quantity = ticketRequest.quantity;
 
@@ -144,6 +151,8 @@ serve(async (req) => {
         quantity: quantity,
         price: unitPrice,
         fee: unitFee,
+        // Dynamic pricing: record which tier was charged
+        ...(tierName && { priceTierName: tierName }),
         // Structured VIP Data
         ...vipInfo
       });

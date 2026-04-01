@@ -1,12 +1,14 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Music, Ticket, User, Mail, Calendar, LogOut, Loader2, Download, ExternalLink, Send, ArrowRightLeft } from "lucide-react";
+import { Music, Ticket, User, Mail, Calendar, LogOut, Loader2, Download, ExternalLink, Send, ArrowRightLeft, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { getUserTickets, type UserTicket } from "@/lib/orders-service";
@@ -27,6 +29,29 @@ const Account = () => {
   const [transferToEmail, setTransferToEmail] = useState('');
   const [transferToName, setTransferToName] = useState('');
   const [transferLoading, setTransferLoading] = useState(false);
+  const [reminderEmailsEnabled, setReminderEmailsEnabled] = useState(true);
+  const [reminderToggleLoading, setReminderToggleLoading] = useState(false);
+
+  // Sync reminder preference from user metadata
+  useEffect(() => {
+    const stored = user?.user_metadata?.reminder_emails_enabled;
+    // Default is true; only override if explicitly set to false
+    setReminderEmailsEnabled(stored !== false);
+  }, [user?.user_metadata?.reminder_emails_enabled]);
+
+  const handleReminderToggle = async (enabled: boolean) => {
+    setReminderToggleLoading(true);
+    const { error } = await supabase.auth.updateUser({
+      data: { reminder_emails_enabled: enabled },
+    });
+    if (error) {
+      toast.error("Failed to update notification preference");
+    } else {
+      setReminderEmailsEnabled(enabled);
+      toast.success(enabled ? "Event reminders enabled" : "Event reminders disabled");
+    }
+    setReminderToggleLoading(false);
+  };
 
   // Get user display name
   const userName = user?.user_metadata?.first_name && user?.user_metadata?.last_name
@@ -285,6 +310,28 @@ const Account = () => {
             <Button variant="outline" size="sm" asChild>
               <Link to="/profile">Edit Profile</Link>
             </Button>
+          </div>
+        </Card>
+
+        {/* Notifications */}
+        <Card className="p-6 border-border/50 bg-card mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <Bell className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold">Notifications</h2>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Event reminders</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Receive a reminder 24 hours and 2 hours before your event
+              </p>
+            </div>
+            <Switch
+              checked={reminderEmailsEnabled}
+              onCheckedChange={handleReminderToggle}
+              disabled={reminderToggleLoading}
+              aria-label="Toggle event reminder emails"
+            />
           </div>
         </Card>
 

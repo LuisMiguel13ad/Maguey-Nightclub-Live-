@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -425,6 +426,15 @@ export default function VIPTableManager() {
           </Select>
         </CardContent>
       </Card>
+
+      {/* Conflict Warning */}
+      <Alert variant="default" className="mb-4">
+        <AlertDescription>
+          VIP table pricing is also managed from the Owner Dashboard (gate scanner app).
+          Changes made here and from the dashboard are both saved directly — last save wins.
+          Coordinate with your venue manager before editing prices.
+        </AlertDescription>
+      </Alert>
 
       {/* Loading State */}
       {isLoading && selectedEventId && (

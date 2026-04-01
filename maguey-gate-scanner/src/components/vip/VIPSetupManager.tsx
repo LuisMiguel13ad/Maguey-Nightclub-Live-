@@ -78,6 +78,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
     price: 0,
     capacity: 6,
     package_description: '',
+    bottles_included: 1,
   });
 
   useEffect(() => {
@@ -152,7 +153,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
             capacity: config.capacity,
             price_cents: config.price * 100,
             package_description: config.package,
-            bottles_included: tier === 'premium' ? 1 : 1,
+            bottles_included: tier === 'premium' ? 2 : 1,
             champagne_included: tier === 'premium' ? 1 : 0,
             is_available: true,
             is_active: true, // Required for ticket purchase site compatibility
@@ -254,6 +255,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
       price: 600,
       capacity: 6,
       package_description: '1 Bottle',
+      bottles_included: 1,
     });
     setShowCreateDialog(true);
   };
@@ -266,6 +268,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
       price: table.price_cents / 100, // Convert cents to dollars
       capacity: table.capacity,
       package_description: table.package_description || '',
+      bottles_included: table.bottles_included ?? 1,
     });
     setShowCreateDialog(true);
   };
@@ -278,6 +281,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
       price: config.price,
       capacity: config.capacity,
       package_description: config.package,
+      bottles_included: tier === 'premium' ? 2 : 1,
     });
   };
 
@@ -325,7 +329,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
         capacity: formData.capacity,
         price_cents: Math.round(formData.price * 100), // Convert dollars to cents
         package_description: formData.package_description,
-        bottles_included: formData.tier === 'premium' ? 1 : 1,
+        bottles_included: parseInt(String(formData.bottles_included)) || 1,
         champagne_included: formData.tier === 'premium' ? 1 : 0,
         is_available: true,
         is_active: true, // Required for ticket purchase site compatibility
@@ -493,7 +497,7 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
             capacity: config.capacity,
             price_cents: config.price * 100,
             package_description: config.package,
-            bottles_included: tier === 'premium' ? 1 : 1,
+            bottles_included: tier === 'premium' ? 2 : 1,
             champagne_included: tier === 'premium' ? 1 : 0,
             is_available: true,
             display_order: template.table_number,
@@ -971,6 +975,18 @@ export function VIPSetupManager({ eventId, eventName }: VIPSetupManagerProps) {
                 value={formData.capacity}
                 onChange={(e) => setFormData({ ...formData, capacity: Number(e.target.value) })}
                 min="1"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bottles_included">Bottles Included</Label>
+              <Input
+                id="bottles_included"
+                type="number"
+                value={formData.bottles_included}
+                onChange={(e) => setFormData({ ...formData, bottles_included: Number(e.target.value) })}
+                min="0"
+                max="10"
               />
             </div>
 

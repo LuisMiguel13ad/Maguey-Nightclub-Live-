@@ -12,6 +12,7 @@ import { fetchEventById, fetchEventAvailability, type EventDisplay, type EventAv
 import { getPurchaseEventUrl } from "@/lib/purchaseSiteConfig";
 import { useJsonLd, buildEventSchema } from "@/lib/json-ld";
 import ShareButton from "@/components/ShareButton";
+import { CheckoutDrawer } from "@/components/CheckoutDrawer";
 
 const EventPage = () => {
   const { eventId } = useParams();
@@ -29,6 +30,7 @@ const EventPage = () => {
   const [availability, setAvailability] = useState<EventAvailability | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Fetch event from database
   useEffect(() => {
@@ -294,14 +296,13 @@ const EventPage = () => {
                 {event.venue}
               </span>
               {availability && availability.ticketTypes.length > 0 && (
-                <a href={purchaseUrl} target="_blank" rel="noopener noreferrer">
-                  <Button 
-                    className="bg-[#39B54A] hover:bg-[#39B54A]/90 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={isSoldOut}
-                  >
-                    {isSoldOut ? 'SOLD OUT' : 'BUY TICKETS'}
-                  </Button>
-                </a>
+                <Button
+                  className="bg-[#39B54A] hover:bg-[#39B54A]/90 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSoldOut}
+                  onClick={() => !isSoldOut && setIsDrawerOpen(true)}
+                >
+                  {isSoldOut ? 'SOLD OUT' : 'BUY TICKETS'}
+                </Button>
               )}
             </div>
           </motion.div>
@@ -398,17 +399,16 @@ const EventPage = () => {
                                 {ticketType.sold} of {ticketType.total} sold
                               </p>
                             </div>
-                            <a href={purchaseUrl} target="_blank" rel="noopener noreferrer">
-                              <Button 
-                                className="group bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 font-semibold rounded-2xl shadow-[0_0_30px_rgba(255,0,180,0.25)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={isTicketSoldOut}
-                              >
-                                <span className="relative">
-                                  {isTicketSoldOut ? 'SOLD OUT' : 'BUY TICKETS'}
-                                  <span className="absolute -inset-1 -z-10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 glow" />
-                                </span>
-                              </Button>
-                            </a>
+                            <Button
+                              className="group bg-white/10 backdrop-blur-md text-white border border-white/20 hover:bg-white/15 font-semibold rounded-2xl shadow-[0_0_30px_rgba(255,0,180,0.25)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isTicketSoldOut}
+                              onClick={() => !isTicketSoldOut && setIsDrawerOpen(true)}
+                            >
+                              <span className="relative">
+                                {isTicketSoldOut ? 'SOLD OUT' : 'BUY TICKETS'}
+                                <span className="absolute -inset-1 -z-10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 glow" />
+                              </span>
+                            </Button>
                           </div>
                         );
                       })}
@@ -416,11 +416,12 @@ const EventPage = () => {
                   ) : (
                     <div className="text-center py-8">
                       <p className="text-white/60 mb-4">Ticket information not available</p>
-                      <a href={purchaseUrl} target="_blank" rel="noopener noreferrer">
-                        <Button className="bg-[#39B54A] hover:bg-[#39B54A]/90 text-white">
-                          View on Purchase Site
-                        </Button>
-                      </a>
+                      <Button
+                        className="bg-[#39B54A] hover:bg-[#39B54A]/90 text-white"
+                        onClick={() => setIsDrawerOpen(true)}
+                      >
+                        View on Purchase Site
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -664,6 +665,14 @@ const EventPage = () => {
       </section>
 
       <Footer />
+
+      {eventId && (
+        <CheckoutDrawer
+          eventId={eventId}
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+        />
+      )}
     </div>
   );
 };

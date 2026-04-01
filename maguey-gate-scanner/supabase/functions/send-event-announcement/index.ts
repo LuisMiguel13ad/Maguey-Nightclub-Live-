@@ -12,6 +12,8 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 interface EventAnnouncementRequest {
   eventId: string;
   customMessage?: string;
+  recipientEmails?: string[];
+  isEarlyAccess?: boolean;
 }
 
 interface Event {
@@ -219,7 +221,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { eventId, customMessage }: EventAnnouncementRequest = await req.json();
+    const { eventId, customMessage, recipientEmails, isEarlyAccess }: EventAnnouncementRequest = await req.json();
 
     if (!eventId) {
       return new Response(
@@ -261,28 +263,36 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Fetch all active newsletter subscribers
-    const { data: subscribers, error: subError } = await supabase
-      .from("newsletter_subscribers")
-      .select("email")
-      .eq("is_active", true);
+    // Determine recipients: use provided list (early access) or fetch newsletter subscribers
+    let recipientList: string[];
 
-    if (subError) {
-      console.error("Error fetching subscribers:", subError);
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch subscribers" }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-        }
-      );
+    if (recipientEmails && recipientEmails.length > 0) {
+      recipientList = recipientEmails;
+    } else {
+      const { data: subscribers, error: subError } = await supabase
+        .from("newsletter_subscribers")
+        .select("email")
+        .eq("is_active", true);
+
+      if (subError) {
+        console.error("Error fetching subscribers:", subError);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch subscribers" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+          }
+        );
+      }
+
+      recipientList = (subscribers || []).map((s: { email: string }) => s.email);
     }
 
-    if (!subscribers || subscribers.length === 0) {
+    if (recipientList.length === 0) {
       return new Response(
         JSON.stringify({
           success: true,
-          message: "No active subscribers to notify",
+          message: "No recipients to notify",
           sentCount: 0
         }),
         {
@@ -294,7 +304,9 @@ Deno.serve(async (req: Request) => {
 
     // Generate email content
     const emailHtml = generateAnnouncementEmail(event as Event, customMessage);
-    const emailSubject = `New Event: ${event.name} at Maguey!`;
+    const emailSubject = isEarlyAccess
+      ? `Early Access: ${event.name} at Maguey!`
+      : `New Event: ${event.name} at Maguey!`;
 
     // Send emails in batches (Resend supports up to 100 recipients per request)
     const batchSize = 50;
@@ -302,9 +314,8 @@ Deno.serve(async (req: Request) => {
     let failedCount = 0;
     const errors: string[] = [];
 
-    for (let i = 0; i < subscribers.length; i += batchSize) {
-      const batch = subscribers.slice(i, i + batchSize);
-      const emails = batch.map(s => s.email);
+    for (let i = 0; i < recipientList.length; i += batchSize) {
+      const emails = recipientList.slice(i, i + batchSize);
 
       try {
         // Send to each recipient individually for better deliverability
@@ -333,27 +344,31 @@ Deno.serve(async (req: Request) => {
         }
       } catch (batchError: any) {
         console.error("Batch send error:", batchError);
-        failedCount += batch.length;
+        failedCount += emails.length;
         errors.push(batchError.message);
       }
     }
 
-    // Update event to mark newsletter as sent
-    await supabase
-      .from("events")
-      .update({
-        newsletter_sent_at: new Date().toISOString(),
-        newsletter_sent_count: sentCount
-      })
-      .eq("id", eventId);
+    // Update event to mark newsletter as sent — skip for early access sends
+    // so the full subscriber blast can still go out later without triggering "already sent" warnings
+    if (!isEarlyAccess) {
+      await supabase
+        .from("events")
+        .update({
+          newsletter_sent_at: new Date().toISOString(),
+          newsletter_sent_count: sentCount
+        })
+        .eq("id", eventId);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Announcement sent to ${sentCount} subscribers`,
+        message: `Announcement sent to ${sentCount} recipient${sentCount !== 1 ? "s" : ""}`,
         sentCount,
         failedCount,
-        totalSubscribers: subscribers.length,
+        totalRecipients: recipientList.length,
+        isEarlyAccess: isEarlyAccess ?? false,
         errors: errors.length > 0 ? errors.slice(0, 5) : undefined // Return first 5 errors for debugging
       }),
       {

@@ -1,3 +1,11 @@
+/**
+ * Legacy scanner service. Used by:
+ *  - batch-scan-service.ts (batch scanning feature)
+ *  - Integration tests
+ *
+ * The active real-time scanner uses simple-scanner.ts instead.
+ * TODO: Consolidate into simple-scanner.ts when batch-scan-service is refactored.
+ */
 import { supabase, type Ticket, type Event, type TicketType } from './supabase';
 import { updateTicketReEntryStatus, determineScanType, type ReEntryMode } from './re-entry-service';
 import { requiresIDVerification, checkIDRequirementByName, isTicketVerified } from './id-verification-service';

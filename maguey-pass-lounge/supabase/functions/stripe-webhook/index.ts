@@ -1039,6 +1039,24 @@ serve(async (req) => {
                 // Payment succeeded, we've logged the failure for manual resolution
               }
             }
+
+            // Advance the price tier for this ticket type (fire-and-forget, non-blocking)
+            // Increments tickets_sold and activates the next tier if this one is exhausted
+            supabase
+              .rpc("advance_price_tier", {
+                p_ticket_type_id: ticket.ticketTypeId,
+                p_quantity: ticket.quantity,
+              })
+              .then(({ error: tierError }) => {
+                if (tierError) {
+                  logger.warn("advance_price_tier failed (non-critical)", {
+                    ticketTypeId: ticket.ticketTypeId,
+                    error: tierError.message,
+                  });
+                } else {
+                  logger.info("Price tier advanced", { ticketTypeId: ticket.ticketTypeId, quantity: ticket.quantity });
+                }
+              });
           }
         }
 

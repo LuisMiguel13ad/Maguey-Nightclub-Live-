@@ -38,7 +38,8 @@ import {
   getActiveEvents,
   type ScanResult,
 } from "@/lib/simple-scanner";
-import { ensureCacheIsFresh } from "@/lib/offline-ticket-cache";
+import { getStaffDisplayName } from "@/lib/staff-name-service";
+import { ensureCacheIsFresh, getOrInitDeviceId } from "@/lib/offline-ticket-cache";
 import {
   queueScan,
   syncPendingScans,
@@ -46,7 +47,6 @@ import {
 } from "@/lib/offline-queue-service";
 import { sendHeartbeat } from "@/lib/scanner-status-service";
 import { manualEntryLimiter } from "@/lib/rate-limiter";
-import { getDeviceInfo } from "@/lib/battery-monitoring-service";
 import {
   hapticSuccess,
   hapticRejection,
@@ -150,6 +150,9 @@ const Scanner = () => {
   // Track component mount state to prevent setState after unmount
   const mountedRef = useRef(true);
 
+  // Ticket type filter
+  const [ticketTypeFilter, setTicketTypeFilter] = useState<'all' | 'ga_only' | 'vip_only'>('all');
+
   // Event filter
   const [selectedEvent, setSelectedEvent] = useState<string>("all");
   const [events, setEvents] = useState<{ id: string; name: string; event_date: string }[]>([]);
@@ -168,8 +171,12 @@ const Scanner = () => {
   // Selected event ID for counter (separate from name for API queries)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-  // Device ID for rate limiting and display
-  const [deviceId] = useState(() => getDeviceInfo().deviceId);
+  // Device ID for rate limiting and display (persisted in Dexie for iOS/Safari durability)
+  const [deviceId, setDeviceId] = useState<string>('');
+
+  useEffect(() => {
+    getOrInitDeviceId().then(setDeviceId);
+  }, []);
 
   // Scans today counter (for heartbeat reporting)
   const [scansToday, setScansToday] = useState(() => {
@@ -397,9 +404,14 @@ const Scanner = () => {
 
     try {
       // If offline, use local cache validation
+      // Note: ticketTypeFilter is intentionally NOT applied in offline mode — lenient behaviour
+      // prevents unnecessary rejections when ticket type metadata may be stale in the IndexedDB cache.
       if (!isOnline) {
         // Validate against cache instead of just queueing
-        const result = await scanTicketOffline(input.trim(), user?.id, selectedEventId || undefined);
+        const result = await scanTicketOffline(input.trim(), user?.id, selectedEventId || undefined, {
+          staffUserId: user?.id,
+          deviceLabel: deviceId,
+        });
 
         // Guard: Don't update state if component unmounted
         if (!mountedRef.current) return;
@@ -477,7 +489,10 @@ const Scanner = () => {
       }
 
       // Online: perform the scan
-      const result = await scanTicket(input.trim(), user?.id, method, supabase);
+      const result = await scanTicket(input.trim(), user?.id, method, supabase, {
+        staffUserId: user?.id,
+        deviceLabel: deviceId,
+      });
       resetIdleTimer?.();
 
       // Guard: Don't update state if component unmounted
@@ -538,6 +553,53 @@ const Scanner = () => {
       }
 
       if (result.success) {
+        // Ticket type filter check — use the shared helper with a temp VipLinkInfo derived from
+        // result.scanType (the full vipLinkInfo lookup happens later in the success branch)
+        const resolvedType = determineTicketType(
+          result.ticket,
+          { isVipGuest: result.scanType === 'vip_guest_pass', tableNumber: null, purchaserName: null }
+        );
+
+        if (ticketTypeFilter === 'ga_only' && resolvedType !== 'ga') {
+          setScanState({
+            status: 'error',
+            ticket: null,
+            message: 'VIP tickets not accepted at this gate',
+            rejectionReason: 'wrong_event',
+            rejectionDetails: {},
+          });
+          hapticRejection();
+          addToHistory({
+            timestamp: new Date(),
+            status: 'failure',
+            ticketType: resolvedType === 'vip_guest' ? 'VIP Guest' : 'VIP',
+            errorReason: 'VIP tickets not accepted at this gate',
+          });
+          setManualInput('');
+          setIsProcessing(false);
+          return;
+        }
+
+        if (ticketTypeFilter === 'vip_only' && resolvedType === 'ga') {
+          setScanState({
+            status: 'error',
+            ticket: null,
+            message: 'GA tickets not accepted at this gate',
+            rejectionReason: 'wrong_event',
+            rejectionDetails: {},
+          });
+          hapticRejection();
+          addToHistory({
+            timestamp: new Date(),
+            status: 'failure',
+            ticketType: 'GA',
+            errorReason: 'GA tickets not accepted at this gate',
+          });
+          setManualInput('');
+          setIsProcessing(false);
+          return;
+        }
+
         // Handle VIP guest pass scans
         if (result.scanType === 'vip_guest_pass' && result.vipGuestPassData) {
           const vipData = result.vipGuestPassData;
@@ -577,7 +639,7 @@ const Scanner = () => {
         }
 
         // Check if this is a re-entry (VIP-linked ticket scanned again)
-        const isReentry = result.rejectionReason === 'reentry';
+        const isReentry = result.entryType === 'reentry';
 
         setScanState({
           status: isReentry ? "reentry" : "success",
@@ -640,8 +702,8 @@ const Scanner = () => {
           rejectionReason: result.rejectionReason || 'already_used',
           rejectionDetails: result.rejectionDetails || {
             previousScan: {
-              staff: 'Staff',
-              gate: 'Gate',
+              staff: user?.id ? getStaffDisplayName(user.id) : 'Staff',
+              gate: deviceId,
               time: 'Earlier',
             },
           },
@@ -724,7 +786,9 @@ const Scanner = () => {
     e.preventDefault();
 
     // Rate limit manual entry: 5 per minute per device
-    const rateLimitResult = await manualEntryLimiter.increment(deviceId);
+    // Use deviceId from state; fall back to Dexie in the rare case it hasn't resolved yet
+    const activeDeviceId = deviceId || await getOrInitDeviceId();
+    const rateLimitResult = await manualEntryLimiter.increment(activeDeviceId);
     if (!rateLimitResult.allowed) {
       toast({
         title: "Too many attempts",
@@ -885,6 +949,37 @@ const Scanner = () => {
                   {item.title}
                 </Button>
               ))}
+            </div>
+
+            {/* Ticket Type Filter */}
+            <div className="mx-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+              <div className="flex items-center gap-2 mb-1">
+                <Ticket className="h-4 w-4 text-white/60" />
+                <span className="text-white/80 text-sm font-semibold">Ticket Type Filter</span>
+              </div>
+              <p className="text-xs text-white/40 mb-3">
+                {ticketTypeFilter === 'all'
+                  ? 'Accepting all ticket types'
+                  : ticketTypeFilter === 'ga_only'
+                  ? 'GA tickets only — VIP rejected'
+                  : 'VIP tickets only — GA rejected'}
+              </p>
+              <div className="flex gap-1.5">
+                {(['all', 'ga_only', 'vip_only'] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setTicketTypeFilter(f)}
+                    className={cn(
+                      "flex-1 py-2 text-xs font-semibold rounded-xl border transition-all",
+                      ticketTypeFilter === f
+                        ? "bg-purple-600 border-purple-500 text-white"
+                        : "bg-transparent border-white/10 text-white/50 hover:border-white/20 hover:text-white/70"
+                    )}
+                  >
+                    {f === 'all' ? 'All' : f === 'ga_only' ? 'GA Only' : 'VIP Only'}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-white/10 bg-black/50">
@@ -1149,6 +1244,7 @@ const Scanner = () => {
         <SuccessOverlay
           ticketType={determineTicketType(scanState.ticket, vipLinkInfo)}
           guestName={scanState.ticket?.guest_name || undefined}
+          attendeeEmail={scanState.ticket?.guest_email || undefined}
           vipDetails={
             vipLinkInfo.isVipGuest || scanState.vipInfo ? {
               tableName: scanState.vipInfo?.tableName || `Table ${vipLinkInfo.tableNumber}`,

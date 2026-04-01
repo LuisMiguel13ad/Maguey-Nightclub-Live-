@@ -26,6 +26,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EventCardSkeleton, TicketCardSkeleton } from "@/components/ui/skeleton-card";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEmbed } from "@/contexts/EmbedContext";
 import { AuthButton } from "@/components/AuthButton";
 import {
   getEventWithTicketsAndAvailability,
@@ -67,6 +68,7 @@ const Checkout = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isEmbed } = useEmbed();
 
   const handleRecommendedEventClick = async (eventId: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -580,15 +582,17 @@ const Checkout = () => {
       <div className="min-h-screen bg-forest-950 text-stone-300 overflow-x-hidden">
         <CustomCursor />
         <div className="noise-overlay" />
-        <header className="relative z-50 border-b border-white/5 bg-forest-950/80 backdrop-blur-md sticky top-0">
-          <div className="container mx-auto px-4 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <Link to="/" className="font-mono text-xs tracking-[0.2em] uppercase group">
-                MAGUEY <span className="text-copper-400">/</span> DE
-              </Link>
+        {!isEmbed && (
+          <header className="relative z-50 border-b border-white/5 bg-forest-950/80 backdrop-blur-md sticky top-0">
+            <div className="container mx-auto px-4 lg:px-8 py-4">
+              <div className="flex items-center justify-between">
+                <Link to="/" className="font-mono text-xs tracking-[0.2em] uppercase group">
+                  MAGUEY <span className="text-copper-400">/</span> DE
+                </Link>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
+        )}
         <section className="relative z-10 py-12 lg:py-20">
           <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
             <div className="grid lg:grid-cols-[42%_58%] gap-8 lg:gap-12 items-start">
@@ -646,18 +650,20 @@ const Checkout = () => {
       </div>
 
       {/* Header */}
-      <header className="relative z-50 border-b border-white/5 bg-forest-950/80 backdrop-blur-md sticky top-0">
-        <div className="container mx-auto px-4 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="font-mono text-xs tracking-[0.2em] uppercase group">
-              MAGUEY <span className="text-copper-400">/</span> DE
-            </Link>
-            <div className="flex items-center gap-4">
-              <AuthButton />
+      {!isEmbed && (
+        <header className="relative z-50 border-b border-white/5 bg-forest-950/80 backdrop-blur-md sticky top-0">
+          <div className="container mx-auto px-4 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <Link to="/" className="font-mono text-xs tracking-[0.2em] uppercase group">
+                MAGUEY <span className="text-copper-400">/</span> DE
+              </Link>
+              <div className="flex items-center gap-4">
+                <AuthButton />
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* VIP Invite Banner */}
       {vipReservation && (

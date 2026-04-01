@@ -9,6 +9,7 @@ import {
   VolumeX,
   Vibrate,
   AlertTriangle,
+  Ticket,
 } from "lucide-react";
 import { ManualEntry } from "./ManualEntry";
 
@@ -25,6 +26,9 @@ interface ScannerSettingsPanelProps {
   // Re-entry Mode
   reEntryMode: "single" | "reentry" | "exit_tracking";
   onReEntryModeChange: (mode: "single" | "reentry" | "exit_tracking") => void;
+  // Ticket Type Filter
+  ticketTypeFilter: 'all' | 'ga_only' | 'vip_only';
+  onTicketTypeFilterChange: (filter: 'all' | 'ga_only' | 'vip_only') => void;
   // Audio Settings
   soundEnabled: boolean;
   hapticEnabled: boolean;
@@ -55,6 +59,8 @@ export function ScannerSettingsPanel({
   onBatchModeChange,
   reEntryMode,
   onReEntryModeChange,
+  ticketTypeFilter,
+  onTicketTypeFilterChange,
   soundEnabled,
   hapticEnabled,
   onSoundChange,
@@ -131,6 +137,49 @@ export function ScannerSettingsPanel({
                 className="text-xs"
               >
                 Re-entry
+              </Button>
+            </div>
+          </div>
+
+          {/* Ticket Type Filter */}
+          <div className="flex items-center justify-between py-4 border-b border-gray-700">
+            <div className="flex items-center gap-3">
+              <Ticket className="h-5 w-5 text-primary" />
+              <div>
+                <Label className="text-white">Ticket Type Filter</Label>
+                <p className="text-xs text-gray-400">
+                  {ticketTypeFilter === 'all'
+                    ? 'Accepting all ticket types'
+                    : ticketTypeFilter === 'ga_only'
+                    ? 'GA tickets only'
+                    : 'VIP tickets only'}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant={ticketTypeFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => onTicketTypeFilterChange('all')}
+                className="text-xs"
+              >
+                All
+              </Button>
+              <Button
+                size="sm"
+                variant={ticketTypeFilter === 'ga_only' ? 'default' : 'outline'}
+                onClick={() => onTicketTypeFilterChange('ga_only')}
+                className="text-xs"
+              >
+                GA Only
+              </Button>
+              <Button
+                size="sm"
+                variant={ticketTypeFilter === 'vip_only' ? 'default' : 'outline'}
+                onClick={() => onTicketTypeFilterChange('vip_only')}
+                className="text-xs"
+              >
+                VIP Only
               </Button>
             </div>
           </div>
